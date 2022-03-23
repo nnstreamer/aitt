@@ -173,6 +173,7 @@ public class Aitt implements AutoCloseable {
                         if (transportHandler == null) {
                             webrtcHandler = new WebRTC(dataType , appContext);
                             transportHandler = webrtcHandler;
+                            portTable.portMap.replace(port, new Pair<>(Protocol.WEBRTC, transportHandler));
                             webrtcHandler.connect(ip, port);
                         }
                         else {
