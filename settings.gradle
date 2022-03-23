@@ -1,0 +1,4 @@
+include ':android:aitt'
+include ':android:flatbuffers'
+include ':android:mosquitto'
+include ':android:modules:webrtc'

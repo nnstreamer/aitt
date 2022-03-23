@@ -1,0 +1,5 @@
+aitt (0.0.1) unstable; urgency=medium
+
+  * Initialize the debian packaging scripts
+
+ -- Sungjae Park <nicesj.park@samsung.com>  Tue, 23 Nov 2021 14:27:00 +0900
