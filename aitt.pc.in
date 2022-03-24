@@ -4,6 +4,5 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@/@PROJECT_NAME@
 Name: @PROJECT_NAME@
 Description: Development files for the modualrized AI framework
 Version: @PROJECT_VERSION@
-Requires.private: libmosquitto >= 1.6.8, libsrtp2 >= 2.3.0
 Libs: -L${libdir} -l@PROJECT_NAME@
 Cflags: -I${includedir}
