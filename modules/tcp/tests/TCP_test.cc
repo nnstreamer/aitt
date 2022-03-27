@@ -17,6 +17,7 @@
 
 #include <condition_variable>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
