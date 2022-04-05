@@ -64,7 +64,7 @@ public class WebRTC {
     private Context appContext;
     private DataChannel localDataChannel;
     private FrameVideoCapturer videoCapturer;
-    private static ReceiveDataCallback dataCallback;
+    private ReceiveDataCallback dataCallback;
     private String recieverIP;
     private Integer recieverPort;
     private DataType dataType;
@@ -120,7 +120,12 @@ public class WebRTC {
             createVideoTrack();
             addVideoTrack();
         }
-        connectToPeer();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                connectToPeer();
+            }
+        }).start();
     }
 
     private void connectToPeer() {
@@ -242,14 +247,21 @@ public class WebRTC {
         }
     }
 
-    private static class ProxyVideoSink implements VideoSink {
+    private class ProxyVideoSink implements VideoSink {
+
+        private ReceiveDataCallback dataCallback;
+
+        ProxyVideoSink(ReceiveDataCallback dataCb){
+            this.dataCallback = dataCb;
+        }
+
         @Override
         synchronized public void onFrame(VideoFrame frame) {
             byte[] rawFrame = createNV21Data(frame.getBuffer().toI420());
             dataCallback.pushData(rawFrame);
         }
 
-        public static byte[] createNV21Data(VideoFrame.I420Buffer i420Buffer) {
+        public byte[] createNV21Data(VideoFrame.I420Buffer i420Buffer) {
             final int width = i420Buffer.getWidth();
             final int height = i420Buffer.getHeight();
             final int chromaStride = width;
@@ -399,7 +411,7 @@ public class WebRTC {
                     Log.i(TAG, "onAddVideoTrack");
                     VideoTrack remoteVideoTrack = (VideoTrack) track;
                     remoteVideoTrack.setEnabled(true);
-                    ProxyVideoSink  videoSink = new ProxyVideoSink();
+                    ProxyVideoSink  videoSink = new ProxyVideoSink(dataCallback);
                     remoteVideoTrack.addSink(videoSink);
                 }
             }
