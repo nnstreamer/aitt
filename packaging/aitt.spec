@@ -38,7 +38,6 @@ The %{name}-plugins package contains basic plugin libraries for AITT P2P transpo
 %package devel
 Summary: AITT development package
 Group: Development/Libraries
-Requires: aitt-devel
 Requires: %{name} = %{version}-%{release}
 
 %description devel
