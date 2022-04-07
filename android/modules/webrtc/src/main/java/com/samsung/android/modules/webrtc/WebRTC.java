@@ -92,11 +92,17 @@ public class WebRTC {
         this.dataCallback = cb;
     }
 
-    public void disconnect(){
+    public void disconnect() {
         if (socket != null) {
             try {
-                sendMessage(false , "bye");
+                sendMessage(false, "bye");
                 socket.close();
+                if (outStream != null) {
+                    outStream.close();
+                }
+                if (inputStream != null) {
+                    inputStream.close();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -50,7 +50,6 @@ public class Aitt implements AutoCloseable {
 
     private long instance = 0;
     private String ip;
-    private String id;
     private Context appContext;
     //ToDo - For now using sample app parameters, later fetch frameWidth & frameHeight from app
     private Integer frameWidth = 640, frameHeight = 480;
@@ -105,7 +104,7 @@ public class Aitt implements AutoCloseable {
     }
 
     public Aitt(Context appContext, String id, String ip, boolean clearSession) {
-        if(appContext == null){
+        if (appContext == null) {
             throw new IllegalArgumentException("Invalid appContext");
         }
         if (id == null || id.isEmpty()) {
@@ -115,8 +114,6 @@ public class Aitt implements AutoCloseable {
         if (instance == 0L) {
             throw new RuntimeException("Failed to create native instance");
         }
-
-        this.id = id;
         this.ip = ip;
         this.appContext = appContext;
     }
@@ -155,41 +152,44 @@ public class Aitt implements AutoCloseable {
         if (protocols.isEmpty()) {
             throw new IllegalArgumentException("Invalid protocols");
         }
-
-        synchronized (this) {
-            if (!publishTable.containsKey(topic)) {
-                Log.e(TAG,"Invalid publish request over unsubscribed topic");
-                return;
-            }
-            HostTable hostTable = publishTable.get(topic);
-            for (String ip : hostTable.hostMap.keySet()) {
-                PortTable portTable = hostTable.hostMap.get(ip);
-                for (Integer port : portTable.portMap.keySet()) {
-                    Protocol protocol = portTable.portMap.get(port).first;
-                    Object transportHandler = portTable.portMap.get(port).second;
-                    if (protocol == Protocol.WEBRTC) {
-                        WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.Message : WebRTC.DataType.VideoFrame;
-                        WebRTC webrtcHandler = null;
-                        if (transportHandler == null) {
-                            webrtcHandler = new WebRTC(dataType , appContext);
-                            transportHandler = webrtcHandler;
-                            portTable.portMap.replace(port, new Pair<>(Protocol.WEBRTC, transportHandler));
-                            webrtcHandler.connect(ip, port);
+        try {
+            synchronized (this) {
+                if (!publishTable.containsKey(topic)) {
+                    Log.e(TAG, "Invalid publish request over unsubscribed topic");
+                    return;
+                }
+                HostTable hostTable = publishTable.get(topic);
+                for (String ip : hostTable.hostMap.keySet()) {
+                    PortTable portTable = hostTable.hostMap.get(ip);
+                    for (Integer port : portTable.portMap.keySet()) {
+                        Protocol protocol = portTable.portMap.get(port).first;
+                        Object transportHandler = portTable.portMap.get(port).second;
+                        if (protocol == Protocol.WEBRTC) {
+                            WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.Message : WebRTC.DataType.VideoFrame;
+                            WebRTC webrtcHandler = null;
+                            if (transportHandler == null) {
+                                webrtcHandler = new WebRTC(dataType, appContext);
+                                transportHandler = webrtcHandler;
+                                portTable.portMap.replace(port, new Pair<>(Protocol.WEBRTC, transportHandler));
+                                webrtcHandler.connect(ip, port);
+                            } else {
+                                webrtcHandler = (WebRTC) transportHandler;
+                            }
+                            if (dataType == WebRTC.DataType.Message) {
+                                webrtcHandler.sendMessageData(message);
+                            } else if (dataType == WebRTC.DataType.VideoFrame) {
+                                webrtcHandler.sendVideoData(message, frameWidth, frameHeight);
+                            }
+                        } else {
+                            int proto = protocolsToInt(protocols);
+                            publishJNI(instance, topic, message, message.length, proto, qos.ordinal(), false);
                         }
-                        else {
-                            webrtcHandler = (WebRTC) transportHandler;
-                        }
-                        if(dataType == WebRTC.DataType.Message){
-                            webrtcHandler.sendMessageData(message);
-                        }else if(dataType == WebRTC.DataType.VideoFrame){
-                            webrtcHandler.sendVideoData(message, frameWidth, frameHeight);
-                        }
-                    } else {
-                        int proto = protocolsToInt(protocols);
-                        publishJNI(instance, topic, message, message.length, proto, qos.ordinal(), false);
                     }
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Couldnt publish to AITT C++");
         }
     }
 
@@ -213,56 +213,64 @@ public class Aitt implements AutoCloseable {
         if (protocols.isEmpty()) {
             throw new IllegalArgumentException("Invalid protocols");
         }
+        try {
+            if (protocols.contains(Protocol.WEBRTC)) {
+                WebRTC.ReceiveDataCallback cb = frame -> {
+                    AittMessage message = new AittMessage(frame);
+                    message.setTopic(topic);
+                    messageReceived(message);
+                };
 
-        if (protocols.contains(Protocol.WEBRTC)) {
-            WebRTC.ReceiveDataCallback cb = frame -> {
-                AittMessage message = new AittMessage(frame);
-                message.setTopic(topic);
-                messageReceived(message);
-            };
+                WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.Message : WebRTC.DataType.VideoFrame;
+                WebRTCServer ws = new WebRTCServer(appContext, dataType, cb);
+                int serverPort = ws.start();
+                synchronized (this) {
+                    subscribeMap.put(topic, new Pair(Protocol.WEBRTC, ws));
+                }
 
-            WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.Message : WebRTC.DataType.VideoFrame;
-            WebRTCServer ws = new WebRTCServer(appContext, dataType , cb);
-            int serverPort = ws.start();
-            synchronized (this){
-                subscribeMap.put(topic, new Pair(Protocol.WEBRTC, ws));
-            }
-
-            FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
-            {
-                int smap = fbb.startMap();
-                fbb.putString("status", JOIN_NETWORK);
-                fbb.putString("host", this.ip);
+                FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
                 {
-                    int smap1 = fbb.startMap();
-                    fbb.putInt("protocol", Protocol.WEBRTC.value);
-                    fbb.putInt("port", serverPort);
-                    fbb.endMap(topic, smap1);
+                    int smap = fbb.startMap();
+                    fbb.putString("status", JOIN_NETWORK);
+                    fbb.putString("host", this.ip);
+                    {
+                        int smap1 = fbb.startMap();
+                        fbb.putInt("protocol", Protocol.WEBRTC.value);
+                        fbb.putInt("port", serverPort);
+                        fbb.endMap(topic, smap1);
+                    }
+                    fbb.endMap(null, smap);
                 }
-                fbb.endMap(null , smap);
-            }
-            ByteBuffer buffer = fbb.finish();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data,0,data.length);
-            publishJNI(instance, JAVA_SPECIFIC_DISCOVERY_TOPIC, data , data.length ,Protocol.MQTT.value, QoS.EXACTLY_ONCE.ordinal(),true);
-        } else {
-            int proto = protocolsToInt(protocols);
-            Long pObject = subscribeJNI(instance, topic, proto, qos.ordinal());
-            aittSubId.put(topic, pObject);
-        }
-
-        synchronized (this) {
-            ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
-
-            if (cbList != null) {
-                // check whether the list already contains same callback
-                if (!cbList.contains(callback)) {
-                    cbList.add(callback);
-                }
+                ByteBuffer buffer = fbb.finish();
+                byte[] data = new byte[buffer.remaining()];
+                buffer.get(data, 0, data.length);
+                publishJNI(instance, JAVA_SPECIFIC_DISCOVERY_TOPIC, data, data.length, Protocol.MQTT.value, QoS.EXACTLY_ONCE.ordinal(), true);
             } else {
-                cbList = new ArrayList<>();
-                cbList.add(callback);
-                subscribeCallbacks.put(topic, cbList);
+                int proto = protocolsToInt(protocols);
+                Long pObject = subscribeJNI(instance, topic, proto, qos.ordinal());
+                aittSubId.put(topic, pObject);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Couldnt subscribe to AITT C++");
+        }
+        synchronized (this) {
+            try {
+                ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
+
+                if (cbList != null) {
+                    // check whether the list already contains same callback
+                    if (!cbList.contains(callback)) {
+                        cbList.add(callback);
+                    }
+                } else {
+                    cbList = new ArrayList<>();
+                    cbList.add(callback);
+                    subscribeCallbacks.put(topic, cbList);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(TAG, "Couldnt subscribe to AITT C++");
             }
         }
     }
@@ -273,30 +281,35 @@ public class Aitt implements AutoCloseable {
         }
 
         boolean isRemoved = false;
-        synchronized (this){
-            if (subscribeMap.containsKey(topic) && subscribeMap.get(topic).first == Protocol.WEBRTC) {
-                WebRTCServer ws = (WebRTCServer) subscribeMap.get(topic).second;
-                ws.stop();
-                subscribeMap.remove(topic);
-                isRemoved = true;
-            }
-        }
-
-        if(!isRemoved){
-            Long paittSubId = null;
+        try {
             synchronized (this) {
-                if (aittSubId.containsKey(topic)) {
-                    paittSubId = aittSubId.get(topic);
+                if (subscribeMap.containsKey(topic) && subscribeMap.get(topic).first == Protocol.WEBRTC) {
+                    WebRTCServer ws = (WebRTCServer) subscribeMap.get(topic).second;
+                    ws.stop();
+                    subscribeMap.remove(topic);
+                    isRemoved = true;
                 }
             }
-            if(paittSubId!=null) {
-                unsubscribeJNI(instance, paittSubId);
-            }
-        }
 
-        synchronized (this) {
-            subscribeCallbacks.remove(topic);
-            aittSubId.remove(topic);
+            if (!isRemoved) {
+                Long paittSubId = null;
+                synchronized (this) {
+                    if (aittSubId.containsKey(topic)) {
+                        paittSubId = aittSubId.get(topic);
+                    }
+                }
+                if (paittSubId != null) {
+                    unsubscribeJNI(instance, paittSubId);
+                }
+            }
+
+            synchronized (this) {
+                subscribeCallbacks.remove(topic);
+                aittSubId.remove(topic);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Exception during un subscribe to AITT C++");
         }
     }
 
@@ -326,34 +339,39 @@ public class Aitt implements AutoCloseable {
         if (payload.length <= 0) {
             throw new IllegalArgumentException("Invalid payload");
         }
-        ByteBuffer buffer = ByteBuffer.wrap(payload);
-        FlexBuffers.Map map = FlexBuffers.getRoot(buffer).asMap();
-        String host = map.get("host").asString();
-        String status = map.get("status").asString();
-        if (status != null && status.compareTo(WILL_LEAVE_NETWORK) == 0) {
-            synchronized (this) {
-                for (String _topic : publishTable.keySet()) {
-                    HostTable hostTable = publishTable.get(_topic);
-                    if (hostTable != null) {
-                        hostTable.hostMap.remove(host);
+        try {
+            ByteBuffer buffer = ByteBuffer.wrap(payload);
+            FlexBuffers.Map map = FlexBuffers.getRoot(buffer).asMap();
+            String host = map.get("host").asString();
+            String status = map.get("status").asString();
+            if (status != null && status.compareTo(WILL_LEAVE_NETWORK) == 0) {
+                synchronized (this) {
+                    for (String _topic : publishTable.keySet()) {
+                        HostTable hostTable = publishTable.get(_topic);
+                        if (hostTable != null) {
+                            hostTable.hostMap.remove(host);
+                        }
                     }
                 }
-            }
-            return;
-        }
-
-        FlexBuffers.KeyVector topics = map.keys();
-        for(int i=0; i<topics.size(); i++) {
-            String _topic = topics.get(i).toString();
-            if(_topic.compareTo("host")==0 || _topic.compareTo("status")==0) {
-                continue;
+                return;
             }
 
-            FlexBuffers.Map _map = map.get(_topic).asMap();
-            int port = _map.get("port").asInt();
-            long p = _map.get("protocol").asUInt();
-            Protocol protocol = Protocol.fromInt(p);
-            updatePublishTable(_topic, host, port, protocol);
+            FlexBuffers.KeyVector topics = map.keys();
+            for (int i = 0; i < topics.size(); i++) {
+                String _topic = topics.get(i).toString();
+                if (_topic.compareTo("host") == 0 || _topic.compareTo("status") == 0) {
+                    continue;
+                }
+
+                FlexBuffers.Map _map = map.get(_topic).asMap();
+                int port = _map.get("port").asInt();
+                long p = _map.get("protocol").asUInt();
+                Protocol protocol = Protocol.fromInt(p);
+                updatePublishTable(_topic, host, port, protocol);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Couldnt un subscribe to AITT C++");
         }
     }
 
@@ -388,16 +406,21 @@ public class Aitt implements AutoCloseable {
 
     // Method to be called when a new message arrives
     private void messageReceived(AittMessage message) {
-        String topic = message.getTopic();
+        try {
 
-        synchronized(this) {
-            ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
+            String topic = message.getTopic();
+            synchronized (this) {
+                ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
 
-            if (cbList != null) {
-                for (int i = 0; i < cbList.size(); i++) {
-                    cbList.get(i).onMessageReceived(message);
+                if (cbList != null) {
+                    for (int i = 0; i < cbList.size(); i++) {
+                        cbList.get(i).onMessageReceived(message);
+                    }
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Exception in messageReceived");
         }
     }
 
