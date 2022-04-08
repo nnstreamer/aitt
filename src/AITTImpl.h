@@ -77,7 +77,6 @@ class AITT::Impl {
 
     std::string id_;
     std::unique_ptr<MQ> mq;
-    AITT *parent;
     unsigned short reply_id;
     void *discoveryCallbackHandle;
     TransportModuleLoader modules;

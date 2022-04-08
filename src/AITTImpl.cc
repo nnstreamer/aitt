@@ -34,7 +34,6 @@ namespace aitt {
 AITT::Impl::Impl(AITT *parent, const std::string &id, const std::string &ipAddr, bool clearSession)
       : id_(id),
         mq(std::make_unique<MQ>(id, clearSession)),
-        parent(parent),
         reply_id(0),
         discoveryCallbackHandle(0),
         modules(ipAddr)

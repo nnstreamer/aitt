@@ -16,7 +16,6 @@
 #pragma once
 
 #include <AITT.h>
-#include <Types.h>
 #include <android/log.h>
 #include <jni.h>
 #include <string>
