@@ -224,6 +224,9 @@ public class Aitt implements AutoCloseable {
                 WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.Message : WebRTC.DataType.VideoFrame;
                 WebRTCServer ws = new WebRTCServer(appContext, dataType, cb);
                 int serverPort = ws.start();
+                if (serverPort < 0) {
+                    throw new RuntimeException("Failed to start webRTC server-socket");
+                }
                 synchronized (this) {
                     subscribeMap.put(topic, new Pair(Protocol.WEBRTC, ws));
                 }
