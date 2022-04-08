@@ -17,10 +17,10 @@
 
 #include <string>
 
-#include "Types.h"
+#include <AittTypes.h>
 
 namespace aitt {
-class MSG {
+class API MSG {
   public:
     MSG();
 

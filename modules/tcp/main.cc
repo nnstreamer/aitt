@@ -21,7 +21,7 @@ extern "C" {
 
 // NOTE:
 // name of this function is defined in aitt::TransportModule::MODULE_ENTRY_NAME
-void *aitt_module_entry(const char *ip)
+API void *aitt_module_entry(const char *ip)
 {
     // NOTE:
     // The assert() is used to break the build when the MODULE_ENTRY_NAME is changed.

@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include "Types.h"
+#include <AittTypes.h>
 /**
  * @addtogroup CAPI_AITT_MODULE
  * @{

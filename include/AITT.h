@@ -19,15 +19,15 @@
 #include <memory>
 #include <string>
 
-#include "MSG.h"
-#include "Types.h"
+#include <MSG.h>
+#include <AittTypes.h>
 
 #define AITT_LOCALHOST "127.0.0.1"
 #define AITT_PORT 1883
 
 namespace aitt {
 
-class AITT {
+class API AITT {
   public:
     // NOTE:
     // This QoS only works with the AITT_TYPE_MQTT

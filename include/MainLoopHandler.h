@@ -21,9 +21,11 @@
 #include <map>
 #include <mutex>
 
+#include <AittTypes.h>
+
 namespace aitt {
 
-class MainLoopHandler {
+class API MainLoopHandler {
   public:
     enum MainLoopResult {
         OK,
