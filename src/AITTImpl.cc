@@ -47,8 +47,6 @@ AITT::Impl::Impl(AITT *parent, const std::string &id, const std::string &ipAddr,
         id_ = "aitt-" + std::string(buf, rc);
     }
 
-    mq->Start();
-
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
 
@@ -64,13 +62,6 @@ AITT::Impl::~Impl(void)
 
     if (aittThread.joinable())
         aittThread.join();
-
-    // NOTE:
-    // If we forcibly stop the MQ network loop (threaded),
-    // The disconnect message could not be sent to the broker sometimes.
-    // The broker will send WILL message if it detect client disconnection without proper DISCONNECT
-    // message
-    mq->Stop(true);
 }
 
 void AITT::Impl::ThreadMain(void)
@@ -81,14 +72,13 @@ void AITT::Impl::ThreadMain(void)
 
 void AITT::Impl::Connect(const std::string &host, int port)
 {
-    // Connect with the last will message
-    mq->Connect(host, port, DISCOVERY_TOPIC_BASE + id_, nullptr, 0, MQ::QoS::EXACTLY_ONCE, true);
+    mq->Connect(host, port, DISCOVERY_TOPIC_BASE + id_, nullptr, 0, MQ::QoS::AT_LEAST_ONCE, true);
 
     if (discoveryCallbackHandle)
         mq->Unsubscribe(discoveryCallbackHandle);
 
     discoveryCallbackHandle = mq->Subscribe(DISCOVERY_TOPIC_BASE + "+",
-          AITT::Impl::DiscoveryMessageCallback, static_cast<void *>(this));
+          AITT::Impl::DiscoveryMessageCallback, static_cast<void *>(this), MQ::AT_LEAST_ONCE);
 }
 
 void AITT::Impl::Disconnect(void)
@@ -116,15 +106,7 @@ void AITT::Impl::Disconnect(void)
         subscribed_list.clear();
     }
 
-    flexbuffers::Builder fbb;
-    fbb.Map([&fbb]() { fbb.String("status", AITT::WILL_LEAVE_NETWORK); });
-    fbb.Finish();
-    auto buf = fbb.GetBuffer();
-
-    // NOTE:
-    // Publish the last will if the client gets disconnected intentionally, otherwise the broker is
-    // going to publish it for this client
-    mq->Publish(DISCOVERY_TOPIC_BASE + id_, buf.data(), buf.size(), MQ::QoS::EXACTLY_ONCE, true);
+    mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, MQ::QoS::AT_LEAST_ONCE, true);
     mq->Unsubscribe(discoveryCallbackHandle);
     mq->Disconnect();
     discoveryCallbackHandle = nullptr;
@@ -170,6 +152,7 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
         subscribed_list.push_back(info);
     }
 
+    DBG("Subscribe topic(%s) : %p", topic.c_str(), info);
     return reinterpret_cast<AittSubscribeID>(info);
 }
 

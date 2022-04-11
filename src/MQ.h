@@ -59,8 +59,6 @@ class MQ {
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata = nullptr,
           MQ::QoS qos = QoS::AT_MOST_ONCE);
     void *Unsubscribe(void *handle);
-    void Start(void);
-    void Stop(bool force = false);
 
   private:
     struct SubscribeData {
@@ -71,15 +69,13 @@ class MQ {
         void *cbdata;
     };
 
-    static void MQTTMessageCallback(mosquitto *, void *, const mosquitto_message *,
+    static void MessageCallback(mosquitto *, void *, const mosquitto_message *,
           const mosquitto_property *);
     void InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props);
 
     static const std::string REPLY_SEQUENCE_NUM_KEY;
     static const std::string REPLY_IS_END_SEQUENCE_KEY;
 
-    bool clear_session_;
-    std::string mq_id;
     mosquitto *handle;
     const int keep_alive;
     std::vector<SubscribeData *> subscribers;

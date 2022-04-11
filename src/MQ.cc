@@ -31,26 +31,89 @@ const std::string MQ::REPLY_SEQUENCE_NUM_KEY = "sequenceNum";
 const std::string MQ::REPLY_IS_END_SEQUENCE_KEY = "isEndSequence";
 
 MQ::MQ(const std::string &id, bool clear_session)
-      : clear_session_(clear_session), mq_id(id), keep_alive(60), subscriber_iterator_updated(false)
+      : handle(nullptr), keep_alive(60), subscriber_iterator_updated(false)
 {
-    int ret = mosquitto_lib_init();
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
+    do {
+        int ret = mosquitto_lib_init();
+        if (ret != MOSQ_ERR_SUCCESS) {
+            ERR("mosquitto_lib_init() Fail(%s)", mosquitto_strerror(ret));
+            break;
+        }
 
-    handle = mosquitto_new(mq_id.c_str(), clear_session_, this);
-    if (!handle) {
-        mosquitto_lib_cleanup();
-        throw std::runtime_error("Failed to mosquitto_new");
-    }
+        handle = mosquitto_new(id.c_str(), clear_session, this);
+        if (handle == nullptr) {
+            ERR("mosquitto_new() Fail");
+            break;
+        }
 
-    ret = mosquitto_int_option(handle, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
+        ret = mosquitto_int_option(handle, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5);
+        if (ret != MOSQ_ERR_SUCCESS) {
+            ERR("mosquitto_int_option() Fail(%s)", mosquitto_strerror(ret));
+            break;
+        }
 
-    mosquitto_message_v5_callback_set(handle, MQTTMessageCallback);
+        mosquitto_message_v5_callback_set(handle, MessageCallback);
+
+        ret = mosquitto_loop_start(handle);
+        if (ret != MOSQ_ERR_SUCCESS) {
+            ERR("mosquitto_loop_start() Fail(%s)", mosquitto_strerror(ret));
+            break;
+        }
+
+        return;
+    } while (0);
+
+    mosquitto_destroy(handle);
+    mosquitto_lib_cleanup();
+    throw std::runtime_error("MQ Constructor Error");
 }
 
-void MQ::MQTTMessageCallback(mosquitto *handle, void *_mq, const mosquitto_message *msg,
+MQ::~MQ(void)
+{
+    int ret;
+    ret = mosquitto_loop_stop(handle, true);
+    if (ret != MOSQ_ERR_SUCCESS)
+        ERR("mosquitto_loop_stop() Fail(%s)", mosquitto_strerror(ret));
+
+    mosquitto_destroy(handle);
+
+    ret = mosquitto_lib_cleanup();
+    if (ret != MOSQ_ERR_SUCCESS)
+        ERR("mosquitto_lib_cleanup() Fail(%s)", mosquitto_strerror(ret));
+}
+
+void MQ::Connect(const std::string &host, int port, const std::string &topic, const void *msg,
+      size_t szmsg, MQ::QoS qos, bool retain)
+{
+    int ret;
+
+    if (topic.empty() == false) {
+        ret = mosquitto_will_set(handle, topic.c_str(), szmsg, msg, qos, retain);
+        if (ret != MOSQ_ERR_SUCCESS) {
+            ERR("mosquitto_will_set(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
+            throw std::runtime_error(mosquitto_strerror(ret));
+        }
+    }
+
+    ret = mosquitto_connect(handle, host.c_str(), port, keep_alive);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_connect(%s, %d) Fail(%s)", host.c_str(), port, mosquitto_strerror(ret));
+        throw std::runtime_error(mosquitto_strerror(ret));
+    }
+}
+
+void MQ::Disconnect(void)
+{
+    int ret = mosquitto_disconnect(handle);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_disconnect() Fail(%s)", mosquitto_strerror(ret));
+        throw std::runtime_error(mosquitto_strerror(ret));
+    }
+
+    mosquitto_will_clear(handle);
+}
+
+void MQ::MessageCallback(mosquitto *handle, void *_mq, const mosquitto_message *msg,
       const mosquitto_property *props)
 {
     RET_IF(_mq == nullptr);
@@ -61,14 +124,7 @@ void MQ::MQTTMessageCallback(mosquitto *handle, void *_mq, const mosquitto_messa
 
     mq->subscriber_iterator = mq->subscribers.begin();
     while (mq->subscriber_iterator != mq->subscribers.end()) {
-        bool result = false;
-        int ret = mosquitto_topic_matches_sub((*mq->subscriber_iterator)->topic.c_str(), msg->topic,
-              &result);
-        if (ret != MOSQ_ERR_SUCCESS) {
-            ERR("Topic comparator error: %s", mosquitto_strerror(ret));
-            return;
-        }
-
+        bool result = CompareTopic((*mq->subscriber_iterator)->topic.c_str(), msg->topic);
         if (result)
             mq->InvokeCallback(msg, props);
 
@@ -134,11 +190,10 @@ void MQ::Publish(const std::string &topic, const void *data, const size_t datale
 {
     int mid = -1;
     int ret = mosquitto_publish(handle, &mid, topic.c_str(), datalen, data, qos, retain);
-    if (ret != MOSQ_ERR_SUCCESS)
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_publish(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
-
-    // TODO:
-    // Use the mId to verify the broker gets our publish message successfully
+    }
 }
 
 void MQ::PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
@@ -150,19 +205,21 @@ void MQ::PublishWithReply(const std::string &topic, const void *data, const size
 
     ret = mosquitto_property_add_string(&props, MQTT_PROP_RESPONSE_TOPIC, reply_topic.c_str());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_property_add_string(response-topic) Fail(%d)", ret);
+        ERR("mosquitto_property_add_string(response-topic) Fail(%s)", mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
     }
 
     ret = mosquitto_property_add_binary(&props, MQTT_PROP_CORRELATION_DATA, correlation.c_str(),
           correlation.size());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_property_add_binary(correlation) Fail(%d)", ret);
+        ERR("mosquitto_property_add_binary(correlation) Fail(%s)", mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
     }
     ret = mosquitto_publish_v5(handle, &mid, topic.c_str(), datalen, data, qos, retain, props);
-    if (ret != MOSQ_ERR_SUCCESS)
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_publish_v5(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
+    }
 }
 
 void MQ::SendReply(MSG *msg, const void *data, const size_t datalen, MQ::QoS qos, bool retain)
@@ -176,63 +233,58 @@ void MQ::SendReply(MSG *msg, const void *data, const size_t datalen, MQ::QoS qos
     ret = mosquitto_property_add_binary(&props, MQTT_PROP_CORRELATION_DATA,
           msg->GetCorrelation().c_str(), msg->GetCorrelation().size());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_property_add_binary(correlation) Fail(%d)", ret);
+        ERR("mosquitto_property_add_binary(correlation) Fail(%s)", mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
     }
 
     ret = mosquitto_property_add_string_pair(&props, MQTT_PROP_USER_PROPERTY,
           REPLY_SEQUENCE_NUM_KEY.c_str(), std::to_string(msg->GetSequence()).c_str());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_property_add_string_pair(squence number) Fail(%d)", ret);
+        ERR("mosquitto_property_add_string_pair(squenceNum) Fail(%s)", mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
     }
 
     ret = mosquitto_property_add_string_pair(&props, MQTT_PROP_USER_PROPERTY,
           REPLY_IS_END_SEQUENCE_KEY.c_str(), std::to_string(msg->IsEndSequence()).c_str());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_property_add_string_pair(is end sequence) Fail(%d)", ret);
+        ERR("mosquitto_property_add_string_pair(IsEndSequence) Fail(%s)", mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
     }
 
     ret = mosquitto_publish_v5(handle, &mId, msg->GetResponseTopic().c_str(), datalen, data, qos,
           retain, props);
-    if (ret != MOSQ_ERR_SUCCESS)
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_publish_v5(%s) Fail(%s)", msg->GetResponseTopic().c_str(),
+              mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
+    }
 }
 
 void *MQ::Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata,
       MQ::QoS qos)
 {
-    std::lock_guard<std::recursive_mutex> auto_lock(subscribers_lock);
+    int mid = -1;
+    int ret = mosquitto_subscribe(handle, &mid, topic.c_str(), qos);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_subscribe(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
+        throw std::runtime_error(mosquitto_strerror(ret));
+    }
+
+    std::lock_guard<std::recursive_mutex> lock_from_here(subscribers_lock);
     SubscribeData *data = new SubscribeData(topic, cb, cbdata);
     subscribers.push_back(data);
 
-    // TODO:
-    // 와일드카드로 토픽을 여러번 subscribe 한 경우,
-    // MessageCallback 이 subscribe 한 횟수만큼 불릴까?
-    // 아니면, 한번만 불릴까?
-
-    int mid = -1;
-    int ret = mosquitto_subscribe(handle, &mid, topic.c_str(), qos);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
-
-    DBG("Subscribe request is sent for %s, %p", topic.c_str(), data);
-    // TODO:
-    // Use the mId to verify the broker gets our unsubsribe request successfully
     return static_cast<void *>(data);
 }
 
 void *MQ::Unsubscribe(void *sub_handle)
 {
-    DBG("Get a lock");
     std::lock_guard<std::recursive_mutex> auto_lock(subscribers_lock);
-    DBG("Got a lock");
     auto it = std::find(subscribers.begin(), subscribers.end(),
           static_cast<SubscribeData *>(sub_handle));
 
     if (it == subscribers.end()) {
-        DBG("Element is not found: %p", reinterpret_cast<SubscribeData *>(sub_handle));
+        ERR("No Subscription(%p)", sub_handle);
         throw std::runtime_error("Element is not found");
     }
 
@@ -251,72 +303,24 @@ void *MQ::Unsubscribe(void *sub_handle)
 
     int mid = -1;
     int ret = mosquitto_unsubscribe(handle, &mid, topic.c_str());
-    if (ret != MOSQ_ERR_SUCCESS)
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_unsubscribe(%s) Fail(%d)", topic.c_str(), ret);
         throw std::runtime_error(mosquitto_strerror(ret));
-
-    DBG("Unsubscribe request is sent for %s", topic.c_str());
-    // TODO:
-    // Use the mId to verify the broker gets our publish message successfully
-    return cbdata;
-}
-
-void MQ::Connect(const std::string &host, int port, const std::string &topic, const void *msg,
-      size_t szmsg, MQ::QoS qos, bool retain)
-{
-    int ret;
-
-    if (!topic.empty()) {
-        ret = mosquitto_will_set(handle, topic.c_str(), szmsg, msg, qos, retain);
-        if (ret != MOSQ_ERR_SUCCESS)
-            throw std::runtime_error(mosquitto_strerror(ret));
     }
 
-    ret = mosquitto_connect(handle, host.c_str(), port, keep_alive);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
-}
-
-void MQ::Disconnect(void)
-{
-    int ret = mosquitto_disconnect(handle);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
-
-    mosquitto_will_clear(handle);
-}
-
-void MQ::Start(void)
-{
-    int ret = mosquitto_loop_start(handle);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
-}
-
-void MQ::Stop(bool force)
-{
-    int ret = mosquitto_loop_stop(handle, force);
-    if (ret != MOSQ_ERR_SUCCESS)
-        throw std::runtime_error(mosquitto_strerror(ret));
+    return cbdata;
 }
 
 bool MQ::CompareTopic(const std::string &left, const std::string &right)
 {
     bool result = false;
     int ret = mosquitto_topic_matches_sub(left.c_str(), right.c_str(), &result);
-    if (ret != MOSQ_ERR_SUCCESS)
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_topic_matches_sub(%s, %s) Fail(%s)", left.c_str(), right.c_str(),
+              mosquitto_strerror(ret));
         throw std::runtime_error(mosquitto_strerror(ret));
+    }
     return result;
-}
-
-MQ::~MQ(void)
-{
-    mosquitto_destroy(handle);
-
-    int ret = mosquitto_lib_cleanup();
-
-    // Fallthrough to the end of a program
-    if (ret != MOSQ_ERR_SUCCESS)
-        ERR("Failed to cleanup the mqtt library (%s)", mosquitto_strerror(ret));
 }
 
 inline MQ::SubscribeData::SubscribeData(const std::string topic, const SubscribeCallback &cb,

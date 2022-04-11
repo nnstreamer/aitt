@@ -22,7 +22,7 @@
 
 TEST(AITT_C_INTERFACE, new_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test1");
     EXPECT_TRUE(handle != nullptr);
 
     aitt_destroy(handle);
@@ -39,7 +39,7 @@ TEST(AITT_C_INTERFACE, new_P_Anytime)
 
 TEST(AITT_C_INTERFACE, destroy_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test2");
     ASSERT_NE(handle, nullptr);
 
     aitt_destroy(handle);
@@ -48,7 +48,7 @@ TEST(AITT_C_INTERFACE, destroy_P_Anytime)
 
 TEST(AITT_C_INTERFACE, option_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test3");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_set_option(handle, AITT_OPT_MY_IP, LOCAL_IP);
@@ -64,7 +64,7 @@ TEST(AITT_C_INTERFACE, option_P_Anytime)
 
 TEST(AITT_C_INTERFACE, option_N_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test4");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_set_option(handle, AITT_OPT_UNKNOWN, LOCAL_IP);
@@ -78,7 +78,7 @@ TEST(AITT_C_INTERFACE, option_N_Anytime)
 
 TEST(AITT_C_INTERFACE, connect_disconnect_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test5");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, LOCAL_IP, 1883);
@@ -92,7 +92,7 @@ TEST(AITT_C_INTERFACE, connect_disconnect_P_Anytime)
 
 TEST(AITT_C_INTERFACE, connect_N_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test6");
     ASSERT_NE(handle, nullptr);
 
     aitt_h invalid_handle = nullptr;
@@ -119,7 +119,7 @@ TEST(AITT_C_INTERFACE, disconnect_N_Anytime)
     int ret = aitt_disconnect(nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test7");
     ASSERT_NE(handle, nullptr);
 
     ret = aitt_disconnect(handle);
@@ -132,7 +132,7 @@ TEST(AITT_C_INTERFACE, disconnect_N_Anytime)
 #define test_topic "test/topic_1"
 TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test8");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, LOCAL_IP, 1883);
@@ -167,7 +167,7 @@ TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_N_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test9");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, nullptr, 1883);
@@ -190,7 +190,7 @@ TEST(AITT_C_INTERFACE, pub_N_Anytime)
 
 TEST(AITT_C_INTERFACE, sub_N_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test10");
     aitt_sub_h sub_handle = nullptr;
     ASSERT_NE(handle, nullptr);
 
@@ -222,7 +222,7 @@ TEST(AITT_C_INTERFACE, sub_N_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test11");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, LOCAL_IP, 1883);
@@ -263,7 +263,7 @@ TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test12");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, LOCAL_IP, 1883);
@@ -293,7 +293,7 @@ TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 
 TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
 {
-    aitt_h handle = aitt_new("test");
+    aitt_h handle = aitt_new("test13");
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect(handle, LOCAL_IP, 1883);

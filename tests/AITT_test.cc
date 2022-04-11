@@ -409,7 +409,7 @@ TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime)
 
         IterateEventLoop();
 
-        aitt.Publish(testTopic, nullptr, 0, AITT_TYPE_MQTT, AITT::QoS::AT_MOST_ONCE, true);
+        aitt.Publish(testTopic, nullptr, 0, AITT_TYPE_MQTT, AITT::QoS::AT_LEAST_ONCE, true);
 
         ASSERT_TRUE(ready);
     } catch (std::exception &e) {
@@ -460,6 +460,7 @@ TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
 
             IterateEventLoop();
         }
+        DBG("aitt1 client Finish");
 
         // Here, It's automatically checked Unexpected callback(szmsg = 0)
         // when publisher is disconnected.
@@ -476,6 +477,7 @@ TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
 
         ASSERT_TRUE(ready);
 
+        aitt_retry.Publish("test/stress1", nullptr, 0, AITT_TYPE_TCP, AITT::QoS::AT_LEAST_ONCE);
         // Check auto release of aitt. It sould be no Segmentation fault
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();

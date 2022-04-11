@@ -92,8 +92,13 @@ API void aitt_destroy(aitt_h handle)
         ERR("handle is NULL");
         return;
     }
-    delete handle->aitt;
-    delete handle;
+
+    try {
+        delete handle->aitt;
+        delete handle;
+    } catch (std::exception &e) {
+        ERR("delete() Fail(%s)", e.what());
+    }
 }
 
 static bool is_valid_ip(const char *ip)

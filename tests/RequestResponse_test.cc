@@ -107,12 +107,14 @@ class AITTRRTest : public testing::Test {
         using namespace std::placeholders;
         for (int i = 0; i < 2; i++) {
             if ((i == 0 && first_sync) || (i == 1 && second_sync)) {
+                INFO("PublishWithReplySync() Call");
                 aitt.PublishWithReplySync(rr_topic.c_str(), message.c_str(), message.size(),
                       AITT_TYPE_MQTT, AITT::AT_MOST_ONCE, false,
                       std::bind(&AITTRRTest::CheckReplyCallback, this, (i == 1), &reply_ok[i],
                             _1, _2, _3, _4),
                       nullptr, correlation);
             } else {
+                INFO("PublishWithReply() Call");
                 aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(),
                       AITT_TYPE_MQTT, AITT::AT_MOST_ONCE, false,
                       std::bind(&AITTRRTest::CheckReplyCallback, this, (i == 1), &reply_ok[i],
@@ -135,7 +137,11 @@ class AITTRRTest : public testing::Test {
         sub_ok = reply1_ok = reply2_ok = false;
 
         AITT sub_aitt(clientId + "sub", MY_IP, true);
+        INFO("Constructor Success");
+
         sub_aitt.Connect();
+        INFO("Connected");
+
         sub_aitt.Subscribe(rr_topic.c_str(),
               [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
@@ -183,7 +189,6 @@ class AITTRRTest : public testing::Test {
     bool ready;
     GMainLoop *mainLoop;
     std::string clientId;
-    std::string testTopic;
     const std::string rr_topic = "test/rr_topic";
     const std::string message = "Hello world";
     const std::string correlation = "0001";
@@ -386,6 +391,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
         sub_aitt.Connect();
         sub_aitt.Subscribe(rr_topic.c_str(),
               [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+                  INFO("Subscribe Callback is called");
                   CheckSubscribe(msg, data, datalen);
                   sub_aitt.SendReply(msg, reply.c_str(), reply.size(), false);
                   sub_ok = true;
@@ -398,6 +404,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
               rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT, AITT::AT_MOST_ONCE,
               false,
               [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+                  INFO("Reply Callback is called");
                   static int invalid = 0;
                   if (invalid)
                       FAIL() << "Should not be called";
@@ -405,10 +412,9 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
                       reply_ok = true;
                   invalid++;
               },
-              nullptr, correlation, 1000);
+              nullptr, correlation, 500);
 
-        EXPECT_TRUE(sub_ok);
-        EXPECT_TRUE(reply_ok);
+        EXPECT_TRUE(sub_ok == reply_ok);
         EXPECT_EQ(ret, AITT_ERROR_TIMED_OUT);
     } catch (std::exception &e) {
         FAIL() << e.what();

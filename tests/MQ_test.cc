@@ -36,12 +36,14 @@ using ::testing::Return;
 TEST_F(MQTTTest, Negative_Create_lib_init_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_NOT_SUPPORTED));
+    EXPECT_CALL(GetMock(), mosquitto_destroy(nullptr)).WillOnce(Return());
+    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MQ mq(TEST_CLIENT_ID, true);
         FAIL() << "lib_init must be failed";
     } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), mosquitto_strerror(MOSQ_ERR_NOT_SUPPORTED));
+        ASSERT_STREQ(e.what(), "MQ Constructor Error");
     }
 }
 
@@ -50,13 +52,14 @@ TEST_F(MQTTTest, Negative_Create_new_Anytime)
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(nullptr));
+    EXPECT_CALL(GetMock(), mosquitto_destroy(nullptr)).Times(1);
     EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MQ mq(TEST_CLIENT_ID, true);
         FAIL() << "lib_init must be failed";
     } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), "Failed to mosquitto_new");
+        ASSERT_STREQ(e.what(), "MQ Constructor Error");
     }
 }
 
@@ -77,7 +80,6 @@ TEST_F(MQTTTest, Positive_Publish_Anytime)
 
     try {
         aitt::MQ mq(TEST_CLIENT_ID, true);
-        mq.Start();
         mq.Connect(TEST_HOST, TEST_PORT);
         mq.Publish(TEST_TOPIC, TEST_PAYLOAD, sizeof(TEST_PAYLOAD));
     } catch (std::exception &e) {
@@ -102,7 +104,6 @@ TEST_F(MQTTTest, Positive_Subscribe_Anytime)
 
     try {
         aitt::MQ mq(TEST_CLIENT_ID, true);
-        mq.Start();
         mq.Connect(TEST_HOST, TEST_PORT);
         mq.Subscribe(
               TEST_TOPIC,
@@ -134,7 +135,6 @@ TEST_F(MQTTTest, Positive_Unsubscribe_Anytime)
 
     try {
         aitt::MQ mq(TEST_CLIENT_ID, true);
-        mq.Start();
         mq.Connect(TEST_HOST, TEST_PORT);
         void *handle = mq.Subscribe(
               TEST_TOPIC,
@@ -152,6 +152,9 @@ TEST_F(MQTTTest, Positive_Create_Anytime)
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
+    EXPECT_CALL(GetMock(),
+          mosquitto_int_option(TEST_HANDLE, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5))
+          .Times(1);
     EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
     EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
     EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
@@ -217,44 +220,5 @@ TEST_F(MQTTTest, Positive_Disconnect_Anytime)
         mq.Disconnect();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
-    }
-}
-
-TEST_F(MQTTTest, Negative_Start_invalid_Anytime)
-{
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
-          .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_INVAL));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-
-    try {
-        aitt::MQ mq(TEST_CLIENT_ID, true);
-        mq.Start();
-        FAIL() << "Start() must be failed";
-    } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), mosquitto_strerror(MOSQ_ERR_INVAL));
-    }
-}
-
-TEST_F(MQTTTest, Negative_Stop_invalid_Anytime)
-{
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
-          .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_loop_stop(TEST_HANDLE, false))
-          .WillOnce(Return(MOSQ_ERR_INVAL));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-
-    try {
-        aitt::MQ mq(TEST_CLIENT_ID, true);
-        mq.Stop();
-        FAIL() << "Stop() must be failed";
-    } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), mosquitto_strerror(MOSQ_ERR_INVAL));
     }
 }
