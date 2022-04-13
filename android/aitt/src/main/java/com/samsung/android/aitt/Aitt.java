@@ -137,15 +137,15 @@ public class Aitt implements AutoCloseable {
 
     public void publish(String topic, byte[] message) {
         EnumSet<Protocol> protocolSet = EnumSet.of(Protocol.MQTT);
-        publish(topic, message, protocolSet, QoS.AT_MOST_ONCE);
+        publish(topic, message, protocolSet, QoS.AT_MOST_ONCE, false);
     }
 
-    public void publish(String topic, byte[] message, Protocol protocol, QoS qos) {
+    public void publish(String topic, byte[] message, Protocol protocol, QoS qos, boolean retain) {
         EnumSet<Protocol> protocolSet = EnumSet.of(protocol);
-        publish(topic, message, protocolSet, qos);
+        publish(topic, message, protocolSet, qos, retain);
     }
 
-    public void publish(String topic, byte[] message, EnumSet<Protocol> protocols, QoS qos) {
+    public void publish(String topic, byte[] message, EnumSet<Protocol> protocols, QoS qos, boolean retain) {
         if (topic == null || topic.isEmpty()) {
             throw new IllegalArgumentException("Invalid topic");
         }
@@ -182,7 +182,7 @@ public class Aitt implements AutoCloseable {
                             }
                         } else {
                             int proto = protocolsToInt(protocols);
-                            publishJNI(instance, topic, message, message.length, proto, qos.ordinal(), false);
+                            publishJNI(instance, topic, message, message.length, proto, qos.ordinal(), retain);
                         }
                     }
                 }

@@ -103,7 +103,7 @@ public class AittUnitTest {
       aitt.connect(brokerIp, port);
 
       byte[] payload = message.getBytes();
-      aitt.publish(topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
+      aitt.publish(topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false);
       aitt.close();
    }
 
@@ -126,7 +126,7 @@ public class AittUnitTest {
       aitt.connect(brokerIp, port);
 
       byte[] payload = message.getBytes();
-      aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
+      aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
       aitt.close();
    }
 
@@ -138,7 +138,7 @@ public class AittUnitTest {
 
       byte[] payload = message.getBytes();
       EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
-      aitt.publish(topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE);
+      aitt.publish(topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false);
       aitt.close();
    }
 
