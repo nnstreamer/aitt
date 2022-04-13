@@ -17,7 +17,7 @@
 
 AittNativeInterface::CallbackContext AittNativeInterface::cbContext = {
         .jvm = nullptr,
-        .discoveryCallbackMethodID = nullptr,
+        .messageCallbackMethodID = nullptr,
 };
 
 AittNativeInterface::AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession)
@@ -175,6 +175,13 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
                         return;
                     }
                     if (env != nullptr && instance->cbObject != nullptr) {
+                        jstring _topic = env->NewStringUTF(handle->GetTopic().c_str());
+                        if (env->ExceptionCheck() == true) {
+                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
+                            cbContext.jvm->DetachCurrentThread();
+                            return;
+                        }
+
                         jbyteArray array = env->NewByteArray(szmsg);
                         auto _msg = reinterpret_cast<unsigned char *>(const_cast<void *>(msg));
                         env->SetByteArrayRegion(array, 0, szmsg, reinterpret_cast<jbyte *>(_msg));
@@ -184,7 +191,7 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
                             return;
                         }
 
-                        env->CallVoidMethod(instance->cbObject, cbContext.discoveryCallbackMethodID, array);
+                        env->CallVoidMethod(instance->cbObject, cbContext.messageCallbackMethodID, _topic, array);
                         if (env->ExceptionCheck() == true) {
                             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
                             cbContext.jvm->DetachCurrentThread();
@@ -256,8 +263,8 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *en
         instance->cbObject = env->NewGlobalRef(jniInterfaceObject);
 
         jclass callbackClass = env->FindClass("com/samsung/android/aitt/Aitt");
-        cbContext.discoveryCallbackMethodID = env->GetMethodID(callbackClass, "discoveryMessageCallback",
-                                                               "([B)V");
+        cbContext.messageCallbackMethodID = env->GetMethodID(callbackClass, "messageCallback",
+                                                               "(Ljava/lang/String;[B)V");
         env->DeleteLocalRef(callbackClass);
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());

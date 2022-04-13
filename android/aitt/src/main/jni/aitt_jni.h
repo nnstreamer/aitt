@@ -29,7 +29,7 @@ class AittNativeInterface {
     private:
         struct CallbackContext {
             JavaVM *jvm;
-            jmethodID discoveryCallbackMethodID;
+            jmethodID messageCallbackMethodID;
         };
 
     private:

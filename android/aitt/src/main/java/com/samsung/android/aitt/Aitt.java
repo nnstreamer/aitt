@@ -316,6 +316,16 @@ public class Aitt implements AutoCloseable {
         }
     }
 
+    private void messageCallback(String topic, byte[] payload) {
+        if (topic.compareTo(JAVA_SPECIFIC_DISCOVERY_TOPIC) == 0) {
+            discoveryMessageCallback(payload);
+        } else {
+            AittMessage message = new AittMessage(payload);
+            message.setTopic(topic);
+            messageReceived(message);
+        }
+    }
+
     private void discoveryMessageCallback(byte[] payload) {
         /*
            Flexbuffer discovery message expected
@@ -407,7 +417,6 @@ public class Aitt implements AutoCloseable {
         }
     }
 
-    // Method to be called when a new message arrives
     private void messageReceived(AittMessage message) {
         try {
 
