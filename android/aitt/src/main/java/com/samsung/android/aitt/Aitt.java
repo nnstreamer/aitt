@@ -132,6 +132,8 @@ public class Aitt implements AutoCloseable {
     }
 
     public void disconnect() {
+        publishJNI(instance, JAVA_SPECIFIC_DISCOVERY_TOPIC, new byte[0], 0, Protocol.MQTT.getValue(), QoS.AT_LEAST_ONCE.ordinal(), true);
+
         disconnectJNI(instance);
     }
 
