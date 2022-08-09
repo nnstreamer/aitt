@@ -1,0 +1,30 @@
+Source: aitt
+Section: libs
+Priority: optional
+Maintainer: Semun Lee <semun.lee@samsung.com>
+Build-Depends: gcc-9 | gcc-8 | gcc-7 | gcc-6 | gcc-5 (>=5.4),
+ cmake, debhelper (>=9), libmosquitto-dev, lcov, libgmock-dev, libflatbuffers-dev, libglib2.0-dev
+Standards-Version: 0.0.1
+
+Package: aitt
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: AI Telemetry Transport based on MQTT
+ AITT is a Framework which transfers data of AI service.
+ It makes distributed AI Inference possible.
+
+Package: aitt-plugins
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Plugin Libraries for AITT P2P transport
+ The aitt-plugins package contains basic plugin libraries for AITT P2P transport.
+
+Package: aitt-dev
+Architecture: any
+Multi-Arch: same
+Depends: aitt
+Description: AITT development package
+ The aitt-dev package contains libraries and header files for
+ developing programs that use %{name}

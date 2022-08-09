@@ -1,0 +1,71 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+ROOT_DIR:=$(shell pwd)
+export DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+export DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+export BUILDDIR=build
+export AITT_SOURCE_ROOT_PATH=$(ROOT_DIR)
+export AITT_BUILD_ROOT_PATH=${AITT_SOURCE_ROOT_PATH}/${BUILDDIR}
+export COMMIT_ID=$(shell git rev-parse --short HEAD)
+
+export TEST ?= 1
+export COVERAGE ?= 0
+
+%:
+	dh $@ --parallel --buildsystem=cmake
+
+.PHONY: override_dh_auto_clean
+override_dh_auto_clean:
+	rm -rf ${AITT_BUILD_ROOT_PATH}
+
+.PHONY: override_dh_auto_configure
+override_dh_auto_configure:
+	mkdir -p ${AITT_BUILD_ROOT_PATH}; \
+	cd ${AITT_BUILD_ROOT_PATH}; \
+	cmake .. \
+	    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+	    -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF \
+	    -DBUILD_TESTING:BOOL=${TEST} \
+	    -DCOVERAGE_TEST:BOOL=${COVERAGE}; \
+	cd -
+
+.PHONY: override_dh_auto_build
+override_dh_auto_build:
+	make -C ${AITT_BUILD_ROOT_PATH}
+
+.PHONY: override_dh_shlibdeps
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+
+.PHONY: override_dh_auto_test
+override_dh_auto_test:
+	cd ${AITT_BUILD_ROOT_PATH}; \
+	ctest --output-on-failure --timeout 100
+
+	if [ ${TEST} -ne 0 -a ${COVERAGE} -ne 0 ]; then \
+		lcov -c --ignore-errors graph --no-external -b . -d . -o aitt_gcov.info; \
+		genhtml aitt_gcov.info -o out --legend --show-details; \
+	fi
+.PHONY: override_dh_link
+override_dh_link:
+
+.PHONY: override_dh_auto_install
+override_dh_auto_install:
+	DESTDIR=$(CURDIR)/debian/tmp make -C ${AITT_BUILD_ROOT_PATH} install
+
+.PHONY: override_dh_install
+override_dh_install:
+	dh_install --sourcedir=debian/tmp
+	dh_missing --fail-missing

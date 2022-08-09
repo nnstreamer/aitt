@@ -1,0 +1,164 @@
+plugins {
+    id 'com.android.library'
+    id "de.undercouch.download" version "5.0.1"
+}
+
+def thirdPartyDir = new File ("${rootProject.projectDir}/third_party")
+
+def flatbuffersDir = new File("${thirdPartyDir}/flatbuffers-2.0.0")
+def mosquittoDir = new File("${thirdPartyDir}/mosquitto-2.0.14")
+
+android {
+    compileSdkVersion 31
+    ndkVersion "21.3.6528147"
+    defaultConfig {
+        minSdkVersion 28
+        targetSdkVersion 31
+        versionCode 1
+        versionName '1.0'
+        project.archivesBaseName = "aitt"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            cmake {
+                arguments '-DLOG_STDOUT=ON'
+                arguments '-DCMAKE_VERBOSE_MAKEFILE=1'
+                arguments '-DCMAKE_INSTALL_PREFIX:PATH=/usr'
+                arguments '-DANDROID_STL=c++_shared'
+                arguments "-DANDROID_NDK_HOME=${System.env.ANDROID_NDK_ROOT}"
+                arguments "-DGSTREAMER_ROOT_ANDROID=${System.env.GSTREAMER_ROOT_ANDROID}"
+                arguments '-DBUILD_TESTING=OFF'
+                arguments '-DUSE_PREBUILT=OFF'
+                arguments '-DVERSIONING=OFF'
+                arguments '-DPLATFORM=android'
+                arguments '-DCOVERAGE=OFF'
+                abiFilters 'arm64-v8a', 'x86'
+                cppFlags "-std=c++17"
+                targets "aitt-android", "aitt-transport-tcp"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('./CMakeLists.txt')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        pickFirst 'lib/armeabi-v7a/libaitt.so'
+    }
+    libraryVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "${archivesBaseName}-${defaultConfig.versionName}.aar"
+        }
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            jacoco {
+                includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
+            }
+        }
+    }
+}
+
+dependencies {
+    compileOnly project(":android:flatbuffers")
+    compileOnly project(":android:mosquitto")
+
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.flatbuffers:flatbuffers-java:2.0.0'
+    implementation fileTree(include: ['*.jar'], dir: 'modules/webrtc')
+    implementation project(path: ':android:modules:webrtc')
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:2.25.0'
+    testImplementation 'org.powermock:powermock-core:2.0.0-beta.5'
+    testImplementation 'org.powermock:powermock-module-junit4:2.0.0-beta.5'
+    testImplementation 'org.powermock:powermock-api-mockito2:2.0.0-beta.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}
+
+task downloadFlatBuffers(type: Download) {
+    doFirst {
+        println("Downloading FlatBuffers")
+    }
+    src "https://github.com/google/flatbuffers/archive/refs/tags/v2.0.0.zip"
+    dest new File(thirdPartyDir, "flatbuffers.zip")
+    onlyIfModified true
+}
+
+task unzipFlatBuffers(type: Copy, dependsOn: downloadFlatBuffers) {
+    doFirst {
+        println("Unzipping FlatBuffers")
+    }
+    from zipTree(downloadFlatBuffers.dest)
+    into thirdPartyDir
+    onlyIf { !flatbuffersDir.exists() }
+}
+
+task downloadMosquitto(type: Download) {
+    doFirst {
+        println("Downloading Mosquitto")
+    }
+    src "https://github.com/eclipse/mosquitto/archive/refs/tags/v2.0.14.zip"
+    dest new File(thirdPartyDir, "mosquitto-2.0.14.zip")
+    onlyIfModified true
+}
+
+task unzipMosquitto(type: Copy, dependsOn: downloadMosquitto) {
+    doFirst {
+        println("Unzipping Mosquitto")
+    }
+    from zipTree(downloadMosquitto.dest)
+    into thirdPartyDir
+    onlyIf { !mosquittoDir.exists() }
+}
+
+preBuild.dependsOn(unzipFlatBuffers)
+preBuild.dependsOn(unzipMosquitto)
+preBuild.dependsOn ":android:flatbuffers:build"
+preBuild.dependsOn ":android:mosquitto:build"
+
+apply plugin: 'jacoco'
+
+task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
+
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+
+    def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*']
+    def debugTree = fileTree(dir : "${buildDir}/intermediates/javac/debugUnitTest", excludes: fileFilter)
+
+    def mainSrc = "${project.projectDir}/src/main/java"
+
+    getSourceDirectories().setFrom(files([mainSrc]))
+    getClassDirectories().setFrom(files([debugTree]))
+    getExecutionData().setFrom(fileTree(dir: "$buildDir", includes: [
+            "jacoco/testDebugUnitTest.exec",
+            "outputs/code-coverage/connected/*coverage.ec"
+    ]))
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.1'
+}
+
+build.dependsOn jacocoTestReport

@@ -1,0 +1,4 @@
+include ':aitt'
+include ':flatbuffers'
+include ':mosquitto'
+include ':modules:webrtc'
