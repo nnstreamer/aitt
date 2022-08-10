@@ -68,6 +68,9 @@ TEST_F(MQMockTest, Positive_Publish_Anytime)
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
+    EXPECT_CALL(GetMock(),
+          mosquitto_int_option(TEST_HANDLE, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5))
+          .WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
     EXPECT_CALL(GetMock(), mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))

@@ -18,11 +18,8 @@
 #include <mosquitto.h>
 
 #include <functional>
-#include <map>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <utility>
 #include <vector>
 
 #include "MSG.h"
@@ -72,11 +69,9 @@ class MQ {
     static void MessageCallback(mosquitto *, void *, const mosquitto_message *,
           const mosquitto_property *);
     void InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props);
-    void SetConnectionCallbackReal(bool is_set);
 
     static const std::string REPLY_SEQUENCE_NUM_KEY;
     static const std::string REPLY_IS_END_SEQUENCE_KEY;
-    thread_local static bool in_callback;
 
     mosquitto *handle;
     const int keep_alive;
@@ -87,7 +82,6 @@ class MQ {
     bool subscriber_iterator_updated;
     std::recursive_mutex callback_lock;
     MQConnectionCallback connect_cb;
-    std::thread mq_connect_thread;
 };
 
 }  // namespace aitt

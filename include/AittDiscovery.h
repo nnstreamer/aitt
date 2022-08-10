@@ -15,6 +15,9 @@
  */
 #pragma once
 
+#include <map>
+#include <memory>
+
 #include "MQ.h"
 
 namespace aitt {

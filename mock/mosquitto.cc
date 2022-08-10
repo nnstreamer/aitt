@@ -37,7 +37,7 @@ struct mosquitto *mosquitto_new(const char *id, bool clean_session, void *obj)
     return MQMockTest::GetMock().mosquitto_new(id, clean_session, obj);
 }
 
-int mosquitto_int_option(struct mosquitto *mosq, int option, int value)
+int mosquitto_int_option(struct mosquitto *mosq, enum mosq_opt_t option, int value)
 {
     return MQMockTest::GetMock().mosquitto_int_option(mosq, option, value);
 }
@@ -105,6 +105,18 @@ void mosquitto_message_v5_callback_set(struct mosquitto *mosq,
             const struct mqtt5__property *))
 {
     return MQMockTest::GetMock().mosquitto_message_v5_callback_set(mosq, on_message);
+}
+
+void mosquitto_connect_v5_callback_set(struct mosquitto *mosq,
+      void (*on_connect)(struct mosquitto *, void *, int, int, const mosquitto_property *))
+{
+    return MQMockTest::GetMock().mosquitto_connect_v5_callback_set(mosq, on_connect);
+}
+
+void mosquitto_disconnect_v5_callback_set(struct mosquitto *mosq,
+      void (*on_disconnect)(struct mosquitto *, void *, int, const mosquitto_property *))
+{
+    return MQMockTest::GetMock().mosquitto_disconnect_v5_callback_set(mosq, on_disconnect);
 }
 
 }  // extern "C"

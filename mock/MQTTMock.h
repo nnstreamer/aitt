@@ -16,6 +16,7 @@
 #pragma once
 
 #include <gmock/gmock.h>
+#include <mosquitto.h>
 
 class MQTTMock {
   public:
@@ -25,7 +26,8 @@ class MQTTMock {
     MOCK_METHOD0(mosquitto_lib_init, int(void));
     MOCK_METHOD0(mosquitto_lib_cleanup, int(void));
     MOCK_METHOD3(mosquitto_new, struct mosquitto *(const char *id, bool clean_session, void *obj));
-    MOCK_METHOD3(mosquitto_int_option, int(struct mosquitto *mosq, int option, int value));
+    MOCK_METHOD3(mosquitto_int_option,
+          int(struct mosquitto *mosq, enum mosq_opt_t option, int value));
     MOCK_METHOD1(mosquitto_destroy, void(struct mosquitto *mosq));
     MOCK_METHOD3(mosquitto_username_pw_set,
           int(struct mosquitto *mosq, const char *username, const char *password));
@@ -47,4 +49,10 @@ class MQTTMock {
           void(struct mosquitto *mosq,
                 void (*on_message)(struct mosquitto *, void *, const struct mosquitto_message *,
                       const struct mqtt5__property *)));
+    MOCK_METHOD2(mosquitto_connect_v5_callback_set,
+          void(struct mosquitto *mosq, void (*on_connect)(struct mosquitto *, void *, int, int,
+                                             const mosquitto_property *)));
+    MOCK_METHOD2(mosquitto_disconnect_v5_callback_set,
+          void(struct mosquitto *mosq, void (*on_disconnect)(struct mosquitto *, void *, int,
+                                             const mosquitto_property *)));
 };
