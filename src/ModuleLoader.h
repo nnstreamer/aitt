@@ -23,27 +23,31 @@
 #include <mutex>
 #include <string>
 
-#include "TransportModuleLoader.h"
+#include "ModuleLoader.h"
 
 namespace aitt {
 
-class TransportModuleLoader {
+class ModuleLoader {
   public:
-    explicit TransportModuleLoader(const std::string &ip);
-    virtual ~TransportModuleLoader() = default;
+    enum Type {
+        TYPE_MQTT = 0,
+        TYPE_TCP,
+        TYPE_WEBRTC,
+        TYPE_RTSP,
+        TYPE_MAX,
+    };
 
-    void Init(AittDiscovery &discovery);
-    std::shared_ptr<AittTransport> GetInstance(AittProtocol protocol);
+    using ModuleHandle = std::unique_ptr<void, void (*)(const void *)>;
+
+    explicit ModuleLoader(const std::string &ip);
+    virtual ~ModuleLoader() = default;
+
+    ModuleHandle OpenModule(Type type);
+    std::shared_ptr<AittTransport> LoadTransport(void *handle, AittDiscovery &discovery);
 
   private:
-    using Handler = std::unique_ptr<void, void (*)(const void *)>;
-    using ModuleMap = std::map<AittProtocol, std::pair<Handler, std::shared_ptr<AittTransport>>>;
+    std::string GetModuleFilename(Type type);
 
-    std::string GetModuleFilename(AittProtocol protocol);
-    int LoadModule(AittProtocol protocol, AittDiscovery &discovery);
-
-    ModuleMap module_table;
-    std::mutex module_lock;
     std::string ip;
 };
 

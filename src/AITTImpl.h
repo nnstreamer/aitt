@@ -28,7 +28,7 @@
 #include "AittDiscovery.h"
 #include "MQ.h"
 #include "MainLoopHandler.h"
-#include "TransportModuleLoader.h"
+#include "ModuleLoader.h"
 
 namespace aitt {
 
@@ -68,6 +68,7 @@ class AITT::Impl {
   private:
     using Blob = std::pair<const void *, int>;
     using SubscribeInfo = std::pair<AittProtocol, void *>;
+    using ModuleObj = std::pair<ModuleLoader::ModuleHandle, std::shared_ptr<AittTransport>>;
 
     void ConnectionCB(ConnectionCallback cb, void *user_data, int status);
     AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
@@ -84,6 +85,7 @@ class AITT::Impl {
     void PublishWebRtc(const std::string &topic, const void *data, const size_t datalen,
           AittQoS qos, bool retain);
     void UnsubscribeAll();
+    std::shared_ptr<AittTransport> GetTransport(ModuleLoader::Type type);
 
     AITT &public_api;
     std::string id_;
@@ -92,7 +94,7 @@ class AITT::Impl {
     MQ mq;
     AittDiscovery discovery;
     unsigned short reply_id;
-    TransportModuleLoader modules;
+    ModuleObj *modules[ModuleLoader::TYPE_MAX];
     MainLoopHandler main_loop;
     void ThreadMain(void);
     std::thread aittThread;

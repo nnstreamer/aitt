@@ -31,16 +31,20 @@
 namespace aitt {
 
 AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &ipAddr, bool clearSession)
-      : public_api(parent),
-        id_(id),
-        mq(id, clearSession),
-        discovery(id),
-        reply_id(0),
-        modules(ipAddr)
+      : public_api(parent), id_(id), mq(id, clearSession), discovery(id), reply_id(0)
 {
     // TODO:
     // Validate ipAddr
+    ModuleLoader loader(ipAddr);
+    for (ModuleLoader::Type i = ModuleLoader::TYPE_MQTT; i < ModuleLoader::TYPE_MAX;
+          i = ModuleLoader::Type(i + 1)) {
+        ModuleLoader::ModuleHandle handle = loader.OpenModule(i);
+        if (handle == nullptr)
+            ERR("OpenModule() Fail");
 
+        modules[i] =
+              new ModuleObj(std::move(handle), loader.LoadTransport(handle.get(), discovery));
+    }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
 
@@ -56,6 +60,11 @@ AITT::Impl::~Impl(void)
 
     if (aittThread.joinable())
         aittThread.join();
+
+    for (ModuleLoader::Type i = ModuleLoader::TYPE_MQTT; i < ModuleLoader::TYPE_MAX;
+          i = ModuleLoader::Type(i + 1)) {
+        delete modules[i];
+    }
 }
 
 void AITT::Impl::ThreadMain(void)
@@ -89,8 +98,6 @@ void AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status
 void AITT::Impl::Connect(const std::string &host, int port, const std::string &username,
       const std::string &password)
 {
-    modules.Init(discovery);
-
     discovery.Start(host, port, username, password);
     mq.Connect(host, port, username, password);
 
@@ -118,10 +125,11 @@ void AITT::Impl::UnsubscribeAll()
         case AITT_TYPE_MQTT:
             mq.Unsubscribe(subscribe_info->second);
             break;
-
         case AITT_TYPE_TCP:
+            GetTransport(ModuleLoader::TYPE_TCP)->Unsubscribe(subscribe_info->second);
+            break;
         case AITT_TYPE_WEBRTC:
-            modules.GetInstance(subscribe_info->first)->Unsubscribe(subscribe_info->second);
+            GetTransport(ModuleLoader::TYPE_WEBRTC)->Unsubscribe(subscribe_info->second);
             break;
 
         default:
@@ -132,6 +140,11 @@ void AITT::Impl::UnsubscribeAll()
         delete subscribe_info;
     }
     subscribed_list.clear();
+}
+
+inline std::shared_ptr<AittTransport> AITT::Impl::GetTransport(ModuleLoader::Type type)
+{
+    return modules[type]->second;
 }
 
 void AITT::Impl::ConfigureTransportModule(const std::string &key, const std::string &value,
@@ -145,21 +158,17 @@ void AITT::Impl::Publish(const std::string &topic, const void *data, const size_
     if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT)
         mq.Publish(topic, data, datalen, qos, retain);
 
-    // NOTE:
-    // Invoke the publish method of the specified transport module
-    if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP) {
-        auto tcpModule = modules.GetInstance(AITT_TYPE_TCP);
-        tcpModule->Publish(topic, data, datalen, qos, retain);
-    }
-    if ((protocols & AITT_TYPE_WEBRTC) == AITT_TYPE_WEBRTC) {
+    if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP)
+        GetTransport(ModuleLoader::TYPE_TCP)->Publish(topic, data, datalen, qos, retain);
+
+    if ((protocols & AITT_TYPE_WEBRTC) == AITT_TYPE_WEBRTC)
         PublishWebRtc(topic, data, datalen, qos, retain);
-    }
 }
 
 void AITT::Impl::PublishWebRtc(const std::string &topic, const void *data, const size_t datalen,
       AittQoS qos, bool retain)
 {
-    auto webrtcModule = modules.GetInstance(AITT_TYPE_WEBRTC);
+    auto webrtcModule = GetTransport(ModuleLoader::TYPE_WEBRTC);
     flexbuffers::Builder fbb;
     fbb.Map([=, &fbb]() {
         fbb.String("Id", id_ + WEBRTC_ID_POSTFIX);
@@ -240,7 +249,7 @@ void AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const siz
 
 void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
 {
-    INFO("[%s] %p", __func__, subscribe_id);
+    INFO("subscribe_id : %p", subscribe_id);
     SubscribeInfo *info = reinterpret_cast<SubscribeInfo *>(subscribe_id);
 
     std::unique_lock<std::mutex> lock(subscribed_list_mutex_);
@@ -258,12 +267,12 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
         user_data = mq.Unsubscribe(found_info->second);
         break;
     case AITT_TYPE_TCP: {
-        auto tcpModule = modules.GetInstance(AITT_TYPE_TCP);
+        auto tcpModule = GetTransport(ModuleLoader::TYPE_TCP);
         user_data = tcpModule->Unsubscribe(found_info->second);
         break;
     }
     case AITT_TYPE_WEBRTC: {
-        auto webrtcModule = modules.GetInstance(AITT_TYPE_WEBRTC);
+        auto webrtcModule = GetTransport(ModuleLoader::TYPE_WEBRTC);
         user_data = webrtcModule->Unsubscribe(found_info->second);
         break;
     }
@@ -390,7 +399,7 @@ void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool e
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    auto tcpModule = modules.GetInstance(AITT_TYPE_TCP);
+    auto tcpModule = GetTransport(ModuleLoader::TYPE_TCP);
     return tcpModule->Subscribe(
           topic,
           [handle, cb](const std::string &topic, const void *data, const size_t datalen,
@@ -409,7 +418,7 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
 void *AITT::Impl::SubscribeWebRtc(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    auto webrtc_module = modules.GetInstance(AITT_TYPE_WEBRTC);
+    auto webrtc_module = GetTransport(ModuleLoader::TYPE_WEBRTC);
     flexbuffers::Builder fbb;
     fbb.Map([=, &fbb]() {
         fbb.String("Id", id_ + WEBRTC_ID_POSTFIX);

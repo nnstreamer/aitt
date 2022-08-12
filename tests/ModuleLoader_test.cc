@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "TransportModuleLoader.h"
+#include "ModuleLoader.h"
 
 #include <AITT.h>
 #include <gtest/gtest.h>
@@ -21,29 +21,34 @@
 #include "AittTransport.h"
 #include "aitt_internal.h"
 
-class TransportModuleLoaderTest : public testing::Test {
+using ModuleLoader = aitt::ModuleLoader;
+
+class ModuleLoaderTest : public testing::Test {
   public:
-    TransportModuleLoaderTest(void) : discovery("test"), loader("127.0.0.1")
-    {
-        loader.Init(discovery);
-    }
+    ModuleLoaderTest(void) : discovery("test"), loader("127.0.0.1") {}
 
   protected:
     void SetUp() override {}
     void TearDown() override {}
 
     aitt::AittDiscovery discovery;
-    aitt::TransportModuleLoader loader;
+    aitt::ModuleLoader loader;
 };
 
-TEST_F(TransportModuleLoaderTest, Positive_GetInstance_Anytime)
+TEST_F(ModuleLoaderTest, Positive_LoadTransport_Anytime)
 {
-    std::shared_ptr<aitt::AittTransport> module = loader.GetInstance(AITT_TYPE_TCP);
+    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TCP);
+    ASSERT_NE(handle, nullptr);
+
+    std::shared_ptr<aitt::AittTransport> module = loader.LoadTransport(handle.get(), discovery);
     ASSERT_NE(module, nullptr);
 }
 
-TEST_F(TransportModuleLoaderTest, Negative_GetInstance_Anytime)
+TEST_F(ModuleLoaderTest, Negative_LoadTransport_Anytime)
 {
-    std::shared_ptr<aitt::AittTransport> module = loader.GetInstance(AITT_TYPE_MQTT);
-    ASSERT_EQ(module, nullptr);
+    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_MQTT);
+    ASSERT_EQ(handle.get(), nullptr);
+
+    auto module = loader.LoadTransport(handle.get(), discovery);
+    ASSERT_NE(module, nullptr);
 }

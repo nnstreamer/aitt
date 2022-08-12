@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <AITTEx.h>
 #include <AittTypes.h>
 #include <MSG.h>
 
