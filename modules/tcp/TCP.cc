@@ -98,7 +98,7 @@ void TCP::SetupOptions(void)
 {
     int on = 1;
 
-    int ret = setsockopt(handle, IPPROTO_IP, TCP_NODELAY, &on, sizeof(on));
+    int ret = setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
     if (ret < 0) {
         ERR_CODE(errno, "delay option setting failed");
     }
