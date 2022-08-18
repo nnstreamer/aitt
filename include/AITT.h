@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include <AITTEx.h>
+#include <AittException.h>
 #include <AittTypes.h>
 #include <MSG.h>
 
@@ -61,10 +61,6 @@ class API AITT {
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const size_t datalen, bool end = true);
-
-    // NOTE:
-    // Provide utility functions to developers who only be able to access the AITT class
-    static bool CompareTopic(const std::string &left, const std::string &right);
 
   private:
     class Impl;

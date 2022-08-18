@@ -30,20 +30,19 @@
 
 namespace aitt {
 
-AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &ipAddr, bool clearSession)
-      : public_api(parent), id_(id), mq(id, clearSession), discovery(id), reply_id(0)
+AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session)
+      : public_api(parent), id_(id), mq(id, clear_session), discovery(id), reply_id(0), modules{0}
 {
-    // TODO:
-    // Validate ipAddr
-    ModuleLoader loader(ipAddr);
-    for (ModuleLoader::Type i = ModuleLoader::TYPE_MQTT; i < ModuleLoader::TYPE_MAX;
+    // TODO: Validate my_ip
+    ModuleLoader loader;
+    for (ModuleLoader::Type i = ModuleLoader::TYPE_TCP; i < ModuleLoader::TYPE_TRANSPORT_MAX;
           i = ModuleLoader::Type(i + 1)) {
         ModuleLoader::ModuleHandle handle = loader.OpenModule(i);
         if (handle == nullptr)
             ERR("OpenModule() Fail");
 
-        modules[i] =
-              new ModuleObj(std::move(handle), loader.LoadTransport(handle.get(), discovery));
+        modules[i] = new ModuleObj(std::move(handle),
+              loader.LoadTransport(handle.get(), my_ip, discovery));
     }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
@@ -61,7 +60,7 @@ AITT::Impl::~Impl(void)
     if (aittThread.joinable())
         aittThread.join();
 
-    for (ModuleLoader::Type i = ModuleLoader::TYPE_MQTT; i < ModuleLoader::TYPE_MAX;
+    for (ModuleLoader::Type i = ModuleLoader::TYPE_TCP; i < ModuleLoader::TYPE_TRANSPORT_MAX;
           i = ModuleLoader::Type(i + 1)) {
         delete modules[i];
     }

@@ -15,34 +15,38 @@
  */
 #pragma once
 
-#include <exception>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <string>
-#include <vector>
+
+#include "AittTransport.h"
+#include "MQ.h"
 
 namespace aitt {
 
-class AITTEx : public std::exception {
+class ModuleLoader {
   public:
-    typedef enum {
-        INVALID_ARG,
-        NO_MEMORY,
-        OPERATION_FAILED,
-        SYSTEM_ERR,
-        MQTT_ERR,
-        NO_DATA
-    } ErrCode;
+    enum Type {
+        TYPE_TCP,
+        TYPE_WEBRTC,
+        TYPE_RTSP,
+        TYPE_TRANSPORT_MAX,
+    };
 
-    AITTEx(ErrCode err_code);
-    AITTEx(ErrCode err_code, const std::string& custom_err_msg);
+    using ModuleHandle = std::unique_ptr<void, void (*)(const void *)>;
 
-    ErrCode getErrCode();
-    virtual const char* what() const throw() override;
+    ModuleLoader() = default;
+    virtual ~ModuleLoader() = default;
+
+    ModuleHandle OpenModule(Type type);
+    std::shared_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
+          AittDiscovery &discovery);
 
   private:
-    ErrCode err_code;
-    std::string err_msg;
+    std::string GetModuleFilename(Type type);
 
-    std::string getErrString() const;
+    std::string ip;
 };
 
 }  // namespace aitt

@@ -23,6 +23,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "TCPServer.h"
 

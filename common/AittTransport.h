@@ -21,6 +21,10 @@
 #include <functional>
 #include <string>
 
+#define AITT_TRANSPORT_NEW aitt_transport_new
+#define TO_STR(s) #s
+#define DEFINE_TO_STR(x) TO_STR(x)
+
 namespace aitt {
 
 class AittTransport {
@@ -29,7 +33,7 @@ class AittTransport {
     using SubscribeCallback = std::function<void(const std::string &topic, const void *msg,
           const size_t szmsg, void *cbdata, const std::string &correlation)>;
 
-    static constexpr const char *const MODULE_ENTRY_NAME = "aitt_module_entry";
+    static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_TRANSPORT_NEW);
 
     explicit AittTransport(AittDiscovery &discovery) : discovery(discovery) {}
     virtual ~AittTransport(void) = default;
@@ -53,3 +57,6 @@ class AittTransport {
 };
 
 }  // namespace aitt
+
+#undef TO_STR
+#undef DEFINE_TO_STR

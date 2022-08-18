@@ -15,26 +15,26 @@
  */
 #include <assert.h>
 
+#include <string>
+
 #include "Module.h"
 #include "aitt_internal_definitions.h"
 
 extern "C" {
 
-// Function name Should be same with aitt::AittTransport::MODULE_ENTRY_NAME
-API void *aitt_module_entry(const char *ip, AittDiscovery &discovery)
+API void *AITT_TRANSPORT_NEW(const char *ip, AittDiscovery &discovery)
 {
-    assert(!strcmp(__func__, aitt::AittTransport::MODULE_ENTRY_NAME)
+    assert(STR_EQ == strcmp(__func__, aitt::AittTransport::MODULE_ENTRY_NAME)
            && "Entry point name is not matched");
 
     std::string ip_address(ip);
     Module *module = new Module(ip_address, discovery);
 
-    AittTransport *tModule = dynamic_cast<AittTransport *>(module);
-    // NOTE:
     // validate that the module creates valid object (which inherits AittTransport)
-    assert(tModule && "Transport Module is not created");
+    AittTransport *transport_module = dynamic_cast<AittTransport *>(module);
+    assert(transport_module && "Transport Module is not created");
 
-    return tModule;
+    return transport_module;
 }
 
 }  // extern "C"

@@ -15,40 +15,34 @@
  */
 #pragma once
 
-#include <AITT.h>
-#include <AittTransport.h>
-
-#include <map>
-#include <memory>
-#include <mutex>
+#include <exception>
 #include <string>
-
-#include "ModuleLoader.h"
+#include <vector>
 
 namespace aitt {
 
-class ModuleLoader {
+class AittException : public std::exception {
   public:
-    enum Type {
-        TYPE_MQTT = 0,
-        TYPE_TCP,
-        TYPE_WEBRTC,
-        TYPE_RTSP,
-        TYPE_MAX,
+    enum ErrCode {
+        INVALID_ARG,
+        NO_MEMORY_ERR,
+        OPERATION_FAILED,
+        SYSTEM_ERR,
+        MQTT_ERR,
+        NO_DATA_ERR,
     };
 
-    using ModuleHandle = std::unique_ptr<void, void (*)(const void *)>;
+    AittException(ErrCode err_code);
+    AittException(ErrCode err_code, const std::string& custom_err_msg);
 
-    explicit ModuleLoader(const std::string &ip);
-    virtual ~ModuleLoader() = default;
-
-    ModuleHandle OpenModule(Type type);
-    std::shared_ptr<AittTransport> LoadTransport(void *handle, AittDiscovery &discovery);
+    ErrCode getErrCode();
+    virtual const char* what() const throw() override;
 
   private:
-    std::string GetModuleFilename(Type type);
+    ErrCode err_code;
+    std::string err_msg;
 
-    std::string ip;
+    std::string getErrString() const;
 };
 
 }  // namespace aitt

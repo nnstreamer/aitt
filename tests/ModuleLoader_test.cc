@@ -20,12 +20,13 @@
 
 #include "AittTransport.h"
 #include "aitt_internal.h"
+#include "aitt_tests.h"
 
 using ModuleLoader = aitt::ModuleLoader;
 
 class ModuleLoaderTest : public testing::Test {
   public:
-    ModuleLoaderTest(void) : discovery("test"), loader("127.0.0.1") {}
+    ModuleLoaderTest(void) : discovery("test") {}
 
   protected:
     void SetUp() override {}
@@ -35,20 +36,21 @@ class ModuleLoaderTest : public testing::Test {
     aitt::ModuleLoader loader;
 };
 
-TEST_F(ModuleLoaderTest, Positive_LoadTransport_Anytime)
+TEST_F(ModuleLoaderTest, LoadTransport_P_Anytime)
 {
     ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TCP);
     ASSERT_NE(handle, nullptr);
 
-    std::shared_ptr<aitt::AittTransport> module = loader.LoadTransport(handle.get(), discovery);
+    std::shared_ptr<aitt::AittTransport> module =
+          loader.LoadTransport(handle.get(), LOCAL_IP, discovery);
     ASSERT_NE(module, nullptr);
 }
 
-TEST_F(ModuleLoaderTest, Negative_LoadTransport_Anytime)
+TEST_F(ModuleLoaderTest, LoadTransport_N_Anytime)
 {
-    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_MQTT);
+    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TRANSPORT_MAX);
     ASSERT_EQ(handle.get(), nullptr);
 
-    auto module = loader.LoadTransport(handle.get(), discovery);
+    auto module = loader.LoadTransport(handle.get(), LOCAL_IP, discovery);
     ASSERT_NE(module, nullptr);
 }

@@ -129,9 +129,5 @@ void AITT::SendReply(MSG *msg, const void *data, size_t datalen, bool end)
     return pImpl->SendReply(msg, data, datalen, end);
 }
 
-bool AITT::CompareTopic(const std::string &left, const std::string &right)
-{
-    return MQ::CompareTopic(left, right);
-}
 
 }  // namespace aitt

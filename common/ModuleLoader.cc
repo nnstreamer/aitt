@@ -18,15 +18,12 @@
 
 #include <dlfcn.h>
 
-#include "AITTEx.h"
+#include "AittException.h"
+#include "MQ.h"
 #include "NullTransport.h"
 #include "aitt_internal.h"
 
 namespace aitt {
-
-ModuleLoader::ModuleLoader(const std::string &ip) : ip(ip)
-{
-}
 
 std::string ModuleLoader::GetModuleFilename(Type type)
 {
@@ -53,8 +50,14 @@ ModuleLoader::ModuleHandle ModuleLoader::OpenModule(Type type)
     return handle;
 }
 
-std::shared_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, AittDiscovery &discovery)
+std::shared_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const std::string &ip,
+      AittDiscovery &discovery)
 {
+    if (handle == nullptr) {
+        ERR("handle is NULL");
+        return std::shared_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+    }
+
     AittTransport::ModuleEntry get_instance_fn = reinterpret_cast<AittTransport::ModuleEntry>(
           dlsym(handle, AittTransport::MODULE_ENTRY_NAME));
     if (get_instance_fn == nullptr) {

@@ -19,7 +19,7 @@
 
 #include <atomic>
 
-#include "AITTEx.h"
+#include "AittException.h"
 #include "aitt_internal.h"
 
 namespace aitt {
@@ -74,7 +74,7 @@ void AittDiscovery::RemoveDiscoveryCB(int callback_id)
     auto it = callbacks.find(callback_id);
     if (it == callbacks.end()) {
         ERR("Unknown callback_id(%d)", callback_id);
-        throw AITTEx(AITTEx::INVALID_ARG);
+        throw AittException(AittException::INVALID_ARG);
     }
     callbacks.erase(it);
 }

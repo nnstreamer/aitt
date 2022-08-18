@@ -34,7 +34,7 @@ namespace aitt {
 
 class AITT::Impl {
   public:
-    Impl(AITT &parent, const std::string &id, const std::string &ipAddr, bool clearSession);
+    Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session);
     virtual ~Impl(void);
 
     void SetWillInfo(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
@@ -49,18 +49,15 @@ class AITT::Impl {
 
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocols, AittQoS qos, bool retain);
-
     int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const AITT::SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
-
     int PublishWithReplySync(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation, int timeout_ms);
 
     AittSubscribeID Subscribe(const std::string &topic, const AITT::SubscribeCallback &cb,
           void *cbdata, AittProtocol protocols, AittQoS qos);
-
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const int datalen, bool end);
@@ -94,7 +91,7 @@ class AITT::Impl {
     MQ mq;
     AittDiscovery discovery;
     unsigned short reply_id;
-    ModuleObj *modules[ModuleLoader::TYPE_MAX];
+    ModuleObj *modules[ModuleLoader::TYPE_TRANSPORT_MAX];
     MainLoopHandler main_loop;
     void ThreadMain(void);
     std::thread aittThread;

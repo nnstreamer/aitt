@@ -21,7 +21,7 @@
 #include <set>
 #include <thread>
 
-#include "AITTEx.h"
+#include "AittException.h"
 #include "Config.h"
 #include "MqttServer.h"
 #include "aitt_internal.h"
@@ -156,12 +156,12 @@ TEST_F(MqttServerTest, Negative_Disconnect_Anytime)
                   server.Disconnect();
 
                   g_main_loop_run(loop_);
-              } catch (const aitt::AITTEx &e) {
+              } catch (const aitt::AittException &e) {
                   // and this tests that it has the correct message
                   throw;
               }
           },
-          aitt::AITTEx);
+          aitt::AittException);
 }
 
 TEST_F(MqttServerTest, Positive_Disconnect_Anytime)
