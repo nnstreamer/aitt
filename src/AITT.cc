@@ -21,7 +21,7 @@
 
 namespace aitt {
 
-AITT::AITT(const std::string &id, const std::string &ip_addr, bool clear_session)
+AITT::AITT(const std::string &id, const std::string &ip_addr, AittOption option)
 {
     std::string valid_id = id;
     std::string valid_ip = ip_addr;
@@ -42,7 +42,7 @@ AITT::AITT(const std::string &id, const std::string &ip_addr, bool clear_session
     if (ip_addr.empty())
         valid_ip = "127.0.0.1";
 
-    pImpl = std::make_unique<AITT::Impl>(*this, valid_id, valid_ip, clear_session);
+    pImpl = std::make_unique<AITT::Impl>(*this, valid_id, valid_ip, option.GetClearSession());
 }
 
 AITT::~AITT(void)
@@ -128,6 +128,5 @@ void AITT::SendReply(MSG *msg, const void *data, size_t datalen, bool end)
 
     return pImpl->SendReply(msg, data, datalen, end);
 }
-
 
 }  // namespace aitt

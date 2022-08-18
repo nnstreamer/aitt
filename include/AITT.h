@@ -16,6 +16,7 @@
 #pragma once
 
 #include <AittException.h>
+#include <AittOption.h>
 #include <AittTypes.h>
 #include <MSG.h>
 
@@ -34,7 +35,8 @@ class API AITT {
           std::function<void(MSG *msg, const void *data, const size_t datalen, void *user_data)>;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
-    explicit AITT(const std::string &id, const std::string &ip_addr, bool clear_session = false);
+    explicit AITT(const std::string &id, const std::string &ip_addr,
+          AittOption option = AittOption(false, false));
     virtual ~AITT(void);
 
     void SetWillInfo(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,

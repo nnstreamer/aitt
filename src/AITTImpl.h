@@ -34,7 +34,8 @@ namespace aitt {
 
 class AITT::Impl {
   public:
-    Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session);
+    explicit Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session,
+          bool custom_broker = false);
     virtual ~Impl(void);
 
     void SetWillInfo(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,

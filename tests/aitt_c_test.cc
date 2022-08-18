@@ -23,7 +23,11 @@
 
 TEST(AITT_C_INTERFACE, new_P_Anytime)
 {
-    aitt_h handle = aitt_new("test1", LOCAL_IP);
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    aitt_h handle = aitt_new("test1", option);
+    aitt_option_destroy(option);
     EXPECT_TRUE(handle != nullptr);
     aitt_destroy(handle);
 
@@ -31,59 +35,91 @@ TEST(AITT_C_INTERFACE, new_P_Anytime)
     EXPECT_TRUE(handle != nullptr);
     aitt_destroy(handle);
 
-    handle = aitt_new("", "");
+    handle = aitt_new("", nullptr);
     EXPECT_TRUE(handle != nullptr);
     aitt_destroy(handle);
 }
 
 TEST(AITT_C_INTERFACE, destroy_P_Anytime)
 {
-    aitt_h handle = aitt_new("test2", LOCAL_IP);
+    aitt_h handle = aitt_new("test2", nullptr);
     ASSERT_NE(handle, nullptr);
 
     aitt_destroy(handle);
     aitt_destroy(nullptr);
 }
 
-// TODO:: Not yet Support
-/*
 TEST(AITT_C_INTERFACE, option_P_Anytime)
 {
-    aitt_h handle = aitt_new("test3");
-    ASSERT_NE(handle, nullptr);
+    int ret;
 
-    int ret = aitt_set_option(handle, AITT_OPT_MY_IP, LOCAL_IP);
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
-    EXPECT_STREQ(LOCAL_IP, aitt_get_option(handle, AITT_OPT_MY_IP));
+    EXPECT_STREQ(LOCAL_IP, aitt_option_get(option, AITT_OPT_MY_IP));
 
-    ret = aitt_set_option(handle, AITT_OPT_MY_IP, NULL);
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
-    EXPECT_EQ(NULL, aitt_get_option(handle, AITT_OPT_MY_IP));
+    EXPECT_STREQ(nullptr, aitt_option_get(option, AITT_OPT_MY_IP));
 
-    aitt_destroy(handle);
+    ret = aitt_option_set(option, AITT_OPT_CLEAN_SESSION, "TRUE");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("true", aitt_option_get(option, AITT_OPT_CLEAN_SESSION));
+
+    ret = aitt_option_set(option, AITT_OPT_CLEAN_SESSION, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CLEAN_SESSION));
+
+    ret = aitt_option_set(option, AITT_OPT_CUSTOM_BROKER, "TRUE");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("true", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
+
+    ret = aitt_option_set(option, AITT_OPT_CUSTOM_BROKER, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
+
+    aitt_option_destroy(option);
 }
 
 TEST(AITT_C_INTERFACE, option_N_Anytime)
 {
-    aitt_h handle = aitt_new("test4");
-    ASSERT_NE(handle, nullptr);
+    int ret;
 
-    int ret = aitt_set_option(handle, AITT_OPT_UNKNOWN, LOCAL_IP);
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_UNKNOWN, LOCAL_IP);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
-    ret = aitt_set_option(nullptr, AITT_OPT_MY_IP, LOCAL_IP);
+    ret = aitt_option_set(option, AITT_OPT_CLEAN_SESSION, "OFF");
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
-    aitt_destroy(handle);
+    ret = aitt_option_set(option, AITT_OPT_CUSTOM_BROKER, "Off");
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+
+    ret = aitt_option_set(nullptr, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+
+    aitt_option_destroy(option);
 }
-*/
 
 TEST(AITT_C_INTERFACE, connect_disconnect_P_Anytime)
 {
-    aitt_h handle = aitt_new("test5", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test5", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     ret = aitt_disconnect(handle);
@@ -94,11 +130,13 @@ TEST(AITT_C_INTERFACE, connect_disconnect_P_Anytime)
 
 TEST(AITT_C_INTERFACE, connect_N_Anytime)
 {
-    aitt_h handle = aitt_new("test6", LOCAL_IP);
+    int ret;
+
+    aitt_h handle = aitt_new("test6", nullptr);
     ASSERT_NE(handle, nullptr);
 
     aitt_h invalid_handle = nullptr;
-    int ret = aitt_connect(invalid_handle, LOCAL_IP, 1883);
+    ret = aitt_connect(invalid_handle, LOCAL_IP, 1883);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     const char *invalid_ip = "1.2.3";
@@ -118,10 +156,12 @@ TEST(AITT_C_INTERFACE, connect_N_Anytime)
 
 TEST(AITT_C_INTERFACE, disconnect_N_Anytime)
 {
-    int ret = aitt_disconnect(nullptr);
+    int ret;
+
+    ret = aitt_disconnect(nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
-    aitt_h handle = aitt_new("test7", LOCAL_IP);
+    aitt_h handle = aitt_new("test7", nullptr);
     ASSERT_NE(handle, nullptr);
 
     ret = aitt_disconnect(handle);
@@ -132,10 +172,19 @@ TEST(AITT_C_INTERFACE, disconnect_N_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
 {
-    aitt_h handle = aitt_new("test8", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test8", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
@@ -167,10 +216,19 @@ TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_N_Anytime)
 {
-    aitt_h handle = aitt_new("test9", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test9", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, nullptr, 1883);
+    ret = aitt_connect(handle, nullptr, 1883);
     EXPECT_NE(ret, AITT_ERROR_NONE);
 
     ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
@@ -194,11 +252,20 @@ TEST(AITT_C_INTERFACE, pub_N_Anytime)
 
 TEST(AITT_C_INTERFACE, sub_N_Anytime)
 {
-    aitt_h handle = aitt_new("test10", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test10", option);
+    aitt_option_destroy(option);
     aitt_sub_h sub_handle = nullptr;
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, nullptr, 1883);
+    ret = aitt_connect(handle, nullptr, 1883);
     EXPECT_NE(ret, AITT_ERROR_NONE);
 
     ret = aitt_subscribe(
@@ -230,10 +297,19 @@ TEST(AITT_C_INTERFACE, sub_N_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
 {
-    aitt_h handle = aitt_new("test11", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test11", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
@@ -272,10 +348,19 @@ TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
 
 TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 {
-    aitt_h handle = aitt_new("test12", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test12", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     ret = aitt_publish_with_reply(
@@ -304,10 +389,19 @@ TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 
 TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
 {
-    aitt_h handle = aitt_new("test13", LOCAL_IP);
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test13", option);
+    aitt_option_destroy(option);
     ASSERT_NE(handle, nullptr);
 
-    int ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     static unsigned int sub_call_count = 0;
@@ -365,6 +459,8 @@ TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
 
 TEST(AITT_C_INTERFACE, will_set_N_Anytime)
 {
-    int ret = aitt_will_set(nullptr, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
+    int ret;
+
+    ret = aitt_will_set(nullptr, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 }

@@ -30,8 +30,14 @@
 
 namespace aitt {
 
-AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session)
-      : public_api(parent), id_(id), mq(id, clear_session), discovery(id), reply_id(0), modules{0}
+AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session,
+      bool custom_broker)
+      : public_api(parent),
+        id_(id),
+        mq(id, clear_session),
+        discovery(id, custom_broker),
+        reply_id(0),
+        modules{0}
 {
     // TODO: Validate my_ip
     ModuleLoader loader;

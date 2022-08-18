@@ -26,7 +26,7 @@ using ModuleLoader = aitt::ModuleLoader;
 
 class ModuleLoaderTest : public testing::Test {
   public:
-    ModuleLoaderTest(void) : discovery("test") {}
+    ModuleLoaderTest(void) : discovery("test", false) {}
 
   protected:
     void SetUp() override {}

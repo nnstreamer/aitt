@@ -21,7 +21,7 @@ AittNativeInterface::CallbackContext AittNativeInterface::cbContext = {
 };
 
 AittNativeInterface::AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession)
-      : cbObject(nullptr), aitt(mqId, ip, clearSession)
+      : cbObject(nullptr), aitt(mqId, ip, AittOption(clearSession, false))
 {
 }
 

@@ -23,7 +23,7 @@
 TEST(AITT_C_MANUAL, will_set_P)
 {
     int ret;
-    aitt_h handle = aitt_new("test14", LOCAL_IP);
+    aitt_h handle = aitt_new("test14", nullptr);
     ASSERT_NE(handle, nullptr);
 
     ret = aitt_connect(handle, LOCAL_IP, 1883);
@@ -46,7 +46,7 @@ TEST(AITT_C_MANUAL, will_set_P)
 
     int pid = fork();
     if (pid == 0) {
-        aitt_h handle_will = aitt_new("test_will", LOCAL_IP);
+        aitt_h handle_will = aitt_new("test_will", nullptr);
         ASSERT_NE(handle_will, nullptr);
 
         ret = aitt_will_set(handle_will, "test/topic_will", TEST_C_MSG, strlen(TEST_C_MSG),
@@ -88,7 +88,7 @@ TEST(AITT_C_MANUAL, will_set_P)
 // Set user/passwd in mosquitto.conf before testing
 TEST(AITT_C_MANUAL, connect_id_passwd_P)
 {
-    aitt_h handle = aitt_new("test15", LOCAL_IP);
+    aitt_h handle = aitt_new("test15", nullptr);
     ASSERT_NE(handle, nullptr);
 
     int ret = aitt_connect_full(handle, LOCAL_IP, 1883, "testID", "testPasswd");

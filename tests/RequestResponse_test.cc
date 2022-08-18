@@ -80,7 +80,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         bool reply_ok[2];
         sub_ok = reply_ok[0] = reply_ok[1] = false;
 
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
@@ -122,7 +122,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         bool sub_ok, reply1_ok, reply2_ok;
         sub_ok = reply1_ok = reply2_ok = false;
 
-        AITT sub_aitt(clientId + "sub", LOCAL_IP, true);
+        AITT sub_aitt(clientId + "sub", LOCAL_IP, AittOption(true, false));
         INFO("Constructor Success");
 
         sub_aitt.Connect();
@@ -135,7 +135,7 @@ class AITTRRTest : public testing::Test, public AittTests {
                   sub_ok = true;
               });
 
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         using namespace std::placeholders;
@@ -172,7 +172,7 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
     sub_ok = reply_ok = false;
 
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
@@ -209,7 +209,7 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
     sub_ok = reply_ok = false;
 
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
@@ -277,7 +277,7 @@ TEST_F(AITTRRTest, RequestResponse_sync_P_Anytime)
     sub_ok = reply1_ok = false;
 
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
@@ -335,7 +335,7 @@ TEST_F(AITTRRTest, RequestResponse_sync_in_sync_P_Anytime)
 TEST_F(AITTRRTest, RequestResponse_timeout_P_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         int ret = aitt.PublishWithReplySync(
@@ -358,7 +358,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
     sub_ok = reply_ok = false;
 
     try {
-        AITT sub_aitt(clientId + "sub", LOCAL_IP, true);
+        AITT sub_aitt(clientId + "sub", LOCAL_IP, AittOption(true, false));
         sub_aitt.Connect();
         sub_aitt.Subscribe(rr_topic.c_str(),
               [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
@@ -368,7 +368,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
                   sub_ok = true;
               });
 
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
 
         int ret = aitt.PublishWithReplySync(

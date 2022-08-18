@@ -34,7 +34,7 @@ class AITTTest : public testing::Test, public AittTests {
     void pubsub_template(const char *test_msg, AittProtocol protocol)
     {
         try {
-            AITT aitt(clientId, LOCAL_IP, true);
+            AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
             aitt.Connect();
             aitt.Subscribe(
                   testTopic,
@@ -66,7 +66,7 @@ class AITTTest : public testing::Test, public AittTests {
 TEST_F(AITTTest, Positive_Create_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
@@ -75,7 +75,7 @@ TEST_F(AITTTest, Positive_Create_Anytime)
 TEST_F(AITTTest, SetConnectionCallback_P_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.SetConnectionCallback(
               [&](AITT &handle, int status, void *user_data) {
                   AITTTest *test = static_cast<AITTTest *>(user_data);
@@ -105,7 +105,7 @@ TEST_F(AITTTest, SetConnectionCallback_P_Anytime)
 TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.SetConnectionCallback(
               [&](AITT &handle, int status, void *user_data) {
                   AITTTest *test = static_cast<AITTTest *>(user_data);
@@ -136,7 +136,7 @@ TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
 TEST_F(AITTTest, Positive_Connect_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
@@ -146,7 +146,7 @@ TEST_F(AITTTest, Positive_Connect_Anytime)
 TEST_F(AITTTest, Positive_Disconnect_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Disconnect();
     } catch (std::exception &e) {
@@ -157,7 +157,7 @@ TEST_F(AITTTest, Positive_Disconnect_Anytime)
 TEST_F(AITTTest, Positive_Connect_twice_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Disconnect();
         aitt.Connect();
@@ -169,7 +169,7 @@ TEST_F(AITTTest, Positive_Connect_twice_Anytime)
 TEST_F(AITTTest, Positive_Publish_MQTT_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG));
     } catch (std::exception &e) {
@@ -180,7 +180,7 @@ TEST_F(AITTTest, Positive_Publish_MQTT_Anytime)
 TEST_F(AITTTest, Positive_Publish_TCP_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_TCP);
     } catch (std::exception &e) {
@@ -191,7 +191,7 @@ TEST_F(AITTTest, Positive_Publish_TCP_Anytime)
 TEST_F(AITTTest, Positive_Publish_Multiple_Protocols_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
               (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP));
@@ -205,7 +205,7 @@ TEST_F(AITTTest, Positive_Publish_Multiple_Protocols_Anytime)
 TEST_F(AITTTest, Positive_Subscribe_WebRTC_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Subscribe(
               testTopic,
@@ -219,7 +219,7 @@ TEST_F(AITTTest, Positive_Subscribe_WebRTC_Anytime)
 TEST_F(AITTTest, Positive_Unsubscribe_MQTT_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
@@ -235,7 +235,7 @@ TEST_F(AITTTest, Positive_Unsubscribe_MQTT_Anytime)
 TEST_F(AITTTest, Positive_Unsubscribe_TCP_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
@@ -261,7 +261,7 @@ TEST_F(AITTTest, Positve_Publish_0_MQTT_Anytime)
 TEST_F(AITTTest, Positve_Unsubscribe_in_Subscribe_MQTT_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
@@ -296,7 +296,7 @@ TEST_F(AITTTest, Positve_Unsubscribe_in_Subscribe_MQTT_Anytime)
 TEST_F(AITTTest, Positve_Subscribe_in_Subscribe_MQTT_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
@@ -355,7 +355,7 @@ TEST_F(AITTTest, Positve_Publish_0_TCP_Anytime)
 TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
 {
     try {
-        AITT aitt(clientId, LOCAL_IP, true);
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Subscribe(
               testTopic,
@@ -549,7 +549,7 @@ TEST_F(AITTTest, WillSet_N_Anytime)
 {
     EXPECT_THROW(
           {
-              AITT aitt_will("", LOCAL_IP, true);
+              AITT aitt_will("", LOCAL_IP, AittOption(true, false));
               aitt_will.SetWillInfo("+", "will msg", 8, AITT_QOS_AT_MOST_ONCE, false);
               aitt_will.Connect();
               aitt_will.Disconnect();

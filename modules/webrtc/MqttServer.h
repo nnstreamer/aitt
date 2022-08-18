@@ -54,8 +54,6 @@ class MqttServer : public IfaceServer {
     void UnsetRoomMessageArrivedCb(void) { room_message_arrived_cb_ = nullptr; }
 
   private:
-    static void MessageCallback(mosquitto *handle, void *mqtt_server, const mosquitto_message *msg,
-          const mosquitto_property *props);
     void OnConnect();
     void OnDisconnect();
     void ConnectCallBack(int status);

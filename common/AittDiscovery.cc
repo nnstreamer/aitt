@@ -24,7 +24,7 @@
 
 namespace aitt {
 
-AittDiscovery::AittDiscovery(const std::string &id)
+AittDiscovery::AittDiscovery(const std::string &id, bool custom_broker)
       : id_(id), discovery_mq(id + "d", true), callback_handle(nullptr)
 {
 }

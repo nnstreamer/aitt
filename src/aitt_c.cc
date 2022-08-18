@@ -29,23 +29,32 @@ struct aitt_handle {
     bool connected;
 };
 
-API aitt_h aitt_new(const char *id, const char *my_ip)
+struct aitt_option {
+    const char *my_ip;
+    bool clear_session;
+    bool custom_broker;
+};
+
+API aitt_h aitt_new(const char *id, aitt_option_h option)
 {
     aitt_h handle = nullptr;
     try {
         std::string valid_id;
         std::string valid_ip;
+        AittOption aitt_option;
 
         if (id)
             valid_id = id;
 
-        if (my_ip)
-            valid_ip = my_ip;
-
-        DBG("id(%s), ip(%s)", valid_id.c_str(), valid_ip.c_str());
+        if (option) {
+            if (option->my_ip)
+                valid_ip = option->my_ip;
+            aitt_option.SetClearSession(option->clear_session);
+            aitt_option.SetUseCustomMqttBroker(option->custom_broker);
+        }
 
         handle = new aitt_handle();
-        handle->aitt = new AITT(valid_id, valid_ip, true);
+        handle->aitt = new AITT(valid_id, valid_ip, aitt_option);
         handle->connected = false;
     } catch (std::exception &e) {
         ERR("new() Fail(%s)", e.what());
@@ -55,19 +64,82 @@ API aitt_h aitt_new(const char *id, const char *my_ip)
     return handle;
 }
 
-API int aitt_set_option(aitt_h handle, aitt_option_e option, const char *value)
+API void aitt_destroy(aitt_h handle)
+{
+    if (handle == nullptr) {
+        ERR("handle is NULL");
+        return;
+    }
+
+    try {
+        delete handle->aitt;
+        delete handle;
+    } catch (std::exception &e) {
+        ERR("delete() Fail(%s)", e.what());
+    }
+}
+
+API aitt_option_h aitt_option_new()
+{
+    aitt_option_h handle = nullptr;
+
+    try {
+        handle = new aitt_option();
+        handle->my_ip = nullptr;
+        handle->clear_session = false;
+        handle->custom_broker = false;
+    } catch (std::exception &e) {
+        ERR("new() Fail(%s)", e.what());
+    }
+
+    return handle;
+}
+
+void aitt_option_destroy(aitt_option_h handle)
+{
+    if (handle == nullptr) {
+        ERR("handle is NULL");
+        return;
+    }
+
+    try {
+        delete handle;
+    } catch (std::exception &e) {
+        ERR("delete() Fail(%s)", e.what());
+    }
+}
+
+static int _option_set_bool(const char *value, bool &dest)
+{
+    if (value) {
+        dest = (STR_EQ == strcasecmp(value, "true"));
+        if (false == dest && STR_EQ != strcasecmp(value, "false")) {
+            ERR("Unknown value(%s)", value);
+            return AITT_ERROR_INVALID_PARAMETER;
+        }
+    } else {
+        dest = false;
+    }
+    return AITT_ERROR_NONE;
+}
+
+API int aitt_option_set(aitt_option_h handle, aitt_option_e option, const char *value)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
 
     switch (option) {
-    case AITT_OPT_UNKNOWN:
+    case AITT_OPT_MY_IP:
         try {
-            // something to do
+            handle->my_ip = value;
         } catch (std::exception &e) {
             ERR("string() Fail(%s)", e.what());
             return AITT_ERROR_SYSTEM;
         }
         break;
+    case AITT_OPT_CLEAN_SESSION:
+        return _option_set_bool(value, handle->clear_session);
+    case AITT_OPT_CUSTOM_BROKER:
+        return _option_set_bool(value, handle->custom_broker);
     default:
         ERR("Unknown option(%d)", option);
         return AITT_ERROR_INVALID_PARAMETER;
@@ -76,13 +148,17 @@ API int aitt_set_option(aitt_h handle, aitt_option_e option, const char *value)
     return AITT_ERROR_NONE;
 }
 
-API const char *aitt_get_option(aitt_h handle, aitt_option_e option)
+API const char *aitt_option_get(aitt_option_h handle, aitt_option_e option)
 {
     RETV_IF(handle == nullptr, nullptr);
 
     switch (option) {
-    case AITT_OPT_UNKNOWN:
-        return "Unknown";
+    case AITT_OPT_MY_IP:
+        return handle->my_ip;
+    case AITT_OPT_CLEAN_SESSION:
+        return (handle->clear_session) ? "true" : "false";
+    case AITT_OPT_CUSTOM_BROKER:
+        return (handle->custom_broker) ? "true" : "false";
     default:
         ERR("Unknown option(%d)", option);
     }
@@ -102,21 +178,6 @@ API int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const s
         return AITT_ERROR_SYSTEM;
     }
     return AITT_ERROR_NONE;
-}
-
-API void aitt_destroy(aitt_h handle)
-{
-    if (handle == nullptr) {
-        ERR("handle is NULL");
-        return;
-    }
-
-    try {
-        delete handle->aitt;
-        delete handle;
-    } catch (std::exception &e) {
-        ERR("delete() Fail(%s)", e.what());
-    }
 }
 
 static bool is_valid_ip(const char *ip)

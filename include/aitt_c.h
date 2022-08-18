@@ -29,13 +29,18 @@ extern "C" {
 
 /**
  * @brief @a aitt_h is an opaque data structure to represent AITT service handle.
- * @since_tizen 7.0
  */
 typedef struct aitt_handle *aitt_h;
 
 /**
+ * @brief @a aitt_option_h is an opaque data structure to represent AITT option handle.
+ *        The option handle is used at aitt_new()
+ * @see aitt_new()
+ */
+typedef struct aitt_option *aitt_option_h;
+
+/**
  * @brief @a aitt_msg_h is an opaque data structure to represent AITT message handle.
- * @since_tizen 7.0
  * @see aitt_sub_fn
  * @see aitt_msg_get_topic()
  */
@@ -43,34 +48,29 @@ typedef void *aitt_msg_h;
 
 /**
  * @brief @a aitt_sub_h is an opaque data structure to represent AITT subscribe ID.
- * @since_tizen 7.0
  * @see aitt_subscribe(), aitt_unsubscribe()
  */
 typedef AittSubscribeID aitt_sub_h;
 
 /**
  * @brief Enumeration for protocol.
- * @since_tizen 7.0
  */
 typedef enum AittProtocol aitt_protocol_e;
 
 /**
  * @brief Enumeration for MQTT QoS.
  *        It only works with the AITT_TYPE_MQTT
- * @since_tizen 7.0
  */
 typedef enum AittQoS aitt_qos_e;
 
 /**
  * @brief Enumeration for AITT error code.
- * @since_tizen 7.0
  */
 typedef enum AittError aitt_error_e;
 
 /**
  * @brief Specify the type of function passed to aitt_subscribe().
  * @details When the aitt get message, it is called, immediately.
- * @since_tizen 7.0
  * @param[in] msg_handle aitt message handle. The handle has topic name and so on. @c aitt_msg_h
  * @param[in] msg pointer to the data received
  * @param[in] msg_len the size of the @c msg (bytes)
@@ -88,28 +88,56 @@ typedef void (
  * @brief Create a new AITT service instance.
  * @detail If id is NULL or empty string, id will be generated automatically.
  *         If my_ip is NULL or empty string, my_ip will be set as 127.0.0.1.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] id Unique identifier in local network
- * @param[in] my_ip Own device ip address for connecting by others
  * @return @c handle of AITT service
  *         otherwise NULL value on failure
  * @see aitt_destroy()
  */
-aitt_h aitt_new(const char *id, const char *my_ip);
+aitt_h aitt_new(const char *id, aitt_option_h option);
+
+/**
+ * @brief Release memory of the AITT service instance.
+ * @privlevel public
+ * @param[in] handle Handle of AITT service;
+ * @see aitt_new()
+ */
+void aitt_destroy(aitt_h handle);
+
+/**
+ * @brief Create a new AITT option instance.
+ * @detail Create AITT option which is used in aitt_new()
+ * @privlevel public
+ * @return @c handle of AITT option
+ *         otherwise NULL value on failure
+ * @see aitt_option_destroy()
+ */
+aitt_option_h aitt_option_new();
+
+/**
+ * @brief Release memory of the AITT option instance.
+ * @privlevel public
+ * @param[in] handle Handle of AITT option;
+ * @see aitt_option_new()
+ */
+void aitt_option_destroy(aitt_option_h handle);
 
 /**
  * @brief Enumeration for option.
- * @since_tizen 7.0
+ * @remarks The boolean value is case-insensitive @c true or @c false
+ *          and NULL is handled as @c false
  */
 typedef enum {
-    AITT_OPT_UNKNOWN, /**< Unknown */
+    AITT_OPT_UNKNOWN,       /**< Unknown */
+    AITT_OPT_MY_IP,         /**< Own device ip address for connecting by others */
+    AITT_OPT_CLEAN_SESSION, /**< A Boolean value whether broker clean all message and subscriptions
+                               on disconnect */
+    AITT_OPT_CUSTOM_BROKER, /**< A Boolean value whether AITT uses a custom broker. */
 } aitt_option_e;
 
 /**
  * @brief Set the contents of a @c handle related with @c option to @c value
  * @detail The @c value can be NULL for removing the content
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] option value of @a aitt_option_e.
@@ -121,11 +149,10 @@ typedef enum {
  *
  * @see aitt_get_option()
  */
-int aitt_set_option(aitt_h handle, aitt_option_e option, const char *value);
+int aitt_option_set(aitt_option_h handle, aitt_option_e option, const char *value);
 
 /**
  * @brief Returns the string value of a @c handle related with @c option
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] option value of @a aitt_option_e.
@@ -134,12 +161,11 @@ int aitt_set_option(aitt_h handle, aitt_option_e option, const char *value);
  *
  * @see aitt_set_option()
  */
-const char *aitt_get_option(aitt_h handle, aitt_option_e option);
+const char *aitt_option_get(aitt_option_h handle, aitt_option_e option);
 
 /**
  * @brief Configure will information for a aitt instance.
  * @detail By default, clients do not have a will. This must be called before calling aitt_connect()
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic the topic on which to publish the will.
@@ -159,17 +185,7 @@ int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const size_
       aitt_qos_e qos, bool retain);
 
 /**
- * @brief Release memory of the AITT service instance.
- * @since_tizen 7.0
- * @privlevel public
- * @param[in] handle Handle of AITT service;
- * @see aitt_new()
- */
-void aitt_destroy(aitt_h handle);
-
-/**
  * @brief Connect to mqtt broker.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] broker_ip IP address of the broker to connect to
@@ -184,7 +200,6 @@ int aitt_connect(aitt_h handle, const char *broker_ip, int port);
 
 /**
  * @brief Connect to mqtt broker as aitt_connect(), but takes username and password.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] broker_ip IP address of the broker to connect to
@@ -202,7 +217,6 @@ int aitt_connect_full(aitt_h handle, const char *broker_ip, int port, const char
 
 /**
  * @brief Disconnect from the broker.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @return @c 0 on success
@@ -215,7 +229,6 @@ int aitt_disconnect(aitt_h handle);
 
 /**
  * @brief Publish a message on a given topic using MQTT, QoS0(At most once).
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic null terminated string of the topic to publish to.
@@ -231,7 +244,6 @@ int aitt_publish(aitt_h handle, const char *topic, const void *msg, const size_t
 
 /**
  * @brief Publish a message on a given topic as aitt_publish(), but takes protocols and qos.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic null terminated string of the topic to publish to.
@@ -251,7 +263,6 @@ int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const s
 /**
  * @brief Publish a message on a given topic as aitt_publish_full(),
  *        but takes reply topic and callback for the reply.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic null terminated string of the topic to publish to.
@@ -274,7 +285,6 @@ int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *msg, c
 
 /**
  * @brief Send reply message to regarding topic.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] msg_handle Handle of published message(to reply).
@@ -293,7 +303,6 @@ int aitt_send_reply(aitt_h handle, aitt_msg_h msg_handle, const void *reply, con
 
 /**
  * @brief Get topic name from @c handle
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle aitt message handle
  * @return topic name on success otherwise NULL value on failure
@@ -303,7 +312,6 @@ const char *aitt_msg_get_topic(aitt_msg_h handle);
 /**
  * @brief Subscribe to a topic on MQTT with QoS0(at most once).
  * @details Sets a function to be called when the aitt get messages related with @c topic
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic null terminated string of the topic to subscribe to.
@@ -322,7 +330,6 @@ int aitt_subscribe(aitt_h handle, const char *topic, aitt_sub_fn cb, void *user_
 /**
  * @brief Subscribe to a topic, but takes protocols and qos.
  * @details Sets a function to be called when the aitt get messages related with @c topic
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] topic null terminated string of the topic to subscribe to.
@@ -343,7 +350,6 @@ int aitt_subscribe_full(aitt_h handle, const char *topic, aitt_sub_fn cb, void *
 /**
  * @brief Unsubscribe from a topic.
  * @details Removes the subscription of changes with given ID.
- * @since_tizen 7.0
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] sub_handle Handle of subscribed topic

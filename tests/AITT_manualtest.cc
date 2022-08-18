@@ -32,7 +32,7 @@ class AITTManualTest : public testing::Test, public AittTests {
 TEST_F(AITTManualTest, WillSet_P)
 {
     try {
-        AITT aitt("", LOCAL_IP, true);
+        AITT aitt("", LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Subscribe(
               "test/AITT_will",
@@ -45,7 +45,7 @@ TEST_F(AITTManualTest, WillSet_P)
 
         int pid = fork();
         if (pid == 0) {
-            AITT aitt_will("test_will_AITT", LOCAL_IP, true);
+            AITT aitt_will("test_will_AITT", LOCAL_IP, AittOption(true, false));
             aitt_will.SetWillInfo("test/AITT_will", TEST_MSG, sizeof(TEST_MSG),
                   AITT_QOS_AT_LEAST_ONCE, false);
             aitt_will.Connect();
