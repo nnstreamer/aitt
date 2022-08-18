@@ -15,7 +15,7 @@
  */
 #include "Module.h"
 
-#include <MQ.h>
+#include <AittUtil.h>
 #include <flatbuffers/flexbuffers.h>
 #include <unistd.h>
 
@@ -77,7 +77,7 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
     for (PublishMap::iterator it = publishTable.begin(); it != publishTable.end(); ++it) {
         // NOTE:
         // Find entries that have matched with the given topic
-        if (!aitt::MQ::CompareTopic(it->first, topic))
+        if (!aitt::AittUtil::CompareTopic(it->first, topic))
             continue;
 
         // NOTE:
