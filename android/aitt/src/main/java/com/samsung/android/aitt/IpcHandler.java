@@ -17,7 +17,7 @@ package com.samsung.android.aitt;
 
 import android.content.Context;
 
-public class IpcHandler implements TransportHandler{
+class IpcHandler implements TransportHandler {
 
     @Override
     public void setAppContext(Context appContext) {

@@ -23,11 +23,7 @@ import com.samsung.android.modules.webrtc.WebRTCServer;
 
 import java.nio.ByteBuffer;
 
-public class WebRTCHandler implements TransportHandler{
-
-    private static final String RESPONSE_POSTFIX = "_AittRe_";
-    private static final String JOIN_NETWORK = "connected";
-    private static final String STATUS = "status";
+class WebRTCHandler implements TransportHandler {
     private Context appContext;
     private String ip;
     private byte[] publishData;
@@ -52,7 +48,7 @@ public class WebRTCHandler implements TransportHandler{
         WebRTC.ReceiveDataCallback cb = data -> {
             handlerDataCallback.pushHandlerData(data);
         };
-        WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
+        WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
         ws = new WebRTCServer(appContext, dataType, cb);
         int serverPort = ws.start();
         if (serverPort < 0) {
@@ -77,7 +73,7 @@ public class WebRTCHandler implements TransportHandler{
         FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
         {
             int smap = fbb.startMap();
-            fbb.putString(STATUS, JOIN_NETWORK);
+            fbb.putString(Definitions.STATUS, Definitions.JOIN_NETWORK);
             fbb.putString("host", ip);
             {
                 int smap1 = fbb.startMap();
@@ -95,7 +91,7 @@ public class WebRTCHandler implements TransportHandler{
 
     @Override
     public void publish(String topic, String ip, int port, byte[] message) {
-        WebRTC.DataType dataType = topic.endsWith(RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
+        WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
         if (webrtc == null) {
             webrtc = new WebRTC(dataType, appContext);
             webrtc.connect(ip, port);

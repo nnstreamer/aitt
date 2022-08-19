@@ -20,7 +20,7 @@ import android.content.Context;
 /**
  * An interface to create a transportHandler and provide APIs for protocol specific implementation
  */
-public interface TransportHandler {
+interface TransportHandler {
     /**
      * Method to implement protocol specific subscribe functionalities
      * @param topic String topic to which subscribe is called
@@ -65,11 +65,10 @@ public interface TransportHandler {
      */
     byte[] getPublishData();
 
-
     /**
      * Interface to implement handler data callback mechanism
      */
     interface HandlerDataCallback{
-        void pushHandlerData(byte[] frame);
+        void pushHandlerData(byte[] data);
     }
 }

@@ -15,19 +15,12 @@
  */
 package com.samsung.android.aitt;
 
-class TransportFactory {
-    public static TransportHandler createTransport(Aitt.Protocol protocol){
-        TransportHandler transportHandler;
-        switch(protocol){
-            case WEBRTC:
-                transportHandler = new WebRTCHandler();
-                break;
-            case IPC:
-                transportHandler = new IpcHandler();
-                break;
-            default:
-                transportHandler = null;
-        }
-        return transportHandler;
-    }
+class Definitions {
+    public static final String WILL_LEAVE_NETWORK = "disconnected";
+    public static final String AITT_LOCALHOST = "127.0.0.1";
+    public static final int AITT_PORT = 1883;
+    public static final String JAVA_SPECIFIC_DISCOVERY_TOPIC = "/java/aitt/discovery/";
+    public static final String JOIN_NETWORK = "connected";
+    public static final String RESPONSE_POSTFIX = "_AittRe_";
+    public static final String STATUS = "status";
 }
