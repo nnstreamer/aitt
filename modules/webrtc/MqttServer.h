@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #pragma once
 
-#include <MQ.h>
+#include <functional>
+#include <memory>
+#include <string>
 
 #include "Config.h"
 #include "IfaceServer.h"
+#include "MQ.h"
 
 class MqttServer : public IfaceServer {
   public:
@@ -70,7 +72,7 @@ class MqttServer : public IfaceServer {
     std::string room_id_;
     std::string source_id_;
     bool is_publisher_;
-    aitt::MQ mq;
+    std::unique_ptr<aitt::MQ> mq;
 
     ConnectionState connection_state_;
     std::function<void(ConnectionState)> connection_state_changed_cb_;

@@ -23,6 +23,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "MQProxy.h"
 #include "aitt_internal.h"
 
 #define WEBRTC_ROOM_ID_PREFIX std::string(AITT_MANAGED_TOPIC_PREFIX "webrtc/room/Room.webrtc")
@@ -34,7 +35,7 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, 
       bool custom_broker)
       : public_api(parent),
         id_(id),
-        mq(id, clear_session),
+        mq(new MQProxy(id, clear_session, custom_broker)),
         discovery(id, custom_broker),
         reply_id(0),
         modules{0}
@@ -81,16 +82,16 @@ void AITT::Impl::ThreadMain(void)
 void AITT::Impl::SetWillInfo(const std::string &topic, const void *data, const size_t datalen,
       AittQoS qos, bool retain)
 {
-    mq.SetWillInfo(topic, data, datalen, qos, retain);
+    mq->SetWillInfo(topic, data, datalen, qos, retain);
 }
 
 void AITT::Impl::SetConnectionCallback(ConnectionCallback cb, void *user_data)
 {
     if (cb)
-        mq.SetConnectionCallback(
+        mq->SetConnectionCallback(
               std::bind(&Impl::ConnectionCB, this, cb, user_data, std::placeholders::_1));
     else
-        mq.SetConnectionCallback(nullptr);
+        mq->SetConnectionCallback(nullptr);
 }
 
 void AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status)
@@ -104,7 +105,7 @@ void AITT::Impl::Connect(const std::string &host, int port, const std::string &u
       const std::string &password)
 {
     discovery.Start(host, port, username, password);
-    mq.Connect(host, port, username, password);
+    mq->Connect(host, port, username, password);
 
     mqtt_broker_ip_ = host;
     mqtt_broker_port_ = port;
@@ -117,7 +118,7 @@ void AITT::Impl::Disconnect(void)
     mqtt_broker_ip_.clear();
     mqtt_broker_port_ = -1;
 
-    mq.Disconnect();
+    mq->Disconnect();
     discovery.Stop();
 }
 
@@ -128,7 +129,7 @@ void AITT::Impl::UnsubscribeAll()
     for (auto subscribe_info : subscribed_list) {
         switch (subscribe_info->first) {
         case AITT_TYPE_MQTT:
-            mq.Unsubscribe(subscribe_info->second);
+            mq->Unsubscribe(subscribe_info->second);
             break;
         case AITT_TYPE_TCP:
             GetTransport(ModuleLoader::TYPE_TCP)->Unsubscribe(subscribe_info->second);
@@ -161,7 +162,7 @@ void AITT::Impl::Publish(const std::string &topic, const void *data, const size_
       AittProtocol protocols, AittQoS qos, bool retain)
 {
     if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT)
-        mq.Publish(topic, data, datalen, qos, retain);
+        mq->Publish(topic, data, datalen, qos, retain);
 
     if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP)
         GetTransport(ModuleLoader::TYPE_TCP)->Publish(topic, data, datalen, qos, retain);
@@ -224,7 +225,7 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
 AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *loop_handle,
       const std::string &topic, const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    return mq.Subscribe(
+    return mq->Subscribe(
           topic,
           [this, handle, loop_handle, cb](MSG *msg, const std::string &topic, const void *data,
                 const size_t datalen, void *mq_user_data) {
@@ -269,7 +270,7 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     SubscribeInfo *found_info = *it;
     switch (found_info->first) {
     case AITT_TYPE_MQTT:
-        user_data = mq.Unsubscribe(found_info->second);
+        user_data = mq->Unsubscribe(found_info->second);
         break;
     case AITT_TYPE_TCP: {
         auto tcpModule = GetTransport(ModuleLoader::TYPE_TCP);
@@ -316,7 +317,7 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
           },
           user_data, protocol, qos);
 
-    mq.PublishWithReply(topic, data, datalen, qos, false, replyTopic, correlation);
+    mq->PublishWithReply(topic, data, datalen, qos, false, replyTopic, correlation);
     return 0;
 }
 
@@ -362,7 +363,7 @@ int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data,
         subscribed_list.push_back(info);
     }
 
-    mq.PublishWithReply(topic, data, datalen, qos, false, replyTopic, correlation);
+    mq->PublishWithReply(topic, data, datalen, qos, false, replyTopic, correlation);
     if (timeout_ms)
         HandleTimeout(timeout_ms, timeout_id, sync_loop, is_timeout);
 
@@ -398,7 +399,7 @@ void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool e
         msg->IncreaseSequence();
     msg->SetEndSequence(end);
 
-    mq.SendReply(msg, data, datalen, AITT_QOS_AT_MOST_ONCE, false);
+    mq->SendReply(msg, data, datalen, AITT_QOS_AT_MOST_ONCE, false);
 }
 
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,

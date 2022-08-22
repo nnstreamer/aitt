@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "MQ.h"
+#include "MosquittoMQ.h"
 
 #include <gtest/gtest.h>
 
 #include "aitt_internal.h"
 #include "aitt_tests.h"
 
-using MQ = aitt::MQ;
+using MosquittoMQ = aitt::MosquittoMQ;
 
 class MQTest : public testing::Test, public AittTests {
   protected:
@@ -31,7 +31,7 @@ class MQTest : public testing::Test, public AittTests {
 TEST_F(MQTest, Positve_Subscribe_in_Subscribe_Anytime)
 {
     try {
-        MQ mq("MQ_TEST_ID");
+        MosquittoMQ mq("MQ_TEST_ID");
         mq.Connect(LOCAL_IP, 1883, "", "");
         mq.Subscribe(
               "MQ_TEST_TOPIC1",

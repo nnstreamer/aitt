@@ -31,6 +31,8 @@ std::string ModuleLoader::GetModuleFilename(Type type)
         return "libaitt-transport-tcp.so";
     if (type == TYPE_WEBRTC)
         return "libaitt-transport-webrtc.so";
+    if (type == TYPE_CUSTOM_MQTT)
+        return "libaitt-st-broker.so";
 
     return std::string("Unknown");
 }
@@ -71,6 +73,26 @@ std::shared_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const s
     if (instance == nullptr) {
         ERR("Failed to create a new instance");
         return std::shared_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+    }
+
+    return instance;
+}
+
+std::shared_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string &id,
+      bool clear_session)
+{
+    MQ::ModuleEntry get_instance_fn =
+          reinterpret_cast<MQ::ModuleEntry>(dlsym(handle, MQ::MODULE_ENTRY_NAME));
+    if (get_instance_fn == nullptr) {
+        ERR("dlsym: %s", dlerror());
+        throw AittException(AittException::SYSTEM_ERR);
+    }
+
+    std::shared_ptr<MQ> instance(static_cast<MQ *>(get_instance_fn(id.c_str(), clear_session)),
+          [](const MQ *instance) { delete instance; });
+    if (instance == nullptr) {
+        ERR("Failed to create a new instance");
+        throw AittException(AittException::SYSTEM_ERR);
     }
 
     return instance;

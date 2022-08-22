@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "MQ.h"
+#include "MosquittoMQ.h"
 
 #include <mqtt_protocol.h>
 #include <sys/types.h>
@@ -26,14 +26,15 @@
 
 #include "AittException.h"
 #include "AittTypes.h"
+#include "AittUtil.h"
 #include "aitt_internal.h"
 
 namespace aitt {
 
-const std::string MQ::REPLY_SEQUENCE_NUM_KEY = "sequenceNum";
-const std::string MQ::REPLY_IS_END_SEQUENCE_KEY = "isEndSequence";
+const std::string MosquittoMQ::REPLY_SEQUENCE_NUM_KEY = "sequenceNum";
+const std::string MosquittoMQ::REPLY_IS_END_SEQUENCE_KEY = "isEndSequence";
 
-MQ::MQ(const std::string &id, bool clear_session)
+MosquittoMQ::MosquittoMQ(const std::string &id, bool clear_session)
       : handle(nullptr),
         keep_alive(60),
         subscribers_iterating(false),
@@ -74,10 +75,10 @@ MQ::MQ(const std::string &id, bool clear_session)
 
     mosquitto_destroy(handle);
     mosquitto_lib_cleanup();
-    throw AittException(AittException::MQTT_ERR, std::string("MQ Constructor Error"));
+    throw AittException(AittException::MQTT_ERR, std::string("MosquittoMQ Constructor Error"));
 }
 
-MQ::~MQ(void)
+MosquittoMQ::~MosquittoMQ(void)
 {
     int ret;
     INFO("Destructor");
@@ -98,17 +99,17 @@ MQ::~MQ(void)
         ERR("mosquitto_lib_cleanup() Fail(%s)", mosquitto_strerror(ret));
 }
 
-void MQ::SetConnectionCallback(const MQConnectionCallback &cb)
+void MosquittoMQ::SetConnectionCallback(const MQConnectionCallback &cb)
 {
     std::lock_guard<std::recursive_mutex> lock_from_here(callback_lock);
     connect_cb = cb;
 }
 
-void MQ::ConnectCallback(struct mosquitto *mosq, void *obj, int rc, int flag,
+void MosquittoMQ::ConnectCallback(struct mosquitto *mosq, void *obj, int rc, int flag,
       const mosquitto_property *props)
 {
     RET_IF(obj == nullptr);
-    MQ *mq = static_cast<MQ *>(obj);
+    MosquittoMQ *mq = static_cast<MosquittoMQ *>(obj);
 
     INFO("Connected : rc(%d), flag(%d)", rc, flag);
 
@@ -117,11 +118,11 @@ void MQ::ConnectCallback(struct mosquitto *mosq, void *obj, int rc, int flag,
         mq->connect_cb(AITT_CONNECTED);
 }
 
-void MQ::DisconnectCallback(struct mosquitto *mosq, void *obj, int rc,
+void MosquittoMQ::DisconnectCallback(struct mosquitto *mosq, void *obj, int rc,
       const mosquitto_property *props)
 {
     RET_IF(obj == nullptr);
-    MQ *mq = static_cast<MQ *>(obj);
+    MosquittoMQ *mq = static_cast<MosquittoMQ *>(obj);
 
     INFO("Disconnected : rc(%d)", rc);
 
@@ -130,7 +131,7 @@ void MQ::DisconnectCallback(struct mosquitto *mosq, void *obj, int rc,
         mq->connect_cb(AITT_DISCONNECTED);
 }
 
-void MQ::Connect(const std::string &host, int port, const std::string &username,
+void MosquittoMQ::Connect(const std::string &host, int port, const std::string &username,
       const std::string &password)
 {
     int ret;
@@ -151,7 +152,8 @@ void MQ::Connect(const std::string &host, int port, const std::string &username,
     }
 }
 
-void MQ::SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, int qos, bool retain)
+void MosquittoMQ::SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, int qos,
+      bool retain)
 {
     int ret = mosquitto_will_set(handle, topic.c_str(), szmsg, msg, qos, retain);
     if (ret != MOSQ_ERR_SUCCESS) {
@@ -160,7 +162,7 @@ void MQ::SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, in
     }
 }
 
-void MQ::Disconnect(void)
+void MosquittoMQ::Disconnect(void)
 {
     int ret = mosquitto_disconnect(handle);
     if (ret != MOSQ_ERR_SUCCESS) {
@@ -171,11 +173,11 @@ void MQ::Disconnect(void)
     mosquitto_will_clear(handle);
 }
 
-void MQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_message *msg,
+void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_message *msg,
       const mosquitto_property *props)
 {
     RET_IF(obj == nullptr);
-    MQ *mq = static_cast<MQ *>(obj);
+    MosquittoMQ *mq = static_cast<MosquittoMQ *>(obj);
 
     std::lock_guard<std::recursive_mutex> auto_lock(mq->callback_lock);
     mq->subscribers_iterating = true;
@@ -185,7 +187,7 @@ void MQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_message *
         if (nullptr == subscribe_data)
             ERR("end() is not valid because elements were added.");
 
-        bool result = CompareTopic(subscribe_data->topic.c_str(), msg->topic);
+        bool result = AittUtil::CompareTopic(subscribe_data->topic.c_str(), msg->topic);
         if (result)
             mq->InvokeCallback(msg, props);
 
@@ -200,7 +202,7 @@ void MQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_message *
     mq->new_subscribers.clear();
 }
 
-void MQ::InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props)
+void MosquittoMQ::InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props)
 {
     MSG mq_msg;
     mq_msg.SetTopic(msg->topic);
@@ -250,7 +252,7 @@ void MQ::InvokeCallback(const mosquitto_message *msg, const mosquitto_property *
     cb_info->cb(&mq_msg, msg->topic, msg->payload, msg->payloadlen, cb_info->user_data);
 }
 
-void MQ::Publish(const std::string &topic, const void *data, const size_t datalen, int qos,
+void MosquittoMQ::Publish(const std::string &topic, const void *data, const size_t datalen, int qos,
       bool retain)
 {
     int mid = -1;
@@ -261,8 +263,8 @@ void MQ::Publish(const std::string &topic, const void *data, const size_t datale
     }
 }
 
-void MQ::PublishWithReply(const std::string &topic, const void *data, const size_t datalen, int qos,
-      bool retain, const std::string &reply_topic, const std::string &correlation)
+void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+      int qos, bool retain, const std::string &reply_topic, const std::string &correlation)
 {
     int ret;
     int mid = -1;
@@ -287,7 +289,7 @@ void MQ::PublishWithReply(const std::string &topic, const void *data, const size
     }
 }
 
-void MQ::SendReply(MSG *msg, const void *data, const size_t datalen, int qos, bool retain)
+void MosquittoMQ::SendReply(MSG *msg, const void *data, const size_t datalen, int qos, bool retain)
 {
     RET_IF(msg == nullptr);
 
@@ -325,7 +327,8 @@ void MQ::SendReply(MSG *msg, const void *data, const size_t datalen, int qos, bo
     }
 }
 
-void *MQ::Subscribe(const std::string &topic, const SubscribeCallback &cb, void *user_data, int qos)
+void *MosquittoMQ::Subscribe(const std::string &topic, const SubscribeCallback &cb, void *user_data,
+      int qos)
 {
     int mid = -1;
     int ret = mosquitto_subscribe(handle, &mid, topic.c_str(), qos);
@@ -344,7 +347,7 @@ void *MQ::Subscribe(const std::string &topic, const SubscribeCallback &cb, void 
     return static_cast<void *>(data);
 }
 
-void *MQ::Unsubscribe(void *sub_handle)
+void *MosquittoMQ::Unsubscribe(void *sub_handle)
 {
     std::lock_guard<std::recursive_mutex> auto_lock(callback_lock);
     auto it = std::find(subscribers.begin(), subscribers.end(),
@@ -378,20 +381,8 @@ void *MQ::Unsubscribe(void *sub_handle)
     return user_data;
 }
 
-bool MQ::CompareTopic(const std::string &left, const std::string &right)
-{
-    bool result = false;
-    int ret = mosquitto_topic_matches_sub(left.c_str(), right.c_str(), &result);
-    if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_topic_matches_sub(%s, %s) Fail(%s)", left.c_str(), right.c_str(),
-              mosquitto_strerror(ret));
-        throw AittException(AittException::MQTT_ERR);
-    }
-    return result;
-}
-
-MQ::SubscribeData::SubscribeData(const std::string &in_topic, const SubscribeCallback &in_cb,
-      void *in_user_data)
+MosquittoMQ::SubscribeData::SubscribeData(const std::string &in_topic,
+      const SubscribeCallback &in_cb, void *in_user_data)
       : topic(in_topic), cb(in_cb), user_data(in_user_data)
 {
 }

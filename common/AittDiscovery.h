@@ -56,7 +56,7 @@ class AittDiscovery {
     AittProtocol GetProtocol(const std::string &protocol_str);
 
     std::string id_;
-    MQ discovery_mq;
+    std::unique_ptr<MQ> discovery_mq;
     void *callback_handle;
     std::map<AittProtocol, DiscoveryBlob> discovery_map;
     std::map<int, std::pair<AittProtocol, DiscoveryCallback>> callbacks;

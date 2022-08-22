@@ -32,6 +32,7 @@ class ModuleLoader {
         TYPE_WEBRTC,
         TYPE_RTSP,
         TYPE_TRANSPORT_MAX,
+        TYPE_CUSTOM_MQTT,
     };
 
     using ModuleHandle = std::unique_ptr<void, void (*)(const void *)>;
@@ -42,6 +43,7 @@ class ModuleLoader {
     ModuleHandle OpenModule(Type type);
     std::shared_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
           AittDiscovery &discovery);
+    std::shared_ptr<MQ> LoadMqttClient(void *handle, const std::string &id, bool clear_session);
 
   private:
     std::string GetModuleFilename(Type type);

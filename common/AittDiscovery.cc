@@ -20,12 +20,13 @@
 #include <atomic>
 
 #include "AittException.h"
+#include "MQProxy.h"
 #include "aitt_internal.h"
 
 namespace aitt {
 
 AittDiscovery::AittDiscovery(const std::string &id, bool custom_broker)
-      : id_(id), discovery_mq(id + "d", true), callback_handle(nullptr)
+      : id_(id), discovery_mq(new MQProxy(id + "d", true, custom_broker)), callback_handle(nullptr)
 {
 }
 
@@ -34,19 +35,19 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
 {
     RET_IF(callback_handle);
 
-    discovery_mq.SetWillInfo(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
-    discovery_mq.Connect(host, port, username, password);
+    discovery_mq->SetWillInfo(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
+    discovery_mq->Connect(host, port, username, password);
 
-    callback_handle = discovery_mq.Subscribe(DISCOVERY_TOPIC_BASE + "+", DiscoveryMessageCallback,
+    callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+", DiscoveryMessageCallback,
           static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
 }
 
 void AittDiscovery::Stop()
 {
-    discovery_mq.Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
-    discovery_mq.Unsubscribe(callback_handle);
+    discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
+    discovery_mq->Unsubscribe(callback_handle);
     callback_handle = nullptr;
-    discovery_mq.Disconnect();
+    discovery_mq->Disconnect();
 }
 
 void AittDiscovery::UpdateDiscoveryMsg(AittProtocol protocol, const void *msg, size_t length)
@@ -139,7 +140,7 @@ void AittDiscovery::PublishDiscoveryMsg()
     fbb.Finish();
 
     auto buf = fbb.GetBuffer();
-    discovery_mq.Publish(DISCOVERY_TOPIC_BASE + id_, buf.data(), buf.size(), AITT_QOS_EXACTLY_ONCE,
+    discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, buf.data(), buf.size(), AITT_QOS_EXACTLY_ONCE,
           true);
 }
 

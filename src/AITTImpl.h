@@ -89,7 +89,7 @@ class AITT::Impl {
     std::string id_;
     std::string mqtt_broker_ip_;
     int mqtt_broker_port_;
-    MQ mq;
+    std::unique_ptr<MQ> mq;
     AittDiscovery discovery;
     unsigned short reply_id;
     ModuleObj *modules[ModuleLoader::TYPE_TRANSPORT_MAX];

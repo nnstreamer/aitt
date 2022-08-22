@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "MQ.h"
 #include "MSG.h"
 
 #define MQTT_LOCALHOST "127.0.0.1"
@@ -29,16 +30,10 @@
 
 namespace aitt {
 
-class MQ {
+class MosquittoMQ : public MQ {
   public:
-    using SubscribeCallback = std::function<void(MSG *msg, const std::string &topic,
-          const void *data, const size_t datalen, void *user_data)>;
-    using MQConnectionCallback = std::function<void(int)>;
-
-    explicit MQ(const std::string &id, bool clear_session = false);
-    virtual ~MQ(void);
-
-    static bool CompareTopic(const std::string &left, const std::string &right);
+    explicit MosquittoMQ(const std::string &id, bool clear_session = false);
+    virtual ~MosquittoMQ(void);
 
     void SetConnectionCallback(const MQConnectionCallback &cb);
     void Connect(const std::string &host, int port, const std::string &username,

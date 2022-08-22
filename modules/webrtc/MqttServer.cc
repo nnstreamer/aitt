@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "MqttServer.h"
 
+#include "MQProxy.h"
 #include "aitt_internal.h"
 
 #define MQTT_HANDLER_MSG_QOS 1
 #define MQTT_HANDLER_MGMT_QOS 2
 
-MqttServer::MqttServer(const Config &config) : mq(config.GetLocalId(), true)
+MqttServer::MqttServer(const Config &config)
+      : mq(new aitt::MQProxy(config.GetLocalId(), true, false))
 {
     broker_ip_ = config.GetBrokerIp();
     broker_port_ = config.GetBrokerPort();
@@ -33,7 +34,7 @@ MqttServer::MqttServer(const Config &config) : mq(config.GetLocalId(), true)
     DBG("ID[%s] BROKER IP[%s] BROKER PORT [%d] ROOM[%s] %s", id_.c_str(), broker_ip_.c_str(),
           broker_port_, room_id_.c_str(), is_publisher_ ? "Publisher" : "Subscriber");
 
-    mq.SetConnectionCallback(std::bind(&MqttServer::ConnectCallBack, this, std::placeholders::_1));
+    mq->SetConnectionCallback(std::bind(&MqttServer::ConnectCallBack, this, std::placeholders::_1));
 }
 
 MqttServer::~MqttServer()
@@ -96,10 +97,10 @@ void MqttServer::RegisterWithServer(void)
     // Notify Who is source?
     std::string source_topic = room_id_ + std::string("/source");
     if (is_publisher_) {
-        mq.Publish(source_topic, id_.c_str(), id_.size(), AITT_QOS_EXACTLY_ONCE, true);
+        mq->Publish(source_topic, id_.c_str(), id_.size(), AITT_QOS_EXACTLY_ONCE, true);
         SetConnectionState(ConnectionState::Registered);
     } else {
-        mq.Subscribe(source_topic,
+        mq->Subscribe(source_topic,
               std::bind(&MqttServer::HandleSourceTopic, this, std::placeholders::_1,
                     std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
                     std::placeholders::_5),
@@ -136,11 +137,11 @@ bool MqttServer::IsConnected(void)
 int MqttServer::Connect(void)
 {
     std::string will_message = std::string("ROOM_PEER_LEFT ") + id_;
-    mq.SetWillInfo(room_id_, will_message.c_str(), will_message.size(), AITT_QOS_EXACTLY_ONCE,
+    mq->SetWillInfo(room_id_, will_message.c_str(), will_message.size(), AITT_QOS_EXACTLY_ONCE,
           false);
 
     SetConnectionState(ConnectionState::Connecting);
-    mq.Connect(broker_ip_, broker_port_, std::string(), std::string());
+    mq->Connect(broker_ip_, broker_port_, std::string(), std::string());
 
     return 0;
 }
@@ -150,13 +151,13 @@ int MqttServer::Disconnect(void)
     if (is_publisher_) {
         INFO("remove retained");
         std::string source_topic = room_id_ + std::string("/source");
-        mq.Publish(source_topic, nullptr, 0, AITT_QOS_AT_LEAST_ONCE, true);
+        mq->Publish(source_topic, nullptr, 0, AITT_QOS_AT_LEAST_ONCE, true);
     }
 
     std::string left_message = std::string("ROOM_PEER_LEFT ") + id_;
-    mq.Publish(room_id_, left_message.c_str(), left_message.size(), AITT_QOS_AT_LEAST_ONCE, false);
+    mq->Publish(room_id_, left_message.c_str(), left_message.size(), AITT_QOS_AT_LEAST_ONCE, false);
 
-    mq.Disconnect();
+    mq->Disconnect();
 
     room_id_ = std::string("");
 
@@ -177,7 +178,7 @@ int MqttServer::SendMessage(const std::string &peer_id, const std::string &msg)
 
     std::string receiver_topic = room_id_ + std::string("/") + peer_id;
     std::string server_formatted_msg = "ROOM_PEER_MSG " + id_ + " " + msg;
-    mq.Publish(receiver_topic, server_formatted_msg.c_str(), server_formatted_msg.size(),
+    mq->Publish(receiver_topic, server_formatted_msg.c_str(), server_formatted_msg.size(),
           AITT_QOS_AT_LEAST_ONCE);
 
     return 0;
@@ -220,7 +221,7 @@ void MqttServer::JoinRoom(const std::string &room_id)
     }
 
     // Subscribe PEER_JOIN PEER_LEFT
-    mq.Subscribe(room_id_,
+    mq->Subscribe(room_id_,
           std::bind(&MqttServer::HandleRoomTopic, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
                 std::placeholders::_5),
@@ -228,7 +229,7 @@ void MqttServer::JoinRoom(const std::string &room_id)
 
     // Subscribe PEER_MSG
     std::string receiving_topic = room_id + std::string("/") + id_;
-    mq.Subscribe(receiving_topic,
+    mq->Subscribe(receiving_topic,
           std::bind(&MqttServer::HandleMessageTopic, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
                 std::placeholders::_5),
@@ -238,7 +239,7 @@ void MqttServer::JoinRoom(const std::string &room_id)
 
     if (!is_publisher_) {
         std::string join_message = std::string("ROOM_PEER_JOINED ") + id_;
-        mq.Publish(room_id_, join_message.c_str(), join_message.size(), AITT_QOS_EXACTLY_ONCE);
+        mq->Publish(room_id_, join_message.c_str(), join_message.size(), AITT_QOS_EXACTLY_ONCE);
     }
 }
 
