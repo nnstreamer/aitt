@@ -41,9 +41,9 @@ class ModuleLoader {
     virtual ~ModuleLoader() = default;
 
     ModuleHandle OpenModule(Type type);
-    std::shared_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
+    std::unique_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
           AittDiscovery &discovery);
-    std::shared_ptr<MQ> LoadMqttClient(void *handle, const std::string &id, bool clear_session);
+    std::unique_ptr<MQ> LoadMqttClient(void *handle, const std::string &id, bool clear_session);
 
   private:
     std::string GetModuleFilename(Type type);

@@ -29,7 +29,7 @@ MQProxy::MQProxy(const std::string &id, bool clear_session, bool is_custom_broke
 
         mq = loader.LoadMqttClient(handle.get(), "test", true);
     } else {
-        mq = std::shared_ptr<MQ>(new MosquittoMQ(id, clear_session));
+        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, clear_session));
     }
 }
 

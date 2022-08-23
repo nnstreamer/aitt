@@ -42,7 +42,7 @@ class MQProxy : public MQ {
 
   private:
     std::unique_ptr<void, void (*)(const void *)> handle;
-    std::shared_ptr<MQ> mq;
+    std::unique_ptr<MQ> mq;
 };
 
 }  // namespace aitt

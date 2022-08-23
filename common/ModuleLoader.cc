@@ -52,33 +52,32 @@ ModuleLoader::ModuleHandle ModuleLoader::OpenModule(Type type)
     return handle;
 }
 
-std::shared_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const std::string &ip,
+std::unique_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const std::string &ip,
       AittDiscovery &discovery)
 {
     if (handle == nullptr) {
         ERR("handle is NULL");
-        return std::shared_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
     }
 
     AittTransport::ModuleEntry get_instance_fn = reinterpret_cast<AittTransport::ModuleEntry>(
           dlsym(handle, AittTransport::MODULE_ENTRY_NAME));
     if (get_instance_fn == nullptr) {
         ERR("dlsym: %s", dlerror());
-        return std::shared_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
     }
 
-    std::shared_ptr<AittTransport> instance(
-          static_cast<AittTransport *>(get_instance_fn(ip.c_str(), discovery)),
-          [](const AittTransport *instance) -> void { delete instance; });
+    std::unique_ptr<AittTransport> instance(
+          static_cast<AittTransport *>(get_instance_fn(ip.c_str(), discovery)));
     if (instance == nullptr) {
-        ERR("Failed to create a new instance");
-        return std::shared_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        ERR("get_instance_fn(AittTransport) Fail");
+        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
     }
 
     return instance;
 }
 
-std::shared_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string &id,
+std::unique_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string &id,
       bool clear_session)
 {
     MQ::ModuleEntry get_instance_fn =
@@ -88,10 +87,9 @@ std::shared_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string
         throw AittException(AittException::SYSTEM_ERR);
     }
 
-    std::shared_ptr<MQ> instance(static_cast<MQ *>(get_instance_fn(id.c_str(), clear_session)),
-          [](const MQ *instance) { delete instance; });
+    std::unique_ptr<MQ> instance(static_cast<MQ *>(get_instance_fn(id.c_str(), clear_session)));
     if (instance == nullptr) {
-        ERR("Failed to create a new instance");
+        ERR("get_instance_fn(MQ) Fail");
         throw AittException(AittException::SYSTEM_ERR);
     }
 
