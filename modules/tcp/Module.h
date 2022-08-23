@@ -116,10 +116,12 @@ class Module : public AittTransport {
           MainLoopHandler::MainLoopData *watchData);
     void HandleClientDisconnect(int handle);
     std::string GetTopicName(TCPData *connect_info);
+    static void ReceiveExactSize(
+          Module::TCPData *connect_info, void *data, size_t data_length);
     void ThreadMain(void);
-    void SendPayload(const size_t &datalen, Module::PortMap::iterator &portIt, const void *data);
     void SendTopic(const std::string &topic, Module::PortMap::iterator &portIt);
-
+    void SendPayload(const size_t &datalen, Module::PortMap::iterator &portIt, const void *data);
+    void SendExactSize(Module::PortMap::iterator &port_iterator, const void *data, size_t data_length);
     void UpdatePublishTable(const std::string &topic, const std::string &host, unsigned short port);
 
     MainLoopHandler main_loop;
