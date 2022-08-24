@@ -19,8 +19,8 @@
 #include <thread>
 
 #include "AITT.h"
+#include "AittTests.h"
 #include "aitt_internal.h"
-#include "aitt_tests.h"
 
 using AITT = aitt::AITT;
 

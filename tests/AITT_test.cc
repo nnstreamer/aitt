@@ -20,8 +20,8 @@
 
 #include <random>
 
+#include "AittTests.h"
 #include "aitt_internal.h"
-#include "aitt_tests.h"
 
 using AITT = aitt::AITT;
 

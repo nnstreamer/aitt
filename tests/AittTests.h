@@ -18,6 +18,7 @@
 #include <glib.h>
 #include <sys/time.h>
 
+#include "AITT.h"
 #include "aitt_internal.h"
 
 #define LOCAL_IP "127.0.0.1"
@@ -67,7 +68,7 @@ class AittTests {
         DBG("Go forward");
     }
 
-    void *subscribeHandle;
+    AittSubscribeID subscribeHandle;
     bool ready;
     bool ready2;
 

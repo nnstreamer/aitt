@@ -18,8 +18,8 @@
 #include <glib.h>
 #include <gtest/gtest.h>
 
+#include "AittTests.h"
 #include "aitt_internal.h"
-#include "aitt_tests.h"
 
 using AITT = aitt::AITT;
 

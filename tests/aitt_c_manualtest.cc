@@ -18,7 +18,7 @@
 #include <glib.h>
 #include <gtest/gtest.h>
 
-#include "aitt_tests.h"
+#include "AittTests.h"
 
 TEST(AITT_C_MANUAL, will_set_P)
 {

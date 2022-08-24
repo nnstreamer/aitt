@@ -18,9 +18,9 @@
 #include <AITT.h>
 #include <gtest/gtest.h>
 
+#include "AittTests.h"
 #include "AittTransport.h"
 #include "aitt_internal.h"
-#include "aitt_tests.h"
 
 using ModuleLoader = aitt::ModuleLoader;
 
