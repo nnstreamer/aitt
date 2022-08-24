@@ -31,7 +31,7 @@
 TEST(TCPServer, Positive_Create_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
-    std::unique_ptr<TCP::Server> tcp(std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, port));
+    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
 }
 
@@ -40,8 +40,7 @@ TEST(TCPServer, Negative_Create_Anytime)
     try {
         unsigned short port = TEST_SERVER_PORT;
 
-        std::unique_ptr<TCP::Server> tcp(
-              std::make_unique<TCP::Server>(TEST_SERVER_INVALID_ADDRESS, port));
+        std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_INVALID_ADDRESS, port));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));
@@ -51,7 +50,7 @@ TEST(TCPServer, Negative_Create_Anytime)
 TEST(TCPServer, Positive_Create_AutoPort_Anytime)
 {
     unsigned short port = TEST_SERVER_AVAILABLE_PORT;
-    std::unique_ptr<TCP::Server> tcp(std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, port));
+    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_NE(port, 0);
 }
@@ -59,7 +58,7 @@ TEST(TCPServer, Positive_Create_AutoPort_Anytime)
 TEST(TCPServer, Positive_GetPort_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
-    std::unique_ptr<TCP::Server> tcp(std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, port));
+    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_EQ(tcp->GetPort(), TEST_SERVER_PORT);
 }
@@ -67,7 +66,7 @@ TEST(TCPServer, Positive_GetPort_Anytime)
 TEST(TCPServer, Positive_GetHandle_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
-    std::unique_ptr<TCP::Server> tcp(std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, port));
+    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_GE(tcp->GetHandle(), 0);
 }
@@ -75,7 +74,7 @@ TEST(TCPServer, Positive_GetHandle_Anytime)
 TEST(TCPServer, Positive_GetPort_AutoPort_Anytime)
 {
     unsigned short port = TEST_SERVER_AVAILABLE_PORT;
-    std::unique_ptr<TCP::Server> tcp(std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, port));
+    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_EQ(tcp->GetPort(), port);
 }
@@ -91,8 +90,7 @@ TEST(TCPServer, Positive_AcceptPeer_Anytime)
     unsigned short serverPort = TEST_SERVER_PORT;
     std::thread serverThread(
           [serverPort, &m, &ready, &connected, &ready_cv, &connected_cv](void) mutable -> void {
-              std::unique_ptr<TCP::Server> tcp(
-                    std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, serverPort));
+              std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, serverPort));
               {
                   std::lock_guard<std::mutex> lk(m);
                   ready = true;
@@ -110,7 +108,7 @@ TEST(TCPServer, Positive_AcceptPeer_Anytime)
     {
         std::unique_lock<std::mutex> lk(m);
         ready_cv.wait(lk, [&ready] { return ready; });
-        std::unique_ptr<TCP> tcp(std::make_unique<TCP>(TEST_SERVER_ADDRESS, serverPort));
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, serverPort));
         connected_cv.wait(lk, [&connected] { return connected; });
     }
 

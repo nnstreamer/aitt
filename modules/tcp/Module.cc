@@ -105,7 +105,7 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
                         // The broken clientTable or subscribeTable
                     }
 
-                    std::unique_ptr<TCP> client(std::make_unique<TCP>(host, portIt->first));
+                    std::unique_ptr<TCP> client(new TCP(host, portIt->first));
 
                     // TODO:
                     // If the client gets disconnected,
@@ -155,7 +155,8 @@ void Module::SendPayload(const size_t &datalen, Module::PortMap::iterator &portI
     }
 }
 
-void Module::SendExactSize(Module::PortMap::iterator &port_iterator, const void *data, size_t data_length)
+void Module::SendExactSize(Module::PortMap::iterator &port_iterator, const void *data,
+      size_t data_length)
 {
     size_t remaining_size = data_length;
     while (0 < remaining_size) {
@@ -183,7 +184,7 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
     std::unique_ptr<TCP::Server> tcpServer;
 
     unsigned short port = 0;
-    tcpServer = std::make_unique<TCP::Server>("0.0.0.0", port);
+    tcpServer = std::unique_ptr<TCP::Server>(new TCP::Server("0.0.0.0", port));
     TCPServerData *listen_info = new TCPServerData;
     listen_info->impl = this;
     listen_info->cb = cb;

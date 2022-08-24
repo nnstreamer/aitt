@@ -21,6 +21,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // TODO: webrtc.h is very heavy header file.
 // I think we need to decide whether to include this or not
@@ -94,7 +95,7 @@ class WebRtcStream {
 
   private:
     webrtc_h webrtc_handle_;
-    std::shared_ptr<CameraHandler> camera_handler_;
+    std::unique_ptr<CameraHandler> camera_handler_;
     // DO we need to make is_source_overflow_ as atomic?
     bool is_source_overflow_;
     unsigned int source_id_;

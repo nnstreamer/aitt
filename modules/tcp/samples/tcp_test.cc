@@ -36,7 +36,7 @@ __thread __aitt__tls__ __aitt;
 class AittTcpSample {
   public:
     AittTcpSample(const std::string &host, unsigned short &port)
-          : server(std::make_unique<TCP::Server>(host, port))
+          : server(new TCP::Server(host, port))
     {
     }
     virtual ~AittTcpSample(void) {}
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
               SEND_INTERVAL,
               [](gpointer data) -> gboolean {
                   Main *ctx = static_cast<Main *>(data);
-                  std::unique_ptr<TCP> client(std::make_unique<TCP>(ctx->host, ctx->port));
+                  std::unique_ptr<TCP> client(new TCP(ctx->host, ctx->port));
 
                   INFO("Assigned client port: %u", client->GetPort());
 

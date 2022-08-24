@@ -121,7 +121,7 @@ bool WebRtcStream::AttachCameraPreviewSource(void)
         return false;
     }
 
-    camera_handler_ = std::make_unique<CameraHandler>();
+    camera_handler_ = std::unique_ptr<CameraHandler>(new CameraHandler());
     camera_handler_->Init(OnMediaPacketPreview, this);
 
     auto ret = webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET,

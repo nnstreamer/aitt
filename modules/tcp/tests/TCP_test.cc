@@ -43,7 +43,7 @@ class TCPTest : public testing::Test {
         clientThread = std::thread([this](void) mutable -> void {
             std::unique_lock<std::mutex> lk(m);
             ready_cv.wait(lk, [this] { return ready; });
-            client = std::make_unique<TCP>(TEST_SERVER_ADDRESS, serverPort);
+            client = std::unique_ptr<TCP>(new TCP(TEST_SERVER_ADDRESS, serverPort));
 
             customTest();
         });
@@ -51,7 +51,7 @@ class TCPTest : public testing::Test {
 
     void RunServer(void)
     {
-        tcp = std::make_unique<TCP::Server>(TEST_SERVER_ADDRESS, serverPort);
+        tcp = std::unique_ptr<TCP::Server>(new TCP::Server(TEST_SERVER_ADDRESS, serverPort));
         {
             std::lock_guard<std::mutex> lk(m);
             ready = true;
@@ -78,8 +78,7 @@ class TCPTest : public testing::Test {
 TEST(TCP, Negative_Create_InvalidPort_Anytime)
 {
     try {
-        std::unique_ptr<TCP> tcp(
-              std::make_unique<TCP>(TEST_SERVER_ADDRESS, TEST_SERVER_AVAILABLE_PORT));
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, TEST_SERVER_AVAILABLE_PORT));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));
@@ -89,8 +88,7 @@ TEST(TCP, Negative_Create_InvalidPort_Anytime)
 TEST(TCP, Negative_Create_InvalidAddress_Anytime)
 {
     try {
-        std::unique_ptr<TCP> tcp(
-              std::make_unique<TCP>(TEST_SERVER_INVALID_ADDRESS, TEST_SERVER_PORT));
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_INVALID_ADDRESS, TEST_SERVER_PORT));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));

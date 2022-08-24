@@ -17,9 +17,8 @@
 
 #include <glib.h>
 #include <gtest/gtest.h>
-#include <sys/random.h>
 
-#include <thread>
+#include <random>
 
 #include "aitt_internal.h"
 #include "aitt_tests.h"
@@ -477,11 +476,14 @@ TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime)
 TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
 {
     try {
-        char dump_msg[204800] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-        int dump_msg_size = getrandom(dump_msg, sizeof(dump_msg), 0);
-        if (-1 == dump_msg_size) {
-            ERR("getrandom() Fail(%d)", errno);
-            dump_msg_size = 62;
+        const char character_set[] =
+              "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        std::mt19937 random_gen{std::random_device{}()};
+        std::uniform_int_distribution<std::string::size_type> gen(0, 61);
+
+        char dump_msg[204800] = {};
+        for (size_t i = 0; i < sizeof(dump_msg); i++) {
+            dump_msg[i] = character_set[gen(random_gen)];
         }
 
         AITT aitt(clientId, LOCAL_IP);
@@ -513,8 +515,8 @@ TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
             sleep(SLEEP_MS);
 
             for (int i = 0; i < 10; i++) {
-                INFO("size = %d", dump_msg_size);
-                aitt1.Publish("test/stress1", dump_msg, dump_msg_size, AITT_TYPE_TCP,
+                INFO("size = %zu", sizeof(dump_msg));
+                aitt1.Publish("test/stress1", dump_msg, sizeof(dump_msg), AITT_TYPE_TCP,
                       AITT_QOS_AT_MOST_ONCE, true);
             }
             g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
@@ -529,7 +531,7 @@ TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
         ASSERT_TRUE(ready);
         ready = false;
 
-        aitt_retry.Publish("test/stress1", dump_msg, dump_msg_size, AITT_TYPE_TCP,
+        aitt_retry.Publish("test/stress1", dump_msg, sizeof(dump_msg), AITT_TYPE_TCP,
               AITT_QOS_AT_MOST_ONCE, true);
 
         g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
