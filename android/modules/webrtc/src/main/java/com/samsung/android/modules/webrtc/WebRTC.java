@@ -91,21 +91,19 @@ public class WebRTC {
 
     /**
      * WebRTC constructor to create webRTC instance
-     * @param dataType To decide webRTC channel type
      * @param appContext Application context creating webRTC instance
      */
-    public WebRTC(DataType dataType , Context appContext) {
+    public WebRTC(Context appContext) {
         this.appContext = appContext;
         this.isReciever = false;
     }
 
     /**
      * WebRTC constructor to create webRTC instance
-     * @param dataType To decide webRTC channel type
      * @param appContext Application context creating webRTC instance
      * @param socket Java server socket for webrtc signalling
      */
-    WebRTC(DataType dataType , Context appContext , Socket socket) {
+    WebRTC(Context appContext , Socket socket) {
         Log.d(TAG , "InWebRTC Constructor");
         this.appContext = appContext;
         this.socket = socket;

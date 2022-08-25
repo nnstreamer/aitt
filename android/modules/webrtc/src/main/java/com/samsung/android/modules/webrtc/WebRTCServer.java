@@ -29,7 +29,6 @@ import java.util.List;
  */
 public class WebRTCServer {
     private static final String TAG = "WebRTCServer";
-    private WebRTC.DataType dataType;
     private ServerSocket serverSocket = null;
     private Context appContext;
     private WebRTC.ReceiveDataCallback dataCallback;
@@ -40,12 +39,10 @@ public class WebRTCServer {
     /**
      * WebRTCServer constructor to create its instance
      * @param appContext Application context of the app creating WebRTCServer instance
-     * @param dataType Datatype to create webRTC channel - Media channel or data channel
      * @param dataCallback Data callback object to create call back mechanism
      */
-    public WebRTCServer(Context appContext, WebRTC.DataType dataType, WebRTC.ReceiveDataCallback dataCallback){
+    public WebRTCServer(Context appContext, WebRTC.ReceiveDataCallback dataCallback){
         this.appContext = appContext;
-        this.dataType = dataType;
         this.dataCallback = dataCallback;
     }
 
@@ -96,7 +93,7 @@ public class WebRTCServer {
             while(isRunning){
                 try {
                     Socket socket = serverSocket.accept();
-                    WebRTC web = new WebRTC(dataType , appContext , socket);
+                    WebRTC web = new WebRTC(appContext , socket);
                     web.connect();
                     web.registerDataCallback(dataCallback);
                     connectionList.add(web);

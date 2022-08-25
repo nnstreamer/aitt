@@ -49,7 +49,7 @@ class WebRTCHandler implements TransportHandler {
             handlerDataCallback.pushHandlerData(data);
         };
         WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
-        ws = new WebRTCServer(appContext, dataType, cb);
+        ws = new WebRTCServer(appContext, cb);
         int serverPort = ws.start();
         if (serverPort < 0) {
             throw new IllegalArgumentException("Failed to start webRTC server-socket");
@@ -93,7 +93,7 @@ class WebRTCHandler implements TransportHandler {
     public void publish(String topic, String ip, int port, byte[] message) {
         WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
         if (webrtc == null) {
-            webrtc = new WebRTC(dataType, appContext);
+            webrtc = new WebRTC(appContext);
             webrtc.connect(ip, port);
         }
         if (dataType == WebRTC.DataType.MESSAGE) {
