@@ -639,10 +639,16 @@ public class AittUnitTest {
          assertNotNull("Aitt Instance not null", aitt);
          aitt.setConnectionCallback(new Aitt.ConnectionCallback() {
             @Override
-            public void onConnected() {}
+            public void onConnected() {
+            }
 
             @Override
-            public void onDisconnected() {}
+            public void onDisconnected() {
+            }
+
+            @Override
+            public void onConnectionFailed() {
+            }
          });
          aitt.connect(brokerIp, port);
 

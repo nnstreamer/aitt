@@ -122,6 +122,7 @@ public class Aitt {
     public interface ConnectionCallback {
         void onConnected();
         void onDisconnected();
+        void onConnectionFailed();
     }
 
     /**
@@ -473,12 +474,24 @@ public class Aitt {
     /**
      * Method invoked from JNI layer to Java layer for MQTT connection status update
      * @param status Status of the MQTT connection
+     *   0: MQTT Connection disconnected
+     *   1: MQTT connection success
+     *   2: MQTT connection failed
      */
     private void connectionStatusCallback(int status) {
-        if (status == 0) {
-            connectionCallback.onDisconnected();
-        } else {
-            connectionCallback.onConnected();
+
+        switch (status) {
+            case 0:
+                connectionCallback.onDisconnected();
+                break;
+            case 1:
+                connectionCallback.onConnected();
+                break;
+            case 2:
+                connectionCallback.onConnectionFailed();
+                break;
+            default:
+                break;
         }
     }
 
