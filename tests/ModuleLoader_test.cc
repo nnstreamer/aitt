@@ -60,7 +60,7 @@ TEST_F(ModuleLoaderTest, LoadMqttClient_P_Anytime)
     ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_CUSTOM_MQTT);
     if (handle) {
         EXPECT_NO_THROW({
-            auto module = loader.LoadMqttClient(handle.get(), "test", false);
+            auto module = loader.LoadMqttClient(handle.get(), "test", AittOption(false, true));
             ASSERT_NE(module, nullptr);
         });
     }
@@ -70,7 +70,7 @@ TEST_F(ModuleLoaderTest, LoadMqttClient_N_Anytime)
 {
     EXPECT_THROW(
           {
-              loader.LoadMqttClient(nullptr, "test", false);
+              loader.LoadMqttClient(nullptr, "test", AittOption(false, true));
               FAIL() << "Should not be called";
           },
           aitt::AittException);

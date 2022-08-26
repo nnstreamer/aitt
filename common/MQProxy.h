@@ -23,7 +23,7 @@ namespace aitt {
 
 class MQProxy : public MQ {
   public:
-    explicit MQProxy(const std::string &id, bool clear_session, bool custom_broker);
+    explicit MQProxy(const std::string &id, const AittOption &option);
     virtual ~MQProxy() = default;
 
     void SetConnectionCallback(const MQConnectionCallback &cb);

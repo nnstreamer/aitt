@@ -35,7 +35,7 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, 
       bool custom_broker)
       : public_api(parent),
         id_(id),
-        mq(new MQProxy(id, clear_session, custom_broker)),
+        mq(new MQProxy(id, AittOption(clear_session, custom_broker))),
         discovery(id, custom_broker),
         reply_id(0),
         transports{0}

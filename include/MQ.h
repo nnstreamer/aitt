@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <AittOption.h>
 #include <MSG.h>
 
 #include <functional>
@@ -28,7 +29,7 @@ namespace aitt {
 
 class MQ {
   public:
-    typedef void *(*ModuleEntry)(const char *id, bool clear_session);
+    typedef void *(*ModuleEntry)(const char *id, const AittOption &option);
 
     using SubscribeCallback = std::function<void(MSG *msg, const std::string &topic,
           const void *data, const size_t datalen, void *user_data)>;

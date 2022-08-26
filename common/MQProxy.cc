@@ -20,16 +20,15 @@
 
 namespace aitt {
 
-MQProxy::MQProxy(const std::string &id, bool clear_session, bool is_custom_broker)
-      : handle(nullptr, nullptr)
+MQProxy::MQProxy(const std::string &id, const AittOption &option) : handle(nullptr, nullptr)
 {
-    if (is_custom_broker) {
+    if (option.GetUseCustomMqttBroker()) {
         ModuleLoader loader;
         handle = loader.OpenModule(ModuleLoader::TYPE_CUSTOM_MQTT);
 
-        mq = loader.LoadMqttClient(handle.get(), "test", true);
+        mq = loader.LoadMqttClient(handle.get(), "test", option);
     } else {
-        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, clear_session));
+        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetClearSession()));
     }
 }
 

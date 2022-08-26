@@ -17,6 +17,8 @@
 
 #include <AittTypes.h>
 
+#include <string>
+
 class API AittOption {
   public:
     AittOption();
@@ -24,11 +26,23 @@ class API AittOption {
     ~AittOption() = default;
 
     void SetClearSession(bool val);
-    bool GetClearSession();
+    bool GetClearSession() const;
     void SetUseCustomMqttBroker(bool val);
-    bool GetUseCustomMqttBroker();
+    bool GetUseCustomMqttBroker() const;
+    void SetServiceID(const std::string &id);
+    const char *GetServiceID() const;
+    void SetLocationID(const std::string &id);
+    const char *GetLocationID() const;
+    void SetRootCA(const std::string &ca);
+    const char *GetRootCA() const;
+    void SetCustomRWFile(const std::string &file);
+    const char *GetCustomRWFile() const;
 
   private:
     bool clear_session_;
-    bool use_custom_broker_;
+    bool use_custom_broker;
+    std::string service_id;
+    std::string location_id;
+    std::string root_ca;
+    std::string custom_rw_file;
 };

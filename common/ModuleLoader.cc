@@ -78,7 +78,7 @@ std::unique_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const s
 }
 
 std::unique_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string &id,
-      bool clear_session)
+      const AittOption &option)
 {
     MQ::ModuleEntry get_instance_fn =
           reinterpret_cast<MQ::ModuleEntry>(dlsym(handle, MQ::MODULE_ENTRY_NAME));
@@ -87,7 +87,7 @@ std::unique_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string
         throw AittException(AittException::SYSTEM_ERR);
     }
 
-    std::unique_ptr<MQ> instance(static_cast<MQ *>(get_instance_fn(id.c_str(), clear_session)));
+    std::unique_ptr<MQ> instance(static_cast<MQ *>(get_instance_fn(id.c_str(), option)));
     if (instance == nullptr) {
         ERR("get_instance_fn(MQ) Fail");
         throw AittException(AittException::SYSTEM_ERR);

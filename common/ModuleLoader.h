@@ -43,7 +43,8 @@ class ModuleLoader {
     ModuleHandle OpenModule(Type type);
     std::unique_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
           AittDiscovery &discovery);
-    std::unique_ptr<MQ> LoadMqttClient(void *handle, const std::string &id, bool clear_session);
+    std::unique_ptr<MQ> LoadMqttClient(void *handle, const std::string &id,
+          const AittOption &option);
 
   private:
     std::string GetModuleFilename(Type type);

@@ -22,7 +22,7 @@
 #define MQTT_HANDLER_MGMT_QOS 2
 
 MqttServer::MqttServer(const Config &config)
-      : mq(new aitt::MQProxy(config.GetLocalId(), true, false))
+      : mq(new aitt::MQProxy(config.GetLocalId(), AittOption(true, false)))
 {
     broker_ip_ = config.GetBrokerIp();
     broker_port_ = config.GetBrokerPort();
