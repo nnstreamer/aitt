@@ -82,14 +82,6 @@ public class WebRTC {
     private Integer recieverPort;
 
     /**
-     * WebRTC channels supported - Media channel, data channel
-     */
-    public enum DataType{
-        MESSAGE,
-        VIDEOFRAME,
-    }
-
-    /**
      * WebRTC constructor to create webRTC instance
      * @param appContext Application context creating webRTC instance
      */

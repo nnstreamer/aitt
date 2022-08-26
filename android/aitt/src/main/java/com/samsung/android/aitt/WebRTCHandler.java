@@ -48,7 +48,6 @@ class WebRTCHandler implements TransportHandler {
         WebRTC.ReceiveDataCallback cb = data -> {
             handlerDataCallback.pushHandlerData(data);
         };
-        WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
         ws = new WebRTCServer(appContext, cb);
         int serverPort = ws.start();
         if (serverPort < 0) {
@@ -91,14 +90,13 @@ class WebRTCHandler implements TransportHandler {
 
     @Override
     public void publish(String topic, String ip, int port, byte[] message) {
-        WebRTC.DataType dataType = topic.endsWith(Definitions.RESPONSE_POSTFIX) ? WebRTC.DataType.MESSAGE : WebRTC.DataType.VIDEOFRAME;
         if (webrtc == null) {
             webrtc = new WebRTC(appContext);
             webrtc.connect(ip, port);
         }
-        if (dataType == WebRTC.DataType.MESSAGE) {
+        if (topic.endsWith(Definitions.RESPONSE_POSTFIX)) {
             webrtc.sendMessageData(message);
-        } else if (dataType == WebRTC.DataType.VIDEOFRAME) {
+        } else {
             webrtc.sendVideoData(message, frameWidth, frameHeight);
         }
     }
