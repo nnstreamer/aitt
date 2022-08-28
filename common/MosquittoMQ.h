@@ -63,7 +63,8 @@ class MosquittoMQ : public MQ {
           const mosquitto_property *props);
     static void MessageCallback(mosquitto *, void *, const mosquitto_message *,
           const mosquitto_property *);
-    void InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props);
+    void InvokeCallback(SubscribeData *subscriber, const mosquitto_message *msg,
+          const mosquitto_property *props);
 
     static const std::string REPLY_SEQUENCE_NUM_KEY;
     static const std::string REPLY_IS_END_SEQUENCE_KEY;

@@ -188,15 +188,15 @@ int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const size_
  * @brief Connect to mqtt broker.
  * @privlevel public
  * @param[in] handle Handle of AITT service
- * @param[in] broker_ip IP address of the broker to connect to
- * @param[in] port the network port to connect to. Usually 1883.
+ * @param[in] host Identifier of the broker usually it's IP address of the broker to connect to
+ * @param[in] port the network port to connect to. Usually 1883. Ignored if not required.
  * @return @c 0 on success
  *         otherwise a negative error value
  * @retval #AITT_ERROR_NONE  Success
  * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #AITT_ERROR_SYSTEM System errors
  */
-int aitt_connect(aitt_h handle, const char *broker_ip, int port);
+int aitt_connect(aitt_h handle, const char *host, int port);
 
 /**
  * @brief Connect to mqtt broker as aitt_connect(), but takes username and password.

@@ -34,8 +34,9 @@ enum AittQoS {
 };
 
 enum AittConnectionState {
-    AITT_DISCONNECTED = 0,  // The connection is disconnected.
-    AITT_CONNECTED = 1,     // A connection was successfully established to the mqtt broker.
+    AITT_DISCONNECTED = 0,    // The connection is disconnected.
+    AITT_CONNECTED = 1,       // A connection was successfully established to the mqtt broker.
+    AITT_CONNECT_FAILED = 2,  // Failed to connect to the mqtt broker.
 };
 
 #ifdef TIZEN

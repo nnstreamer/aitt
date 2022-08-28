@@ -115,7 +115,7 @@ void MosquittoMQ::ConnectCallback(struct mosquitto *mosq, void *obj, int rc, int
 
     std::lock_guard<std::recursive_mutex> lock_from_here(mq->callback_lock);
     if (mq->connect_cb)
-        mq->connect_cb(AITT_CONNECTED);
+        mq->connect_cb((rc == CONNACK_ACCEPTED) ? AITT_CONNECTED : AITT_CONNECT_FAILED);
 }
 
 void MosquittoMQ::DisconnectCallback(struct mosquitto *mosq, void *obj, int rc,
@@ -189,7 +189,7 @@ void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_
 
         bool result = AittUtil::CompareTopic(subscribe_data->topic.c_str(), msg->topic);
         if (result)
-            mq->InvokeCallback(msg, props);
+            mq->InvokeCallback(*mq->subscriber_iterator, msg, props);
 
         if (!mq->subscriber_iterator_updated)
             mq->subscriber_iterator++;
@@ -202,8 +202,11 @@ void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_
     mq->new_subscribers.clear();
 }
 
-void MosquittoMQ::InvokeCallback(const mosquitto_message *msg, const mosquitto_property *props)
+void MosquittoMQ::InvokeCallback(SubscribeData *subscriber, const mosquitto_message *msg,
+      const mosquitto_property *props)
 {
+    RET_IF(nullptr == subscriber);
+
     MSG mq_msg;
     mq_msg.SetTopic(msg->topic);
     if (props) {
@@ -248,8 +251,7 @@ void MosquittoMQ::InvokeCallback(const mosquitto_message *msg, const mosquitto_p
         }
     }
 
-    SubscribeData *cb_info = *subscriber_iterator;
-    cb_info->cb(&mq_msg, msg->topic, msg->payload, msg->payloadlen, cb_info->user_data);
+    subscriber->cb(&mq_msg, msg->topic, msg->payload, msg->payloadlen, subscriber->user_data);
 }
 
 void MosquittoMQ::Publish(const std::string &topic, const void *data, const size_t datalen, int qos,

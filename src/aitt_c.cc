@@ -27,6 +27,7 @@ struct aitt_handle {
     aitt_handle() : aitt(nullptr) {}
     AITT *aitt;
     bool connected;
+    bool custom_broker;
 };
 
 struct aitt_option {
@@ -42,6 +43,7 @@ API aitt_h aitt_new(const char *id, aitt_option_h option)
         std::string valid_id;
         std::string valid_ip;
         AittOption aitt_option;
+        bool custom_broker = false;
 
         if (id)
             valid_id = id;
@@ -51,11 +53,13 @@ API aitt_h aitt_new(const char *id, aitt_option_h option)
                 valid_ip = option->my_ip;
             aitt_option.SetClearSession(option->clear_session);
             aitt_option.SetUseCustomMqttBroker(option->custom_broker);
+            custom_broker = option->custom_broker;
         }
 
         handle = new aitt_handle();
         handle->aitt = new AITT(valid_id, valid_ip, aitt_option);
         handle->connected = false;
+        handle->custom_broker = custom_broker;
     } catch (std::exception &e) {
         ERR("new() Fail(%s)", e.what());
         return nullptr;
@@ -191,23 +195,25 @@ static bool is_valid_ip(const char *ip)
     return true;
 }
 
-API int aitt_connect(aitt_h handle, const char *broker_ip, int port)
+API int aitt_connect(aitt_h handle, const char *host, int port)
 {
-    return aitt_connect_full(handle, broker_ip, port, NULL, NULL);
+    return aitt_connect_full(handle, host, port, NULL, NULL);
 }
 
-API int aitt_connect_full(aitt_h handle, const char *broker_ip, int port, const char *username,
+API int aitt_connect_full(aitt_h handle, const char *host, int port, const char *username,
       const char *password)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
-    RETVM_IF(is_valid_ip(broker_ip) == false, AITT_ERROR_INVALID_PARAMETER, "Invalid IP(%s)",
-          broker_ip);
+    if (handle->custom_broker)
+        RETV_IF(host == nullptr, AITT_ERROR_INVALID_PARAMETER);
+    else
+        RETVM_IF(!is_valid_ip(host), AITT_ERROR_INVALID_PARAMETER, "Invalid IP(%s)", host);
 
     try {
-        handle->aitt->Connect(broker_ip, port, username ? username : std::string(),
+        handle->aitt->Connect(host, port, username ? username : std::string(),
               password ? password : std::string());
     } catch (std::exception &e) {
-        ERR("Connect(%s, %d) Fail(%s)", broker_ip, port, e.what());
+        ERR("Connect(%s, %d) Fail(%s)", host, port, e.what());
         return AITT_ERROR_SYSTEM;
     }
 
