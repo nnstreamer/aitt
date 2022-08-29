@@ -64,6 +64,17 @@ AittNativeInterface::~AittNativeInterface(void)
     }
 }
 
+
+bool AittNativeInterface::checkParams(JNIEnv *env, jobject jniInterfaceObject){
+    if (env == nullptr || jniInterfaceObject == nullptr) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+        return false;
+    }else{
+        return true;
+    }
+}
+
+
 /**
  * Convert the JNI string to C++ string
  * @param env JNI interface pointer
@@ -97,10 +108,9 @@ std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str)
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_connectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring host, jint port)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string brokerIp = GetStringUTF(env, host);
     if (brokerIp.empty()) {
@@ -133,10 +143,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *
       jobject jniInterfaceObject, jlong handle, jstring topic, jbyteArray data, jlong datalen,
       jint protocol, jint qos, jboolean retain)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
     if (customTopic.empty()) {
@@ -173,10 +182,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     try {
         instance->aitt.Disconnect();
@@ -184,6 +192,20 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEn
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to disconnect");
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
     }
+}
+
+
+bool AittNativeInterface::jniStatusCheck(JNIEnv *env, int JNIStatus){
+    if (JNIStatus == JNI_EDETACHED) {
+        if (cbContext.jvm->AttachCurrentThread(&env, nullptr) != 0) {
+            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to attach current thread");
+            return false;
+        }
+    } else if (JNIStatus == JNI_EVERSION) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Unsupported version");
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -198,10 +220,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEn
 jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring topic, jint protocol, jint qos)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return 0L;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
     if (customTopic.empty()) {
@@ -220,15 +241,10 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
                   JNIEnv *env;
                   int JNIStatus =
                         cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-                  if (JNIStatus == JNI_EDETACHED) {
-                      if (cbContext.jvm->AttachCurrentThread(&env, nullptr) != 0) {
-                          JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to attach current thread");
-                          return;
-                      }
-                  } else if (JNIStatus == JNI_EVERSION) {
-                      JNI_LOG(ANDROID_LOG_ERROR, TAG, "Unsupported version");
+
+                  if(!jniStatusCheck(env, JNIStatus))
                       return;
-                  }
+
                   if (env != nullptr && instance->cbObject != nullptr) {
                       jstring _topic = env->NewStringUTF(handle->GetTopic().c_str());
                       if (env->ExceptionCheck() == true) {
@@ -274,10 +290,9 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jlong aittSubId)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     void *subId = reinterpret_cast<void *>(aittSubId);
     try {
@@ -297,10 +312,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIE
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallbackJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+    if(!checkParams(env, jniInterfaceObject))
         return;
-    }
+
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
 
     try {
@@ -310,15 +324,10 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallba
                     JNIEnv *env;
                     int JNIStatus =
                             cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-                    if (JNIStatus == JNI_EDETACHED) {
-                        if (cbContext.jvm->AttachCurrentThread(&env, nullptr) != 0) {
-                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to attach current thread");
-                            return;
-                        }
-                    } else if (JNIStatus == JNI_EVERSION) {
-                        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Unsupported version");
+
+                    if(!jniStatusCheck(env, JNIStatus))
                         return;
-                    }
+
                     if (env != nullptr && instance->cbObject != nullptr) {
                         env->CallVoidMethod(instance->cbObject, cbContext.connectionCallbackMethodID,
                                             (jint)status);
@@ -349,10 +358,10 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallba
 jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *env,
       jobject jniInterfaceObject, jstring id, jstring ip, jboolean clearSession)
 {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+
+    if(!checkParams(env, jniInterfaceObject))
         return JNI_ERR;
-    }
+
     std::string mqId = GetStringUTF(env, id);
     if (mqId.empty()) {
         return 0L;

@@ -37,6 +37,8 @@ class AittNativeInterface {
         AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession);
         virtual ~AittNativeInterface(void);
         static std::string GetStringUTF(JNIEnv *env, jstring str);
+        static bool checkParams(JNIEnv *env, jobject jniInterfaceObject);
+        static bool jniStatusCheck(JNIEnv *env, int JNIStatus);
 
     public:
         static jlong Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *env, jobject jniInterfaceObject,

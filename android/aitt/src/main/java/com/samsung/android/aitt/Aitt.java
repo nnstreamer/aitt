@@ -244,13 +244,8 @@ public class Aitt {
      * @param retain Boolean to decide whether or not the message should be retained by the broker
      */
     public void publish(String topic, byte[] message, EnumSet<Protocol> protocols, QoS qos, boolean retain) {
-        if (topic == null || topic.isEmpty()) {
-            throw new IllegalArgumentException(INVALID_TOPIC);
-        }
-        if (protocols.isEmpty()) {
-            throw new IllegalArgumentException("Invalid protocols");
-        }
 
+        checkParams(topic, protocols);
         int jniProtocols = 0;
 
         for (Protocol p : protocols) {
@@ -352,14 +347,11 @@ public class Aitt {
      * @param qos QoS at which the message should be delivered
      */
     public void subscribe(String topic, SubscribeCallback callback, EnumSet<Protocol> protocols, QoS qos) {
-        if (topic == null || topic.isEmpty()) {
-            throw new IllegalArgumentException(INVALID_TOPIC);
-        }
+
+        checkParams(topic, protocols);
+
         if (callback == null) {
             throw new IllegalArgumentException("Invalid callback");
-        }
-        if (protocols.isEmpty()) {
-            throw new IllegalArgumentException("Invalid protocols");
         }
 
         int jniProtocols = 0;
@@ -403,6 +395,21 @@ public class Aitt {
         }
 
         addCallBackToSubscribeMap(topic, callback);
+    }
+
+    /**
+     * Method to verify Aitt pub & sub parameters
+     * @param topic String to which applications can subscribe, to receive data
+     * @param protocols Protocol supported by application, invoking subscribe
+     */
+    private void checkParams(String topic, EnumSet<Protocol> protocols){
+        if (topic == null || topic.isEmpty()) {
+            throw new IllegalArgumentException(INVALID_TOPIC);
+        }
+
+        if (protocols.isEmpty()) {
+            throw new IllegalArgumentException("Invalid protocols");
+        }
     }
 
     /**
