@@ -46,10 +46,6 @@ public class AittUnitTest {
    @Mock
    private final Context appContext = mock(Context.class);
 
-   private static final String JOIN_NETWORK = "connected";
-   private static final String WILL_LEAVE_NETWORK = "disconnected";
-   private static final String JAVA_SPECIFIC_DISCOVERY_TOPIC = "/java/aitt/discovery/";
-   private static final String AITT_LOCALHOST = "127.0.0.1";
    private static final int DISCOVERY_MESSAGES_COUNT = 6;
    private final String brokerIp = "192.168.0.1";
    private final int port = 1803;
@@ -128,8 +124,8 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", JOIN_NETWORK);
-            builder.putString("host", AITT_LOCALHOST);
+            builder.putString("status", Definitions.JOIN_NETWORK);
+            builder.putString("host", Definitions.AITT_LOCALHOST);
             int secondStart = builder.startMap();
             builder.putInt("port", 1000);
             builder.putInt("protocol", Aitt.Protocol.TCP.getValue());
@@ -146,7 +142,7 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", JOIN_NETWORK);
+            builder.putString("status", Definitions.JOIN_NETWORK);
             builder.putString("host", "127.0.0.2");
             secondStart = builder.startMap();
             builder.putInt("port", 2000);
@@ -164,8 +160,8 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", JOIN_NETWORK);
-            builder.putString("host",AITT_LOCALHOST);
+            builder.putString("status", Definitions.JOIN_NETWORK);
+            builder.putString("host", Definitions.AITT_LOCALHOST);
             secondStart = builder.startMap();
             builder.putInt("port", 2000);
             builder.putInt("protocol", Aitt.Protocol.MQTT.getValue());
@@ -182,8 +178,8 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", JOIN_NETWORK);
-            builder.putString("host",AITT_LOCALHOST);
+            builder.putString("status", Definitions.JOIN_NETWORK);
+            builder.putString("host", Definitions.AITT_LOCALHOST);
             secondStart = builder.startMap();
             builder.putInt("port", 4000);
             builder.putInt("protocol", Aitt.Protocol.TCP.getValue());
@@ -200,8 +196,8 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", JOIN_NETWORK);
-            builder.putString("host",AITT_LOCALHOST);
+            builder.putString("status", Definitions.JOIN_NETWORK);
+            builder.putString("host", Definitions.AITT_LOCALHOST);
             secondStart = builder.startMap();
             builder.putInt("port", 2000);
             builder.putInt("protocol", Aitt.Protocol.WEBRTC.getValue());
@@ -218,8 +214,8 @@ public class AittUnitTest {
              *             }
              *            }
              */
-            builder.putString("status", WILL_LEAVE_NETWORK);
-            builder.putString("host",AITT_LOCALHOST);
+            builder.putString("status", Definitions.WILL_LEAVE_NETWORK);
+            builder.putString("host", Definitions.AITT_LOCALHOST);
             secondStart = builder.startMap();
             builder.putInt("port", 1000);
             builder.putInt("protocol", Aitt.Protocol.TCP.getValue());
@@ -707,7 +703,7 @@ public class AittUnitTest {
          int counter = 1;
          while (counter < DISCOVERY_MESSAGES_COUNT) {
             byte[] discoveryMessage = createDiscoveryMessage(counter);
-            messageCallbackMethod.invoke(aitt, JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
             counter++;
          }
 
@@ -727,11 +723,11 @@ public class AittUnitTest {
 
          int counter = 1;
          byte[] discoveryMessage = createDiscoveryMessage(counter);
-         messageCallbackMethod.invoke(aitt, JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+         messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
 
          counter = 6;
          byte[] disconnectMessage = createDiscoveryMessage(counter);
-         messageCallbackMethod.invoke(aitt, JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) disconnectMessage);
+         messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) disconnectMessage);
          aitt.disconnect();
       } catch(Exception e) {
          fail("Failed testDiscoveryMessageCallback " + e);
@@ -747,7 +743,7 @@ public class AittUnitTest {
          aitt.connect(brokerIp, port);
 
          byte[] discoveryMessage = new byte[0];
-         messageCallbackMethod.invoke(aitt, JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+         messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
 
          aitt.disconnect();
       } catch(Exception e) {
