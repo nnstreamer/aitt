@@ -36,6 +36,7 @@ import java.util.Map;
  * 3. Publish to a topic using protocol and other params
  * 4. Unsubscribe to a topic
  * 5. Invoke JNI api's which interact with aitt c++
+ * 6. API to set MQTT Connection Callback
  */
 public class Aitt {
     private static final String TAG = "AITT_ANDROID";

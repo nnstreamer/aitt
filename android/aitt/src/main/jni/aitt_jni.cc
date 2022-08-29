@@ -14,17 +14,30 @@
  * limitations under the License.
  */
 #include "aitt_jni.h"
+/**
+ * This class is used as a native interface between the aitt java and aitt C++ layer. It has exposed following API's to
+ * communicate with aitt C++
+ * 1. Native interface API to Connect to MQTT broker
+ * 2. Native interface API to Subscribe to a topic with protocol and other params
+ * 3. Native interface API to Publish to a topic using protocol and other params
+ * 4. Native interface API to Unsubscribe to a topic
+ * 5. Native interface API to disconnect MQTT connection
+ * 6. Native interface API to set MQTT Connection Callback
+ */
 
+/* This cbContext is stored during subscribe, so that these cbContext can be used while invoking a java layer API's*/
 AittNativeInterface::CallbackContext AittNativeInterface::cbContext = {
       .jvm = nullptr,
       .messageCallbackMethodID = nullptr,
 };
 
+/* This constructor creates a new JNI interface object */
 AittNativeInterface::AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession)
       : cbObject(nullptr), aitt(mqId, ip, AittOption(clearSession, false))
 {
 }
 
+/* Destructor called automatically when  AittNativeInterface goes out of scope */
 AittNativeInterface::~AittNativeInterface(void)
 {
     if (cbObject != nullptr) {
@@ -51,6 +64,12 @@ AittNativeInterface::~AittNativeInterface(void)
     }
 }
 
+/**
+ * Convert the JNI string to C++ string
+ * @param env JNI interface pointer
+ * @param str JNI string to convert to C++ string
+ * @return C++ string if the conversion is success, else return null
+ */
 std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str)
 {
     if (env == nullptr) {
@@ -67,6 +86,14 @@ std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str)
     return _str;
 }
 
+/**
+ * JNI API to connect to MQTT broker
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ * @param host mqtt broker IP
+ * @param port mqtt broker port
+ */
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_connectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring host, jint port)
 {
@@ -90,6 +117,18 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_connectJNI(JNIEnv *
     }
 }
 
+/**
+ * JNI API to publish data to a given topic
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ * @param topic subscribe topic
+ * @param data data to be published
+ * @param datalen data length of a publishing data
+ * @param protocol publishing protocol
+ * @param qos publishing qos
+ * @param retain Currently used in MQTT to inform broker to retain data or not
+ */
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring topic, jbyteArray data, jlong datalen,
       jint protocol, jint qos, jboolean retain)
@@ -125,6 +164,12 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *
     env->ReleaseByteArrayElements(data, reinterpret_cast<jbyte *>((char *)cdata), 0);
 }
 
+/**
+ * JNI API to disconnect from MQTT broker
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ */
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
@@ -141,6 +186,15 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEn
     }
 }
 
+/**
+ * JNI API to subscribe to a given topic
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ * @param topic subscribe topic
+ * @param protocol subscribe protocol
+ * @param qos subscribe qos
+ */
 jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring topic, jint protocol, jint qos)
 {
@@ -210,6 +264,13 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
     return (jlong)_id;
 }
 
+/**
+ * JNI API to unsubscribe
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ * @param aitt subscribe id thats received in subscribe()
+ */
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jlong aittSubId)
 {
@@ -227,6 +288,12 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIE
     }
 }
 
+/**
+ * JNI API to set the connection callback with aitt C++
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param handle AittNativeInterface object
+ */
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallbackJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
@@ -270,6 +337,15 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallba
     }
 }
 
+/**
+ * Creates a AittNativeInterface object which inturn creates a aitt C++ instance
+ * @param env JNI interface pointer
+ * @param jniInterfaceObject JNI interface object
+ * @param id unique mqtt id
+ * @param ip self IP address of device
+ * @param clearSession "to clear current session if client disconnects
+ * @return returns the aitt interface object in long
+ */
 jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *env,
       jobject jniInterfaceObject, jstring id, jstring ip, jboolean clearSession)
 {
@@ -323,6 +399,12 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *en
     return reinterpret_cast<long>(instance);
 }
 
+/**
+ * The VM calls this method automatically, when the native library is loaded
+ * @param vm JVM instance
+ * @param reserved reserved for future
+ * @return JNI instance being used
+ */
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     JNIEnv *env = nullptr;
