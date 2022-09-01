@@ -45,6 +45,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            debuggable true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -84,12 +87,16 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.flatbuffers:flatbuffers-java:2.0.0'
+
+    implementation project(path: ':android:modules:tcp')
     implementation project(path: ':android:modules:webrtc')
+
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:2.25.0'
     testImplementation 'org.powermock:powermock-core:2.0.0-beta.5'
     testImplementation 'org.powermock:powermock-module-junit4:2.0.0-beta.5'
     testImplementation 'org.powermock:powermock-api-mockito2:2.0.0-beta.5'
+
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 }
 
