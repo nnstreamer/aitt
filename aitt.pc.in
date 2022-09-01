@@ -4,5 +4,5 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@/@PROJECT_NAME@
 Name: @PROJECT_NAME@
 Description: Development files for the modualrized AI framework
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} -l@PROJECT_NAME@
+Libs: -L${libdir} -l@PROJECT_NAME@ -l@PROJECT_NAME@-common
 Cflags: -I${includedir} @ADDITIONAL_OPT@

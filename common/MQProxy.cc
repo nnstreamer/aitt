@@ -17,6 +17,7 @@
 
 #include "ModuleLoader.h"
 #include "MosquittoMQ.h"
+#include "aitt_internal.h"
 
 namespace aitt {
 
@@ -26,9 +27,11 @@ MQProxy::MQProxy(const std::string &id, const AittOption &option) : handle(nullp
         ModuleLoader loader;
         handle = loader.OpenModule(ModuleLoader::TYPE_CUSTOM_MQTT);
 
-        mq = loader.LoadMqttClient(handle.get(), "test", option);
+        mq = loader.LoadMqttClient(handle.get(), id, option);
+        INFO("Custom MQ(%p)", mq.get());
     } else {
         mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetClearSession()));
+        INFO("Mosquitto MQ");
     }
 }
 

@@ -47,7 +47,7 @@ ModuleLoader::ModuleHandle ModuleLoader::OpenModule(Type type)
                   ERR("dlclose: %s", dlerror());
           });
     if (handle == nullptr)
-        ERR("dlopen: %s", dlerror());
+        ERR("dlopen(%s): %s", filename.c_str(), dlerror());
 
     return handle;
 }

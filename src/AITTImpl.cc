@@ -31,12 +31,12 @@
 
 namespace aitt {
 
-AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip, bool clear_session,
-      bool custom_broker)
+AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
+      const AittOption &option)
       : public_api(parent),
         id_(id),
-        mq(new MQProxy(id, AittOption(clear_session, custom_broker))),
-        discovery(id, custom_broker),
+        mq(new MQProxy(id, option)),
+        discovery(id, option),
         reply_id(0),
         transports{0}
 {

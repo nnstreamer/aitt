@@ -42,8 +42,7 @@ AITT::AITT(const std::string &id, const std::string &ip_addr, AittOption option)
     if (ip_addr.empty())
         valid_ip = "127.0.0.1";
 
-    pImpl = std::unique_ptr<AITT::Impl>(
-          new AITT::Impl(*this, valid_id, valid_ip, option.GetClearSession()));
+    pImpl = std::unique_ptr<AITT::Impl>(new AITT::Impl(*this, valid_id, valid_ip, option));
 }
 
 AITT::~AITT(void)
