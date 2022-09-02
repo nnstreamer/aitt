@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "aitt_jni.h"
+
 /**
  * This class is used as a native interface between the aitt java and aitt C++ layer. It has exposed following API's to
  * communicate with aitt C++
@@ -69,7 +71,7 @@ bool AittNativeInterface::checkParams(JNIEnv *env, jobject jniInterfaceObject){
     if (env == nullptr || jniInterfaceObject == nullptr) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
         return false;
-    }else{
+    } else {
         return true;
     }
 }
@@ -108,12 +110,14 @@ std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str)
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_connectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring host, jint port)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string brokerIp = GetStringUTF(env, host);
     if (brokerIp.empty()) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Broker Ip is empty");
         return;
     }
 
@@ -143,8 +147,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *
       jobject jniInterfaceObject, jlong handle, jstring topic, jbyteArray data, jlong datalen,
       jint protocol, jint qos, jboolean retain)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
@@ -182,8 +187,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     try {
@@ -195,7 +201,7 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEn
 }
 
 
-bool AittNativeInterface::jniStatusCheck(JNIEnv *env, int JNIStatus){
+bool AittNativeInterface::jniStatusCheck(JNIEnv *&env, int JNIStatus){
     if (JNIStatus == JNI_EDETACHED) {
         if (cbContext.jvm->AttachCurrentThread(&env, nullptr) != 0) {
             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to attach current thread");
@@ -220,8 +226,9 @@ bool AittNativeInterface::jniStatusCheck(JNIEnv *env, int JNIStatus){
 jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jstring topic, jint protocol, jint qos)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return 0L;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
@@ -242,8 +249,9 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
                   int JNIStatus =
                         cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
 
-                  if(!jniStatusCheck(env, JNIStatus))
+                  if (!jniStatusCheck(env, JNIStatus)) {
                       return;
+                  }
 
                   if (env != nullptr && instance->cbObject != nullptr) {
                       jstring _topic = env->NewStringUTF(handle->GetTopic().c_str());
@@ -290,8 +298,9 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEn
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle, jlong aittSubId)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
     void *subId = reinterpret_cast<void *>(aittSubId);
@@ -312,8 +321,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIE
 void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallbackJNI(JNIEnv *env,
       jobject jniInterfaceObject, jlong handle)
 {
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return;
+    }
 
     AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
 
@@ -325,8 +335,9 @@ void AittNativeInterface::Java_com_samsung_android_aitt_Aitt_setConnectionCallba
                     int JNIStatus =
                             cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
 
-                    if(!jniStatusCheck(env, JNIStatus))
+                    if (!jniStatusCheck(env, JNIStatus)) {
                         return;
+                    }
 
                     if (env != nullptr && instance->cbObject != nullptr) {
                         env->CallVoidMethod(instance->cbObject, cbContext.connectionCallbackMethodID,
@@ -359,8 +370,9 @@ jlong AittNativeInterface::Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *en
       jobject jniInterfaceObject, jstring id, jstring ip, jboolean clearSession)
 {
 
-    if(!checkParams(env, jniInterfaceObject))
+    if (!checkParams(env, jniInterfaceObject)) {
         return JNI_ERR;
+    }
 
     std::string mqId = GetStringUTF(env, id);
     if (mqId.empty()) {
