@@ -27,7 +27,7 @@ namespace aitt {
 
 std::string ModuleLoader::GetModuleFilename(Type type)
 {
-    if (type == TYPE_TCP)
+    if (type == TYPE_TCP || type == TYPE_SECURE_TCP)
         return "libaitt-transport-tcp.so";
     if (type == TYPE_WEBRTC)
         return "libaitt-transport-webrtc.so";
@@ -52,26 +52,29 @@ ModuleLoader::ModuleHandle ModuleLoader::OpenModule(Type type)
     return handle;
 }
 
-std::unique_ptr<AittTransport> ModuleLoader::LoadTransport(void *handle, const std::string &ip,
-      AittDiscovery &discovery)
+std::unique_ptr<AittTransport> ModuleLoader::LoadTransport(
+      void *handle, AittProtocol protocol, const std::string &ip, AittDiscovery &discovery)
 {
     if (handle == nullptr) {
         ERR("handle is NULL");
-        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        return std::unique_ptr<AittTransport>(
+              new NullTransport(ip.c_str(), discovery));
     }
 
     AittTransport::ModuleEntry get_instance_fn = reinterpret_cast<AittTransport::ModuleEntry>(
           dlsym(handle, AittTransport::MODULE_ENTRY_NAME));
     if (get_instance_fn == nullptr) {
         ERR("dlsym: %s", dlerror());
-        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        return std::unique_ptr<AittTransport>(
+              new NullTransport(ip.c_str(), discovery));
     }
 
     std::unique_ptr<AittTransport> instance(
-          static_cast<AittTransport *>(get_instance_fn(ip.c_str(), discovery)));
+          static_cast<AittTransport *>(get_instance_fn(protocol, ip.c_str(), discovery)));
     if (instance == nullptr) {
         ERR("get_instance_fn(AittTransport) Fail");
-        return std::unique_ptr<AittTransport>(new NullTransport(ip.c_str(), discovery));
+        return std::unique_ptr<AittTransport>(
+              new NullTransport(ip.c_str(), discovery));
     }
 
     return instance;
@@ -94,6 +97,21 @@ std::unique_ptr<MQ> ModuleLoader::LoadMqttClient(void *handle, const std::string
     }
 
     return instance;
+}
+
+AittProtocol ModuleLoader::GetProtocol(Type type)
+{
+    switch (type) {
+    case TYPE_TCP:
+        return AITT_TYPE_TCP;
+    case TYPE_SECURE_TCP:
+        return AITT_TYPE_SECURE_TCP;
+    case TYPE_WEBRTC:
+        return AITT_TYPE_WEBRTC;
+    case TYPE_RTSP:
+    default:
+        return AITT_TYPE_UNKNOWN;
+    }
 }
 
 }  // namespace aitt

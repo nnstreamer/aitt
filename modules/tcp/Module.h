@@ -33,22 +33,29 @@ using AittDiscovery = aitt::AittDiscovery;
 
 class Module : public AittTransport {
   public:
-    explicit Module(const std::string &ip, AittDiscovery &discovery);
+    explicit Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery);
     virtual ~Module(void);
+
+    void Publish(const std::string &topic, const void *data, const size_t datalen,
+          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
+
+    void Publish_(const std::string &topic, const void *data, const size_t datalen,
+          const std::string &correlation, AittQoS qos, bool retain);
 
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
           bool retain = false) override;
 
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
-          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
-
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata = nullptr,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
+
+    void *Subscribe_(const std::string &topic, const AittTransport::SubscribeCallback &cb,
+          void *cbdata, AittQoS qos);
 
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, const void *data,
           const size_t datalen, void *cbdata = nullptr,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
+
     void *Unsubscribe(void *handle) override;
 
   private:
@@ -59,11 +66,13 @@ class Module : public AittTransport {
         std::string topic;
         std::vector<int> client_list;
         std::mutex client_lock;
+        bool is_secure;
     };
 
     struct TCPData : public MainLoopHandler::MainLoopData {
         TCPServerData *parent;
         std::unique_ptr<TCP> client;
+        bool is_secure;
     };
 
     // SubscribeTable
@@ -112,16 +121,26 @@ class Module : public AittTransport {
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
+    void ThreadMain(void);
+    bool SendEncryptedTopic(const std::string &topic, Module::PortMap::iterator &portIt);
+    void SendEncryptedData(
+          Module::PortMap::iterator &port_iterator, const void *data, size_t data_length);
+    void SendExactSize(
+          Module::PortMap::iterator &port_iterator, const void *data, size_t data_length);
+    void SendEncryptedPayload(
+          const size_t &datalen, Module::PortMap::iterator &portIt, const void *data);
+    bool SendTopic(const std::string &topic, Module::PortMap::iterator &portIt);
+    void SendPayload(const size_t &datalen, Module::PortMap::iterator &portIt, const void *data);
     static void ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
           MainLoopHandler::MainLoopData *watchData);
     void HandleClientDisconnect(int handle);
-    std::string GetTopicName(TCPData *connect_info);
+    std::string ReceiveDecryptedTopic(TCPData *connect_info);
+    bool ReceiveDecryptedPayload(Module::TCPData *connect_info, size_t &szmsg, char **msg);
+    static void ReceiveDecryptedData(Module::TCPData *connect_info, void *data, size_t data_length);
     static void ReceiveExactSize(
           Module::TCPData *connect_info, void *data, size_t data_length);
-    void ThreadMain(void);
-    void SendTopic(const std::string &topic, Module::PortMap::iterator &portIt);
-    void SendPayload(const size_t &datalen, Module::PortMap::iterator &portIt, const void *data);
-    void SendExactSize(Module::PortMap::iterator &port_iterator, const void *data, size_t data_length);
+    std::string ReceiveTopic(TCPData *connect_info);
+    bool ReceivePayload(Module::TCPData *connect_info, size_t &szmsg, char **msg);
     void UpdatePublishTable(const std::string &topic, const std::string &host, unsigned short port);
 
     MainLoopHandler main_loop;
@@ -135,4 +154,6 @@ class Module : public AittTransport {
     std::mutex subscribeTableLock;
     ClientMap clientTable;
     std::mutex clientTableLock;
+
+    AittProtocol protocol;
 };

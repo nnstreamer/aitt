@@ -21,6 +21,7 @@
 #include <string>
 
 #include "AittTransport.h"
+#include "AittTypes.h"
 #include "MQ.h"
 
 namespace aitt {
@@ -29,6 +30,7 @@ class ModuleLoader {
   public:
     enum Type {
         TYPE_TCP,
+        TYPE_SECURE_TCP,
         TYPE_WEBRTC,
         TYPE_RTSP,
         TYPE_TRANSPORT_MAX,
@@ -41,10 +43,11 @@ class ModuleLoader {
     virtual ~ModuleLoader() = default;
 
     ModuleHandle OpenModule(Type type);
-    std::unique_ptr<AittTransport> LoadTransport(void *handle, const std::string &ip,
-          AittDiscovery &discovery);
+    std::unique_ptr<AittTransport> LoadTransport(
+          void *handle, AittProtocol protocol, const std::string &ip, AittDiscovery &discovery);
     std::unique_ptr<MQ> LoadMqttClient(void *handle, const std::string &id,
           const AittOption &option);
+    AittProtocol GetProtocol(Type type);
 
   private:
     std::string GetModuleFilename(Type type);

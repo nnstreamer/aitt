@@ -49,7 +49,7 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
         if (handle == nullptr)
             ERR("OpenModule() Fail");
 
-        transports[i] = loader.LoadTransport(handle.get(), my_ip, discovery);
+        transports[i] = loader.LoadTransport(handle.get(), loader.GetProtocol(i), my_ip, discovery);
     }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
@@ -129,6 +129,9 @@ void AITT::Impl::UnsubscribeAll()
         case AITT_TYPE_TCP:
             transports[ModuleLoader::TYPE_TCP]->Unsubscribe(subscribe_info->second);
             break;
+        case AITT_TYPE_SECURE_TCP:
+            transports[ModuleLoader::TYPE_SECURE_TCP]->Unsubscribe(subscribe_info->second);
+            break;
         case AITT_TYPE_WEBRTC:
             transports[ModuleLoader::TYPE_WEBRTC]->Unsubscribe(subscribe_info->second);
             break;
@@ -157,6 +160,9 @@ void AITT::Impl::Publish(const std::string &topic, const void *data, const size_
     if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP)
         transports[ModuleLoader::TYPE_TCP]->Publish(topic, data, datalen, qos, retain);
 
+    if ((protocols & AITT_TYPE_SECURE_TCP) == AITT_TYPE_SECURE_TCP)
+        transports[ModuleLoader::TYPE_SECURE_TCP]->Publish(topic, data, datalen, qos, retain);
+
     if ((protocols & AITT_TYPE_WEBRTC) == AITT_TYPE_WEBRTC)
         PublishWebRtc(topic, data, datalen, qos, retain);
 }
@@ -184,7 +190,6 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
 {
     SubscribeInfo *info = new SubscribeInfo();
     info->first = protocol;
-
     void *subscribe_handle;
     switch (protocol) {
     case AITT_TYPE_MQTT:
@@ -192,6 +197,9 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
         break;
     case AITT_TYPE_TCP:
         subscribe_handle = SubscribeTCP(info, topic, cb, user_data, qos);
+        break;
+    case AITT_TYPE_SECURE_TCP:
+        subscribe_handle = SubscribeSecureTCP(info, topic, cb, user_data, qos);
         break;
     case AITT_TYPE_WEBRTC:
         subscribe_handle = SubscribeWebRtc(info, topic, cb, user_data, qos);
@@ -291,8 +299,8 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
 
     Subscribe(
           replyTopic,
-          [this, cb](MSG *sub_msg, const void *sub_data, const size_t sub_datalen,
-                void *sub_cbdata) {
+          [this, cb](
+                MSG *sub_msg, const void *sub_data, const size_t sub_datalen, void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
@@ -392,6 +400,7 @@ void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool e
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
+    ERR("[ENTER] SubscribeTCP");
     return transports[ModuleLoader::TYPE_TCP]->Subscribe(
           topic,
           [handle, cb](const std::string &topic, const void *data, const size_t datalen,
@@ -401,6 +410,25 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
               msg.SetTopic(topic);
               msg.SetCorrelation(correlation);
               msg.SetProtocols(AITT_TYPE_TCP);
+
+              return cb(&msg, data, datalen, user_data);
+          },
+          user_data, qos);
+}
+
+void *AITT::Impl::SubscribeSecureTCP(SubscribeInfo *handle, const std::string &topic,
+      const SubscribeCallback &cb, void *user_data, AittQoS qos)
+{
+    ERR("[ENTER] SubscribeSecureTCP");
+    return transports[ModuleLoader::TYPE_SECURE_TCP]->Subscribe(
+          topic,
+          [handle, cb](const std::string &topic, const void *data, const size_t datalen,
+                void *user_data, const std::string &correlation) -> void {
+              MSG msg;
+              msg.SetID(handle);
+              msg.SetTopic(topic);
+              msg.SetCorrelation(correlation);
+              msg.SetProtocols(AITT_TYPE_SECURE_TCP);
 
               return cb(&msg, data, datalen, user_data);
           },

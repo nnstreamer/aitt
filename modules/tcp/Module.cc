@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "Module.h"
+#include "AES.h"
 
 #include <AittUtil.h>
 #include <flatbuffers/flexbuffers.h>
@@ -21,13 +22,10 @@
 
 #include "aitt_internal.h"
 
-/*
- * P2P Data Packet Definition
- * TopicLength: 4 bytes
- * TopicString: $TopicLength
- */
+#define AES_KEY_BYTE_SIZE 16
 
-Module::Module(const std::string &ip, AittDiscovery &discovery) : AittTransport(discovery), ip(ip)
+Module::Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery)
+      : AittTransport(discovery), ip(ip), protocol(protocol)
 {
     aittThread = std::thread(&Module::ThreadMain, this);
 
@@ -54,6 +52,12 @@ void Module::ThreadMain(void)
 {
     pthread_setname_np(pthread_self(), "TCPWorkerLoop");
     main_loop.Run();
+}
+
+void Module::Publish(
+      const std::string &topic, const void *data, const size_t datalen, AittQoS qos, bool retain)
+{
+    Publish(topic, data, datalen, std::string(), qos, retain);
 }
 
 void Module::Publish(const std::string &topic, const void *data, const size_t datalen,
@@ -122,19 +126,111 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
                     continue;
                 }
 
-                SendTopic(topic, portIt);
-                SendPayload(datalen, portIt, data);
+                if (protocol == AITT_TYPE_SECURE_TCP) {
+                    if (SendEncryptedTopic(topic, portIt) == true)
+                        SendEncryptedPayload(datalen, portIt, data);
+                } else {
+                    if (SendTopic(topic, portIt) == true)
+                        SendPayload(datalen, portIt, data);
+                }
             }
         }  // connectionEntries
     }      // publishTable
 }
 
-void Module::SendTopic(const std::string &topic, Module::PortMap::iterator &portIt)
+bool Module::SendEncryptedTopic(const std::string &topic, Module::PortMap::iterator &portIt)
 {
     size_t topic_length = topic.length();
-    SendExactSize(portIt, static_cast<const void *>(&topic_length), sizeof(topic_length));
 
-    SendExactSize(portIt, static_cast<const void *>(topic.c_str()), topic_length);
+    try {
+        SendEncryptedData(portIt, static_cast<const void *>(&topic_length), sizeof(topic_length));
+
+        SendEncryptedData(portIt, static_cast<const void *>(topic.c_str()), topic_length);
+    } catch (std::exception &e) {
+        ERR("An exception(%s) occurs during SendEncryptedData().", e.what());
+        return false;
+    }
+
+    return true;
+}
+
+void Module::SendEncryptedData(
+      Module::PortMap::iterator &port_iterator, const void *data, size_t data_length)
+{
+    size_t padding_buffer_size =
+          (data_length + AES_KEY_BYTE_SIZE) / AES_KEY_BYTE_SIZE * AES_KEY_BYTE_SIZE;
+    if (padding_buffer_size % AES_KEY_BYTE_SIZE != 0) {
+        ERR("padding_buffer_size is not a multiple of AES_KEY_BYTE_SIZE.");
+        return;
+    }
+    DBG("data_length = %zu, padding_buffer_size = %zu", data_length, padding_buffer_size);
+
+    unsigned char padding_buffer[padding_buffer_size];
+    memcpy(padding_buffer, data, data_length);
+
+    unsigned char encrypted_data[padding_buffer_size];
+    for (int i = 0; i < static_cast<int>(padding_buffer_size) / AES_KEY_BYTE_SIZE; i++) {
+        AES::Encrypt(
+              padding_buffer + AES_KEY_BYTE_SIZE * i, encrypted_data + AES_KEY_BYTE_SIZE * i);
+    }
+
+    SendExactSize(port_iterator, encrypted_data, padding_buffer_size);
+}
+
+void Module::SendExactSize(
+      Module::PortMap::iterator &port_iterator, const void *data, size_t data_length)
+{
+    size_t remaining_size = data_length;
+    while (0 < remaining_size) {
+        const char *data_index = static_cast<const char *>(data) + (data_length - remaining_size);
+        size_t size_sent = remaining_size;
+        port_iterator->second->Send(data_index, size_sent);
+        if (size_sent > 0) {
+            remaining_size -= size_sent;
+        } else if (size_sent == 0) {
+            DBG("size_sent == 0");
+            remaining_size = 0;
+        }
+    }
+}
+
+void Module::SendEncryptedPayload(
+      const size_t &datalen, Module::PortMap::iterator &portIt, const void *data)
+{
+    size_t payload_size = datalen;
+    if (0 == datalen) {
+        // distinguish between connection problems and zero-size messages
+        INFO("Send a zero-size message.");
+        payload_size = UINT32_MAX;
+    }
+
+    try {
+        SendEncryptedData(portIt, static_cast<void *>(&payload_size), sizeof(payload_size));
+        if (payload_size == UINT32_MAX) {
+            INFO("An actual data size is 0. Skip this payload transmission.");
+            return;
+        }
+
+        SendEncryptedData(portIt, data, datalen);
+    } catch (std::exception &e) {
+        ERR("An exception(%s) occurs during SendEncryptedData().", e.what());
+    }
+}
+
+bool Module::SendTopic(const std::string &topic, Module::PortMap::iterator &portIt)
+{
+    size_t topic_length = topic.length();
+
+    try {
+        SendExactSize(portIt, static_cast<const void *>(&topic_length), sizeof(topic_length));
+
+        SendExactSize(portIt, static_cast<const void *>(topic.c_str()), topic_length);
+    } catch (std::exception &e) {
+        ERR("An exception(%s) occurs during SendExactSize().", e.what());
+        return false;
+    }
+
+    return true;
 }
 
 void Module::SendPayload(const size_t &datalen, Module::PortMap::iterator &portIt, const void *data)
@@ -147,37 +243,20 @@ void Module::SendPayload(const size_t &datalen, Module::PortMap::iterator &portI
     }
 
     try {
+        DBG("sizeof(payload_size) = %zu", sizeof(payload_size));
         SendExactSize(portIt, static_cast<void *>(&payload_size), sizeof(payload_size));
 
+        if (payload_size == UINT32_MAX) {
+            INFO("An actual data size is 0. Skip this payload transmission.");
+            return;
+        }
+
+        DBG("datalen = %zu", datalen);
         SendExactSize(portIt, data, datalen);
     } catch (std::exception &e) {
         ERR("An exception(%s) occurs during SendExactSize().", e.what());
     }
 }
-
-void Module::SendExactSize(Module::PortMap::iterator &port_iterator, const void *data,
-      size_t data_length)
-{
-    size_t remaining_size = data_length;
-    while (0 < remaining_size) {
-        char *data_index = (char *)data + (data_length - remaining_size);
-        size_t size_sent = remaining_size;
-        port_iterator->second->Send(data_index, size_sent);
-        if (size_sent > 0) {
-            remaining_size -= size_sent;
-        } else if (size_sent == 0) {
-            DBG("size_sent == 0");
-            remaining_size = 0;
-        }
-    }
-}
-
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
-      bool retain)
-{
-    Publish(topic, data, datalen, std::string(), qos, retain);
-}
-
 void *Module::Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
       void *cbdata, AittQoS qos)
 {
@@ -190,6 +269,7 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
     listen_info->cb = cb;
     listen_info->cbdata = cbdata;
     listen_info->topic = topic;
+    listen_info->is_secure = (protocol == AITT_TYPE_SECURE_TCP ? true : false);
     auto handle = tcpServer->GetHandle();
 
     main_loop.AddWatch(handle, AcceptConnection, listen_info);
@@ -367,31 +447,33 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     }
 
     size_t szmsg = 0;
-    size_t szdata = sizeof(szmsg);
     char *msg = nullptr;
     std::string topic;
 
     try {
-        topic = impl->GetTopicName(connect_info);
-        if (topic.empty()) {
-            ERR("A topic is empty.");
-            return impl->HandleClientDisconnect(handle);
-        }
+        if (connect_info->is_secure == true) {
+            topic = impl->ReceiveDecryptedTopic(connect_info);
+            if (topic.empty()) {
+                ERR("A topic is empty.");
+                return impl->HandleClientDisconnect(handle);
+            }
 
-        ReceiveExactSize(connect_info, static_cast<void *>(&szmsg), szdata);
-        if (szmsg == 0) {
-            ERR("Got a disconnection message.");
-            return impl->HandleClientDisconnect(handle);
-        }
+            if (impl->ReceiveDecryptedPayload(connect_info, szmsg, &msg) == false) {
+                free(msg);
+                return impl->HandleClientDisconnect(handle);
+            }
+        } else {
+            topic = impl->ReceiveTopic(connect_info);
+            if (topic.empty()) {
+                ERR("A topic is empty.");
+                return impl->HandleClientDisconnect(handle);
+            }
 
-        if (UINT32_MAX == szmsg) {
-            // distinguish between connection problems and zero-size messages
-            INFO("Got a zero-size message.");
-            szmsg = 0;
+            if (impl->ReceivePayload(connect_info, szmsg, &msg) == false) {
+                free(msg);
+                return impl->HandleClientDisconnect(handle);
+            }
         }
-
-        msg = static_cast<char *>(malloc(szmsg));
-        ReceiveExactSize(connect_info, static_cast<void *>(msg), szmsg);
     } catch (std::exception &e) {
         ERR("An exception(%s) occurs", e.what());
         free(msg);
@@ -404,22 +486,6 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
 
     parent_info->cb(topic, msg, szmsg, parent_info->cbdata, correlation);
     free(msg);
-}
-
-void Module::ReceiveExactSize(Module::TCPData *connect_info, void *data, size_t data_length)
-{
-    size_t remaining_size = data_length;
-    while (0 < remaining_size) {
-        char *data_index = (char *)data + (data_length - remaining_size);
-        size_t size_received = remaining_size;
-        connect_info->client->Recv(data_index, size_received);
-        if (size_received > 0) {
-            remaining_size -= size_received;
-        } else if (size_received == 0) {
-            DBG("size_received == 0");
-            remaining_size = 0;
-        }
-    }
 }
 
 void Module::HandleClientDisconnect(int handle)
@@ -438,7 +504,87 @@ void Module::HandleClientDisconnect(int handle)
     delete connect_info;
 }
 
-std::string Module::GetTopicName(Module::TCPData *connect_info)
+std::string Module::ReceiveDecryptedTopic(Module::TCPData *connect_info)
+{
+    size_t topic_length = 0;
+    ReceiveDecryptedData(connect_info, static_cast<void *>(&topic_length), sizeof(topic_length));
+
+    if (AITT_TOPIC_NAME_MAX < topic_length) {
+        ERR("Invalid topic name length(%zu)", topic_length);
+        return std::string();
+    }
+
+    char topic_buffer[topic_length];
+    ReceiveDecryptedData(connect_info, topic_buffer, topic_length);
+    std::string topic = std::string(topic_buffer, topic_length);
+    INFO("Complete topic = [%s], topic_len = %zu", topic.c_str(), topic_length);
+
+    return topic;
+}
+
+bool Module::ReceiveDecryptedPayload(Module::TCPData *connect_info, size_t &szmsg, char **msg)
+{
+    ReceiveDecryptedData(connect_info, static_cast<void *>(&szmsg), sizeof(szmsg));
+    if (szmsg == 0) {
+        ERR("Got a disconnection message.");
+        return false;
+    }
+
+    if (UINT32_MAX == szmsg) {
+        // Distinguish between connection problems and zero-size messages.
+        INFO("Got a zero-size message. Skip this payload transmission.");
+        szmsg = 0;
+    } else {
+        *msg = static_cast<char *>(malloc(szmsg));
+        ReceiveDecryptedData(connect_info, static_cast<void *>(*msg), szmsg);
+    }
+
+    return true;
+}
+
+void Module::ReceiveDecryptedData(Module::TCPData *connect_info, void *data, size_t data_length)
+{
+    size_t padding_buffer_size =
+          (data_length + AES_KEY_BYTE_SIZE) / AES_KEY_BYTE_SIZE * AES_KEY_BYTE_SIZE;
+    if (padding_buffer_size % AES_KEY_BYTE_SIZE != 0) {
+        ERR("data_length is not a multiple of AES_KEY_BYTE_SIZE.");
+        return;
+    }
+    DBG("data_length = %zu, padding_buffer_size = %zu", data_length, padding_buffer_size);
+
+    unsigned char padding_buffer[padding_buffer_size];
+    ReceiveExactSize(connect_info, static_cast<void *>(padding_buffer), padding_buffer_size);
+
+    unsigned char decrypted_data[padding_buffer_size];
+    for (int i = 0; i < (int)padding_buffer_size / AES_KEY_BYTE_SIZE; i++) {
+        AES::Decrypt(
+              padding_buffer + AES_KEY_BYTE_SIZE * i, decrypted_data + AES_KEY_BYTE_SIZE * i);
+    }
+    memcpy(data, decrypted_data, data_length);
+}
+
+void Module::ReceiveExactSize(Module::TCPData *connect_info, void *data, size_t data_length)
+{
+    if (data_length == 0) {
+        DBG("data_length is zero.");
+        return;
+    }
+
+    size_t remaining_size = data_length;
+    while (0 < remaining_size) {
+        char *data_index = (char *)data + (data_length - remaining_size);
+        size_t size_received = remaining_size;
+        connect_info->client->Recv(data_index, size_received);
+        if (size_received > 0) {
+            remaining_size -= size_received;
+        } else if (size_received == 0) {
+            DBG("size_received == 0");
+            remaining_size = 0;
+        }
+    }
+}
+
+std::string Module::ReceiveTopic(Module::TCPData *connect_info)
 {
     size_t topic_length = 0;
     ReceiveExactSize(connect_info, static_cast<void *>(&topic_length), sizeof(topic_length));
@@ -454,6 +600,26 @@ std::string Module::GetTopicName(Module::TCPData *connect_info)
     INFO("Complete topic = [%s], topic_len = %zu", topic.c_str(), topic_length);
 
     return topic;
+}
+
+bool Module::ReceivePayload(Module::TCPData *connect_info, size_t &szmsg, char **msg)
+{
+    ReceiveExactSize(connect_info, static_cast<void *>(&szmsg), sizeof(szmsg));
+    if (szmsg == 0) {
+        ERR("Got a disconnection message.");
+        return false;
+    }
+    ERR("szmsg = [%zu]", szmsg);
+    if (UINT32_MAX == szmsg) {
+        // Distinguish between connection problems and zero-size messages.
+        INFO("Got a zero-size message. Skip this payload transmission.");
+        szmsg = 0;
+    } else {
+        *msg = static_cast<char *>(malloc(szmsg));
+        ReceiveExactSize(connect_info, static_cast<void *>(*msg), szmsg);
+    }
+
+    return true;
 }
 
 void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
@@ -486,6 +652,7 @@ void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle
     TCPData *ecd = new TCPData;
     ecd->parent = listen_info;
     ecd->client = std::move(client);
+    ecd->is_secure = listen_info->is_secure;
 
     impl->main_loop.AddWatch(cHandle, ReceiveData, ecd);
 }
@@ -512,16 +679,16 @@ void Module::UpdatePublishTable(const std::string &topic, const std::string &cli
     }
 
     // NOTE:
-    // The current implementation only has a single port entry
-    // therefore, if the hostIt is not empty, there is the previous connection
+    // The current implementation only has a single port entry.
+    // Therefore, if the hostIt is not empty, there is the previous connection.
     if (!hostIt->second.empty()) {
         auto portIt = hostIt->second.begin();
 
         if (portIt->first == port)
-            return;  // nothing changed. keep the current handle
+            return;  // Nothing is changed. Keep the current handle.
 
-        // otherwise, delete the connection handle
-        // to make a new connection with the new port
+        // Otherwise, delete the connection handle
+        // to make a new connection with the new port.
         hostIt->second.clear();
     }
 

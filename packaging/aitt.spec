@@ -25,6 +25,7 @@ BuildRequires: elementary-tizen
 BuildRequires: pkgconfig(capi-media-webrtc)
 BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(json-glib-1.0)
+BuildRequires: pkgconfig(openssl1.1)
 %if 0%{gcov}
 BuildRequires: lcov
 %endif

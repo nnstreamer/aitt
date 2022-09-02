@@ -41,8 +41,8 @@ TEST_F(ModuleLoaderTest, LoadTransport_P_Anytime)
     ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TCP);
     ASSERT_NE(handle, nullptr);
 
-    std::shared_ptr<aitt::AittTransport> module =
-          loader.LoadTransport(handle.get(), LOCAL_IP, discovery);
+    std::shared_ptr<aitt::AittTransport> module = loader.LoadTransport(
+          handle.get(), loader.GetProtocol(ModuleLoader::TYPE_TCP), LOCAL_IP, discovery);
     ASSERT_NE(module, nullptr);
 }
 
@@ -51,7 +51,8 @@ TEST_F(ModuleLoaderTest, LoadTransport_N_Anytime)
     ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TRANSPORT_MAX);
     ASSERT_EQ(handle.get(), nullptr);
 
-    auto module = loader.LoadTransport(handle.get(), LOCAL_IP, discovery);
+    auto module = loader.LoadTransport(
+          handle.get(), loader.GetProtocol(ModuleLoader::TYPE_TRANSPORT_MAX), LOCAL_IP, discovery);
     ASSERT_NE(module, nullptr);
 }
 

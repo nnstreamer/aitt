@@ -30,7 +30,7 @@ class AITTTest : public testing::Test, public AittTests {
     void SetUp() override { Init(); }
     void TearDown() override { Deinit(); }
 
-    void pubsub_template(const char *test_msg, AittProtocol protocol)
+    void PubsubTemplate(const char *test_msg, AittProtocol protocol)
     {
         try {
             AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -54,6 +54,177 @@ class AITTTest : public testing::Test, public AittTests {
             g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
 
             IterateEventLoop();
+
+            ASSERT_TRUE(ready);
+        } catch (std::exception &e) {
+            FAIL() << "Unexpected exception: " << e.what();
+        }
+    }
+
+    void PublishDisconnectTemplate(AittProtocol protocol)
+    {
+        const char character_set[] =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        std::mt19937 random_gen{std::random_device{}()};
+        std::uniform_int_distribution<std::string::size_type> gen(0, 61);
+
+        char dump_msg[204800] = {};
+        for (size_t i = 0; i < sizeof(dump_msg); i++) {
+            dump_msg[i] = character_set[gen(random_gen)];
+        }
+
+        try {
+            AITT aitt(clientId, LOCAL_IP);
+            AITT aitt_retry("retry_test", LOCAL_IP);
+            aitt.Connect();
+            aitt_retry.Connect();
+
+            int cnt = 0;
+            aitt.Subscribe(
+                "test/stress1",
+                [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
+                    AITTTest *test = static_cast<AITTTest *>(cbdata);
+                    ++cnt;
+                    if (szmsg == 0 && cnt != 12) {
+                        FAIL() << "Unexpected value" << cnt;
+                    }
+
+                    DBG("A subscription message is arrived. cnt = %d", cnt);
+                    const char *receivedMsg = static_cast<const char *>(msg);
+                    ASSERT_TRUE(!strcmp(receivedMsg, dump_msg));
+
+                    if (cnt == 10)
+                        test->ToggleReady();
+                    if (cnt == 11)
+                        test->ToggleReady();
+                },
+                static_cast<void *>(this), protocol);
+
+            {
+                AITT aitt1("stress_test1", LOCAL_IP);
+                aitt1.Connect();
+
+                // Wait a few seconds to the AITT client gets server list (discover devices)
+                sleep(SLEEP_MS);
+
+                for (int i = 0; i < 10; i++) {
+                    INFO("size = %zu", sizeof(dump_msg));
+                    aitt1.Publish("test/stress1", dump_msg, sizeof(dump_msg), protocol,
+                        AITT_QOS_AT_MOST_ONCE, true);
+                }
+                g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+
+                IterateEventLoop();
+            }
+            DBG("Client aitt1 is finished.");
+
+            // Here, an unexpected callback(szmsg = 0) is received
+            // when the publisher is disconnected.
+
+            ASSERT_TRUE(ready);
+            ready = false;
+
+            aitt_retry.Publish("test/stress1", dump_msg, sizeof(dump_msg), protocol,
+                AITT_QOS_AT_MOST_ONCE, true);
+
+            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+
+            IterateEventLoop();
+
+            ASSERT_TRUE(ready);
+
+            aitt_retry.Publish("test/stress1", nullptr, 0, protocol, AITT_QOS_AT_LEAST_ONCE);
+            // Check auto release of aitt. There should be no segmentation faults.
+        } catch (std::exception &e) {
+            FAIL() << "Unexpected exception: " << e.what();
+        }
+    }
+
+    void PublishSubscribeTCPTwiceTemplate(AittProtocol protocol)
+    {
+        try {
+            AITT aitt(clientId, LOCAL_IP);
+            aitt.Connect();
+
+            int cnt = 0;
+            aitt.Subscribe(
+                  testTopic,
+                  [&](aitt::MSG *handle, const void *msg, const size_t szmsg,
+                        void *cbdata) -> void {
+                      AITTTest *test = static_cast<AITTTest *>(cbdata);
+                      // NOTE:
+                      // Subscribe callback will be invoked 2 times
+                      ++cnt;
+                      const char *receivedMsg = static_cast<const char *>(msg);
+                      DBG("Subscribe callback called: %d, szmsg = %zu, msg = [%s]", cnt, szmsg,
+                            receivedMsg);
+                      if (cnt == 1) {
+                          ASSERT_TRUE(!strcmp(receivedMsg, TEST_MSG));
+                      } else if (cnt == 2) {
+                          ASSERT_TRUE(!strcmp(receivedMsg, TEST_MSG2));
+                          test->ToggleReady();
+                      }
+                  },
+                  static_cast<void *>(this), protocol);
+
+            // Wait a few seconds to the AITT client gets server list (discover devices)
+            sleep(SLEEP_MS);
+
+            // NOTE:
+            // Select target peers and send the data through the specified protocol - TCP
+            aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), protocol);
+
+            // NOTE:
+            // Publish message through the specified protocol - TCP
+            aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
+
+            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+
+            IterateEventLoop();
+
+            ASSERT_TRUE(ready);
+        } catch (std::exception &e) {
+            FAIL() << "Unexpected exception: " << e.what();
+        }
+    }
+
+    void SubscribeRetainedTCPTemplate(AittProtocol protocol)
+    {
+        try {
+            AITT aitt(clientId, LOCAL_IP);
+            aitt.Connect();
+
+            int cnt = 0;
+            aitt.Subscribe(
+                  testTopic,
+                  [&](aitt::MSG *handle, const void *msg, const size_t szmsg,
+                        void *cbdata) -> void {
+                      AITTTest *test = static_cast<AITTTest *>(cbdata);
+                      ++cnt;
+                      if (cnt == 1) {
+                          ASSERT_TRUE(msg == nullptr);
+                          test->ToggleReady();
+                      }
+                      DBG("Subscribe callback called: %d", cnt);
+                  },
+                  static_cast<void *>(this), protocol);
+
+            // Wait a few seconds to the AITT client gets server list (discover devices)
+            sleep(SLEEP_MS);
+
+            // NOTE:
+            // Publish a message with the retained flag
+            // This message will not be delivered, subscriber subscribes TCP protocol
+            aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_MQTT,
+                  AITT_QOS_AT_MOST_ONCE, true);
+
+            aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
+
+            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+
+            IterateEventLoop();
+
+            aitt.Publish(testTopic, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_LEAST_ONCE, true);
 
             ASSERT_TRUE(ready);
         } catch (std::exception &e) {
@@ -187,6 +358,17 @@ TEST_F(AITTTest, Positive_Publish_TCP_Anytime)
     }
 }
 
+TEST_F(AITTTest, Positive_Publish_SECURE_TCP_Anytime)
+{
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.Connect();
+        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_SECURE_TCP);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
 TEST_F(AITTTest, Positive_Publish_Multiple_Protocols_Anytime)
 {
     try {
@@ -247,14 +429,30 @@ TEST_F(AITTTest, Positive_Unsubscribe_TCP_Anytime)
     }
 }
 
+TEST_F(AITTTest, Positive_Unsubscribe_SECURE_TCP_Anytime)
+{
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.Connect();
+        subscribeHandle = aitt.Subscribe(
+              testTopic,
+              [](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {},
+              nullptr, AITT_TYPE_SECURE_TCP);
+        DBG("Subscribe handle: %p", reinterpret_cast<void *>(subscribeHandle));
+        aitt.Unsubscribe(subscribeHandle);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
 TEST_F(AITTTest, Positve_PublishSubscribe_MQTT_Anytime)
 {
-    pubsub_template(TEST_MSG, AITT_TYPE_MQTT);
+    PubsubTemplate(TEST_MSG, AITT_TYPE_MQTT);
 }
 
 TEST_F(AITTTest, Positve_Publish_0_MQTT_Anytime)
 {
-    pubsub_template("", AITT_TYPE_MQTT);
+    PubsubTemplate("", AITT_TYPE_MQTT);
 }
 
 TEST_F(AITTTest, Positve_Unsubscribe_in_Subscribe_MQTT_Anytime)
@@ -343,12 +541,22 @@ TEST_F(AITTTest, Positve_Subscribe_in_Subscribe_MQTT_Anytime)
 
 TEST_F(AITTTest, Positve_PublishSubscribe_TCP_Anytime)
 {
-    pubsub_template(TEST_MSG, AITT_TYPE_TCP);
+    PubsubTemplate(TEST_MSG, AITT_TYPE_TCP);
+}
+
+TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_Anytime)
+{
+    PubsubTemplate(TEST_MSG, AITT_TYPE_SECURE_TCP);
 }
 
 TEST_F(AITTTest, Positve_Publish_0_TCP_Anytime)
 {
-    pubsub_template("", AITT_TYPE_TCP);
+    PubsubTemplate("", AITT_TYPE_TCP);
+}
+
+TEST_F(AITTTest, Positve_Publish_0_SECURE_TCP_Anytime)
+{
+    PubsubTemplate("", AITT_TYPE_SECURE_TCP);
 }
 
 TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
@@ -393,158 +601,34 @@ TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_twice_Anytime)
+TEST_F(AITTTest, Positve_PublishSubscribe_TCP_twice_Anytime)
 {
-    try {
-        AITT aitt(clientId, LOCAL_IP);
-        aitt.Connect();
-        aitt.Subscribe(
-              testTopic,
-              [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
-                  AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  // NOTE:
-                  // Subscribe callback will be invoked 2 times
-                  static int cnt = 0;
-                  ++cnt;
-                  if (cnt == 2)
-                      test->ToggleReady();
-                  DBG("Subscribe callback called: %d", cnt);
-              },
-              static_cast<void *>(this), AITT_TYPE_TCP);
-
-        // Wait a few seconds to the AITT client gets server list (discover devices)
-        sleep(SLEEP_MS);
-
-        // NOTE:
-        // Select target peers and send the data through the specified protocol - TCP
-        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_TCP);
-
-        // NOTE:
-        // Publish message through the specified protocol - TCP
-        aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), AITT_TYPE_TCP);
-
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
-
-        IterateEventLoop();
-
-        ASSERT_TRUE(ready);
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
+    PublishSubscribeTCPTwiceTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime)
+TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_twice_Anytime)
 {
-    try {
-        AITT aitt(clientId, LOCAL_IP);
-        aitt.Connect();
-        aitt.Subscribe(
-              testTopic,
-              [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
-                  AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  static int cnt = 0;
-                  ++cnt;
-                  if (cnt == 1)
-                      test->ToggleReady();
-                  DBG("Subscribe callback called: %d", cnt);
-              },
-              static_cast<void *>(this), AITT_TYPE_TCP);
-
-        // Wait a few seconds to the AITT client gets server list (discover devices)
-        sleep(SLEEP_MS);
-
-        // NOTE:
-        // Publish a message with the retained flag
-        // This message will not be delivered, subscriber subscribes TCP protocol
-        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE,
-              true);
-
-        aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), AITT_TYPE_TCP);
-
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
-
-        IterateEventLoop();
-
-        aitt.Publish(testTopic, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_LEAST_ONCE, true);
-
-        ASSERT_TRUE(ready);
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
+    PublishSubscribeTCPTwiceTemplate(AITT_TYPE_SECURE_TCP);
 }
 
-TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime)
+TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime_TCP)
 {
-    try {
-        const char character_set[] =
-              "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-        std::mt19937 random_gen{std::random_device{}()};
-        std::uniform_int_distribution<std::string::size_type> gen(0, 61);
+    SubscribeRetainedTCPTemplate(AITT_TYPE_TCP);
+}
 
-        char dump_msg[204800] = {};
-        for (size_t i = 0; i < sizeof(dump_msg); i++) {
-            dump_msg[i] = character_set[gen(random_gen)];
-        }
+TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime_SECURE_TCP)
+{
+    SubscribeRetainedTCPTemplate(AITT_TYPE_SECURE_TCP);
+}
 
-        AITT aitt(clientId, LOCAL_IP);
-        AITT aitt_retry("retry_test", LOCAL_IP);
-        aitt.Connect();
-        aitt_retry.Connect();
+TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime_TCP)
+{
+    PublishDisconnectTemplate(AITT_TYPE_TCP);
+}
 
-        aitt.Subscribe(
-              "test/stress1",
-              [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
-                  AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  static int cnt = 0;
-                  ++cnt;
-                  if (szmsg == 0 && cnt != 12) {
-                      FAIL() << "Unexpected value" << cnt;
-                  }
-                  if (cnt == 10)
-                      test->ToggleReady();
-                  if (cnt == 11)
-                      test->ToggleReady();
-              },
-              static_cast<void *>(this), AITT_TYPE_TCP);
-
-        {
-            AITT aitt1("stress_test1", LOCAL_IP);
-            aitt1.Connect();
-
-            // Wait a few seconds to the AITT client gets server list (discover devices)
-            sleep(SLEEP_MS);
-
-            for (int i = 0; i < 10; i++) {
-                INFO("size = %zu", sizeof(dump_msg));
-                aitt1.Publish("test/stress1", dump_msg, sizeof(dump_msg), AITT_TYPE_TCP,
-                      AITT_QOS_AT_MOST_ONCE, true);
-            }
-            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
-
-            IterateEventLoop();
-        }
-        DBG("aitt1 client Finish");
-
-        // Here, It's automatically checked Unexpected callback(szmsg = 0)
-        // when publisher is disconnected.
-
-        ASSERT_TRUE(ready);
-        ready = false;
-
-        aitt_retry.Publish("test/stress1", dump_msg, sizeof(dump_msg), AITT_TYPE_TCP,
-              AITT_QOS_AT_MOST_ONCE, true);
-
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
-
-        IterateEventLoop();
-
-        ASSERT_TRUE(ready);
-
-        aitt_retry.Publish("test/stress1", nullptr, 0, AITT_TYPE_TCP, AITT_QOS_AT_LEAST_ONCE);
-        // Check auto release of aitt. It sould be no Segmentation fault
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
+TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime_SECURE_TCP)
+{
+    PublishDisconnectTemplate(AITT_TYPE_SECURE_TCP);
 }
 
 TEST_F(AITTTest, WillSet_N_Anytime)

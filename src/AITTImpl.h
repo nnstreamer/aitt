@@ -50,15 +50,18 @@ class AITT::Impl {
 
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocols, AittQoS qos, bool retain);
+
     int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const AITT::SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
+
     int PublishWithReplySync(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation, int timeout_ms);
 
     AittSubscribeID Subscribe(const std::string &topic, const AITT::SubscribeCallback &cb,
           void *cbdata, AittProtocol protocols, AittQoS qos);
+
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const int datalen, bool end);
@@ -75,6 +78,8 @@ class AITT::Impl {
           MainLoopHandler::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
+    void *SubscribeSecureTCP(SubscribeInfo *handle, const std::string &topic,
+          const SubscribeCallback &cb, void *user_data, AittQoS qos);
     void *SubscribeWebRtc(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
     void HandleTimeout(int timeout_ms, unsigned int &timeout_id, aitt::MainLoopHandler &sync_loop,

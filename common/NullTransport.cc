@@ -22,18 +22,18 @@ NullTransport::NullTransport(const std::string& ip, AittDiscovery& discovery)
 {
 }
 
+void NullTransport::Publish(
+      const std::string& topic, const void* data, const size_t datalen, AittQoS qos, bool retain)
+{
+}
+
 void NullTransport::Publish(const std::string& topic, const void* data, const size_t datalen,
       const std::string& correlation, AittQoS qos, bool retain)
 {
 }
 
-void NullTransport::Publish(const std::string& topic, const void* data, const size_t datalen,
-      AittQoS qos, bool retain)
-{
-}
-
-void* NullTransport::Subscribe(const std::string& topic, const SubscribeCallback& cb, void* cbdata,
-      AittQoS qos)
+void* NullTransport::Subscribe(
+      const std::string& topic, const SubscribeCallback& cb, void* cbdata, AittQoS qos)
 {
     return nullptr;
 }

@@ -21,7 +21,8 @@
 #include "Config.h"
 #include "aitt_internal.h"
 
-Module::Module(const std::string &ip, AittDiscovery &discovery) : AittTransport(discovery)
+Module::Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery)
+      : AittTransport(discovery)
 {
 }
 
@@ -35,8 +36,8 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
     // TODO
 }
 
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
-      bool retain)
+void Module::Publish(
+      const std::string &topic, const void *data, const size_t datalen, AittQoS qos, bool retain)
 {
     std::lock_guard<std::mutex> publish_table_lock(publish_table_lock_);
 

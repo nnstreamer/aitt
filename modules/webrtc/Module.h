@@ -35,7 +35,7 @@ using AittDiscovery = aitt::AittDiscovery;
 
 class Module : public AittTransport {
   public:
-    explicit Module(const std::string &ip, AittDiscovery &discovery);
+    explicit Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery);
     virtual ~Module(void);
 
     // TODO: How about regarding topic as service name?
