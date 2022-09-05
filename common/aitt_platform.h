@@ -27,10 +27,10 @@
 
 #if defined(PLATFORM) && !defined(LOG_STDOUT)
 
-#define PURE(x) x
+#define HEADER PLATFORM/aitt_platform.h
 #define TO_STR(x) #x
 #define DEFINE_TO_STR(x) TO_STR(x)
-#include DEFINE_TO_STR(PLATFORM PURE(/) PURE(aitt_platform.h))
+#include DEFINE_TO_STR(HEADER)
 #undef TO_STR
 #undef DEFINE_TO_STR
 

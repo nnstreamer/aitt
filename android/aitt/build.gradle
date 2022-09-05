@@ -20,7 +20,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                arguments '-DLOG_STDOUT=ON'
+                arguments '-DLOG_STDOUT=OFF'
                 arguments '-DCMAKE_VERBOSE_MAKEFILE=1'
                 arguments '-DCMAKE_INSTALL_PREFIX:PATH=/usr'
                 arguments '-DANDROID_STL=c++_shared'
