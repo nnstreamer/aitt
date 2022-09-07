@@ -26,37 +26,47 @@
 using AITT = aitt::AITT;
 
 class AittNativeInterface {
-    private:
-        struct CallbackContext {
-            JavaVM *jvm;
-            jmethodID messageCallbackMethodID;
-            jmethodID connectionCallbackMethodID;
-        };
+private:
+    struct CallbackContext {
+        JavaVM *jvm;
+        jmethodID messageCallbackMethodID;
+        jmethodID connectionCallbackMethodID;
+    };
 
-    private:
-        AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession);
-        virtual ~AittNativeInterface(void);
-        static std::string GetStringUTF(JNIEnv *env, jstring str);
-        static bool checkParams(JNIEnv *env, jobject jniInterfaceObject);
-        static bool jniStatusCheck(JNIEnv *&env, int JNIStatus);
+private:
+    AittNativeInterface(std::string &mqId, std::string &ip, bool clearSession);
 
-    public:
-        static jlong Java_com_samsung_android_aitt_Aitt_initJNI(JNIEnv *env, jobject jniInterfaceObject,
-                                                                jstring id, jstring ip, jboolean clearSession);
-        static void Java_com_samsung_android_aitt_Aitt_connectJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
-                                                                  jstring host, jint port);
-        static jlong Java_com_samsung_android_aitt_Aitt_subscribeJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
-                                                                     jstring topic, jint protocol, jint qos);
-        static void Java_com_samsung_android_aitt_Aitt_publishJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
-                                                                  jstring topic, jbyteArray data, jlong datalen, jint protocol,
-                                                                  jint qos, jboolean retain);
-        static void Java_com_samsung_android_aitt_Aitt_unsubscribeJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
-                                                                      jlong aittSubId);
-        static void Java_com_samsung_android_aitt_Aitt_disconnectJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
-        static void Java_com_samsung_android_aitt_Aitt_setConnectionCallbackJNI(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+    virtual ~AittNativeInterface(void);
 
-    private:
-        AITT aitt;
-        jobject cbObject;
-        static CallbackContext cbContext;
+    static std::string GetStringUTF(JNIEnv *env, jstring str);
+
+    static bool checkParams(JNIEnv *env, jobject jniInterfaceObject);
+
+    static bool jniStatusCheck(JNIEnv *&env, int JNIStatus);
+
+public:
+    static jlong init(JNIEnv *env, jobject jniInterfaceObject,
+                      jstring id, jstring ip, jboolean clearSession);
+
+    static void connect(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                        jstring host, jint port);
+
+    static jlong subscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                           jstring topic, jint protocol, jint qos);
+
+    static void publish(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                        jstring topic, jbyteArray data, jlong datalen, jint protocol,
+                        jint qos, jboolean retain);
+
+    static void unsubscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                            jlong aittSubId);
+
+    static void disconnect(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+
+    static void setConnectionCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+
+private:
+    AITT aitt;
+    jobject cbObject;
+    static CallbackContext cbContext;
 };
