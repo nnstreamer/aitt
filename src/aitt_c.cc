@@ -24,7 +24,7 @@
 using namespace aitt;
 
 struct aitt_handle {
-    aitt_handle() : aitt(nullptr) {}
+    aitt_handle() : aitt(nullptr), connected(false), custom_broker(false) {}
     AITT *aitt;
     bool connected;
     bool custom_broker;
@@ -58,7 +58,6 @@ API aitt_h aitt_new(const char *id, aitt_option_h option)
 
         handle = new aitt_handle();
         handle->aitt = new AITT(valid_id, valid_ip, aitt_option);
-        handle->connected = false;
         handle->custom_broker = custom_broker;
     } catch (std::exception &e) {
         ERR("new() Fail(%s)", e.what());

@@ -35,6 +35,7 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
       const AittOption &option)
       : public_api(parent),
         id_(id),
+        mqtt_broker_port_(0),
         mq(new MQProxy(id, option)),
         discovery(id, option),
         reply_id(0),
@@ -299,8 +300,8 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
 
     Subscribe(
           replyTopic,
-          [this, cb](
-                MSG *sub_msg, const void *sub_data, const size_t sub_datalen, void *sub_cbdata) {
+          [this, cb](MSG *sub_msg, const void *sub_data, const size_t sub_datalen,
+                void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());

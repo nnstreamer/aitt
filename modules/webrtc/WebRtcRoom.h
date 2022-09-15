@@ -30,7 +30,7 @@ class WebRtcRoom {
         JOINED,
     };
     WebRtcRoom() = delete;
-    WebRtcRoom(const std::string &room_id) : id_(room_id){};
+    explicit WebRtcRoom(const std::string &room_id) : id_(room_id), state_(State::JOINNING){};
     ~WebRtcRoom();
     void setRoomState(State current) { state_ = current; }
     State getRoomState(void) const { return state_; };

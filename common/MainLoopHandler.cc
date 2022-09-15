@@ -180,7 +180,7 @@ void MainLoopHandler::DestroyNotify(gpointer data)
     delete cb_data;
 }
 
-MainLoopHandler::MainLoopCbData::MainLoopCbData() : result(OK), fd(-1)
+MainLoopHandler::MainLoopCbData::MainLoopCbData() : data(nullptr), result(OK), fd(-1), ctx(nullptr)
 {
 }
 
