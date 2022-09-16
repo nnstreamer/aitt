@@ -18,20 +18,27 @@
 #include <memory>
 #include <string>
 
+#include "AESEncryptor.h"
 #include "TCP.h"
 
 class TCP::Server {
   public:
     Server(const std::string &host, unsigned short &port);
+    Server(const Server &) = default;
+    Server &operator=(const Server &) = default;
     virtual ~Server(void);
 
     std::unique_ptr<TCP> AcceptPeer(void);
 
     int GetHandle(void);
     unsigned short GetPort(void);
+    void CreateAESEncryptor(void);
+    AESEncryptor *GetAESEncryptor(void);
+    const unsigned char *GetKey(void);
 
   private:
     int handle;
     sockaddr *addr;
     socklen_t addrlen;
+    AESEncryptor *aes_encryptor;
 };

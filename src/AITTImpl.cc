@@ -192,6 +192,8 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
     SubscribeInfo *info = new SubscribeInfo();
     info->first = protocol;
     void *subscribe_handle;
+
+    INFO("[PROTOCOL] %d", static_cast<int>(protocol));
     switch (protocol) {
     case AITT_TYPE_MQTT:
         subscribe_handle = SubscribeMQ(info, &main_loop, topic, cb, user_data, qos);
@@ -401,7 +403,6 @@ void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool e
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    ERR("[ENTER] SubscribeTCP");
     return transports[ModuleLoader::TYPE_TCP]->Subscribe(
           topic,
           [handle, cb](const std::string &topic, const void *data, const size_t datalen,
@@ -420,7 +421,6 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
 void *AITT::Impl::SubscribeSecureTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    ERR("[ENTER] SubscribeSecureTCP");
     return transports[ModuleLoader::TYPE_SECURE_TCP]->Subscribe(
           topic,
           [handle, cb](const std::string &topic, const void *data, const size_t datalen,

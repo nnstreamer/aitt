@@ -92,6 +92,7 @@ TCP::Server::~Server(void)
         return;
 
     free(addr);
+
     if (close(handle) < 0)
         ERR_CODE(errno, "close");
 }
@@ -129,4 +130,19 @@ unsigned short TCP::Server::GetPort(void)
         throw std::runtime_error(strerror(errno));
 
     return ntohs(addr.sin_port);
+}
+
+void TCP::Server::CreateAESEncryptor(void)
+{
+    aes_encryptor = new AESEncryptor();
+}
+
+AESEncryptor *TCP::Server::GetAESEncryptor(void)
+{
+    return aes_encryptor;
+}
+
+const unsigned char *TCP::Server::GetKey(void)
+{
+    return aes_encryptor->GetCipherKey();
 }

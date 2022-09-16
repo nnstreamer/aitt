@@ -67,12 +67,17 @@ class Module : public AittTransport {
         std::vector<int> client_list;
         std::mutex client_lock;
         bool is_secure;
+        AESEncryptor *aes_encryptor;
     };
 
     struct TCPData : public MainLoopHandler::MainLoopData {
         TCPServerData *parent;
         std::unique_ptr<TCP> client;
-        bool is_secure;
+    };
+
+    struct TCPPublishInfo {
+        std::unique_ptr<TCP> client_handle;
+        AESEncryptor *aes_encryptor;
     };
 
     // SubscribeTable
@@ -100,9 +105,7 @@ class Module : public AittTransport {
     //    "/customTopic/faceRecog": map {
     //       $clientId: map {
     //          11234: $clientHandle,
-    //
     //          ...
-    //
     //          21234: $clientHandle,
     //       },
     //    },
@@ -112,7 +115,7 @@ class Module : public AittTransport {
     // TCP handle should be the unique_ptr, so if we delete the entry from the map,
     // the handle must be released automatically
     // in order to make the handle "unique_ptr", it should be a class object not the "void *"
-    using PortMap = std::map<unsigned short /* port */, std::unique_ptr<TCP>>;
+    using PortMap = std::map<unsigned short /* port */, std::unique_ptr<TCPPublishInfo>>;
     using HostMap = std::map<std::string /* clientId */, PortMap>;
     using PublishMap = std::map<std::string /* topic */, HostMap>;
 
@@ -122,6 +125,7 @@ class Module : public AittTransport {
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
     void ThreadMain(void);
+    std::string FindHost(HostMap::iterator &host_iterator);
     bool SendEncryptedTopic(const std::string &topic, Module::PortMap::iterator &portIt);
     void SendEncryptedData(
           Module::PortMap::iterator &port_iterator, const void *data, size_t data_length);
@@ -141,11 +145,11 @@ class Module : public AittTransport {
           Module::TCPData *connect_info, void *data, size_t data_length);
     std::string ReceiveTopic(TCPData *connect_info);
     bool ReceivePayload(Module::TCPData *connect_info, size_t &szmsg, char **msg);
-    void UpdatePublishTable(const std::string &topic, const std::string &host, unsigned short port);
+    void UpdatePublishTable(const std::string &topic, const std::string &host, unsigned short port,
+          const unsigned char *key);
 
     MainLoopHandler main_loop;
     std::thread aittThread;
-    std::string ip;
     int discovery_cb;
 
     PublishMap publishTable;
@@ -156,4 +160,5 @@ class Module : public AittTransport {
     std::mutex clientTableLock;
 
     AittProtocol protocol;
+    std::string ip;
 };

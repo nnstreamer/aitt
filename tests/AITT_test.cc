@@ -81,24 +81,25 @@ class AITTTest : public testing::Test, public AittTests {
 
             int cnt = 0;
             aitt.Subscribe(
-                "test/stress1",
-                [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
-                    AITTTest *test = static_cast<AITTTest *>(cbdata);
-                    ++cnt;
-                    if (szmsg == 0 && cnt != 12) {
-                        FAIL() << "Unexpected value" << cnt;
-                    }
+                  STRESS_TEST_TOPIC,
+                  [&](aitt::MSG *handle, const void *msg, const size_t szmsg,
+                        void *cbdata) -> void {
+                      AITTTest *test = static_cast<AITTTest *>(cbdata);
+                      ++cnt;
+                      if (szmsg == 0 && cnt != 12) {
+                          FAIL() << "Unexpected value" << cnt;
+                      }
 
-                    DBG("A subscription message is arrived. cnt = %d", cnt);
-                    const char *receivedMsg = static_cast<const char *>(msg);
-                    ASSERT_TRUE(!strcmp(receivedMsg, dump_msg));
+                      DBG("A subscription message is arrived. cnt = %d", cnt);
+                      const char *receivedMsg = static_cast<const char *>(msg);
+                      ASSERT_TRUE(!strcmp(receivedMsg, dump_msg));
 
-                    if (cnt == 10)
-                        test->ToggleReady();
-                    if (cnt == 11)
-                        test->ToggleReady();
-                },
-                static_cast<void *>(this), protocol);
+                      if (cnt == 10)
+                          test->ToggleReady();
+                      if (cnt == 11)
+                          test->ToggleReady();
+                  },
+                  static_cast<void *>(this), protocol);
 
             {
                 AITT aitt1("stress_test1", LOCAL_IP);
@@ -109,8 +110,8 @@ class AITTTest : public testing::Test, public AittTests {
 
                 for (int i = 0; i < 10; i++) {
                     INFO("size = %zu", sizeof(dump_msg));
-                    aitt1.Publish("test/stress1", dump_msg, sizeof(dump_msg), protocol,
-                        AITT_QOS_AT_MOST_ONCE, true);
+                    aitt1.Publish(STRESS_TEST_TOPIC, dump_msg, sizeof(dump_msg), protocol,
+                          AITT_QOS_AT_MOST_ONCE, true);
                 }
                 g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
 
@@ -124,8 +125,8 @@ class AITTTest : public testing::Test, public AittTests {
             ASSERT_TRUE(ready);
             ready = false;
 
-            aitt_retry.Publish("test/stress1", dump_msg, sizeof(dump_msg), protocol,
-                AITT_QOS_AT_MOST_ONCE, true);
+            aitt_retry.Publish(STRESS_TEST_TOPIC, dump_msg, sizeof(dump_msg), protocol,
+                  AITT_QOS_AT_MOST_ONCE, true);
 
             g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
 
@@ -133,7 +134,7 @@ class AITTTest : public testing::Test, public AittTests {
 
             ASSERT_TRUE(ready);
 
-            aitt_retry.Publish("test/stress1", nullptr, 0, protocol, AITT_QOS_AT_LEAST_ONCE);
+            aitt_retry.Publish(STRESS_TEST_TOPIC, nullptr, 0, protocol, AITT_QOS_AT_LEAST_ONCE);
             // Check auto release of aitt. There should be no segmentation faults.
         } catch (std::exception &e) {
             FAIL() << "Unexpected exception: " << e.what();

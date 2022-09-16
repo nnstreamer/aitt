@@ -79,7 +79,8 @@ TCP::TCP(const std::string &host, unsigned short port) : handle(-1), addrlen(0),
     throw std::runtime_error(strerror(ret));
 }
 
-TCP::TCP(int handle, sockaddr *addr, socklen_t szAddr) : handle(handle), addrlen(szAddr), addr(addr)
+TCP::TCP(int handle, sockaddr *addr, socklen_t szAddr)
+ : handle(handle), addrlen(szAddr), addr(addr)
 {
     SetupOptions();
 }

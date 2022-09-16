@@ -24,6 +24,7 @@
 #define LOCAL_IP "127.0.0.1"
 #define TEST_C_TOPIC "test/topic_c"
 #define TEST_C_MSG "test123456789"
+#define STRESS_TEST_TOPIC "test/stress1"
 
 #define TEST_MSG "This is aitt test message"
 #define TEST_MSG2 "This message is going to be delivered through a specified AittProtocol"

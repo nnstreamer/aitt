@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include "Module.h"
-#include "AES.h"
 
 #include <AittUtil.h>
 #include <flatbuffers/flexbuffers.h>
@@ -22,10 +21,8 @@
 
 #include "aitt_internal.h"
 
-#define AES_KEY_BYTE_SIZE 16
-
 Module::Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery)
-      : AittTransport(discovery), ip(ip), protocol(protocol)
+      : AittTransport(discovery), protocol(protocol), ip(ip)
 {
     aittThread = std::thread(&Module::ThreadMain, this);
 
@@ -40,7 +37,7 @@ Module::~Module(void)
     discovery.RemoveDiscoveryCB(discovery_cb);
 
     while (main_loop.Quit() == false) {
-        // wait when called before the thread has completely created.
+        // wait when called before the thread has completely created
         usleep(1000);
     }
 
@@ -70,58 +67,58 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
     //    "/customTopic/faceRecog": map {
     //       "$clientId": map {
     //          11234: $handle,
-    //
     //          ...
-    //
     //          21234: nullptr,
     //       },
     //    },
     // }
     std::lock_guard<std::mutex> auto_lock_publish(publishTableLock);
     for (PublishMap::iterator it = publishTable.begin(); it != publishTable.end(); ++it) {
-        // NOTE:
-        // Find entries that have matched with the given topic
+        // NOTE: Find entries that have matched with the given topic
         if (!aitt::AittUtil::CompareTopic(it->first, topic))
             continue;
 
-        // NOTE:
-        // Iterate all hosts
+        INFO("[Topic] it->first (%s)", it->first.c_str());
         for (HostMap::iterator hostIt = it->second.begin(); hostIt != it->second.end(); ++hostIt) {
+            INFO("[ClientID] hostIt->first (%s)", hostIt->first.c_str());
             // Iterate all ports,
             // the current implementation only be able to have the ZERO or a SINGLE entry
-            // hostIt->first // clientId
             for (PortMap::iterator portIt = hostIt->second.begin(); portIt != hostIt->second.end();
                   ++portIt) {
-                // portIt->first // port
                 // portIt->second // handle
-                if (!portIt->second) {
-                    std::string host;
-                    {
-                        ClientMap::iterator clientIt;
-                        std::lock_guard<std::mutex> auto_lock_client(clientTableLock);
-
-                        clientIt = clientTable.find(hostIt->first);
-                        if (clientIt != clientTable.end())
-                            host = clientIt->second;
-
-                        // NOTE:
-                        // otherwise, it is a critical error
-                        // The broken clientTable or subscribeTable
+                INFO("[Port] portIt->first = (%d)", portIt->first);
+                if (!portIt->second) {  // AITT_TYPE_TCP
+                    std::string host = FindHost(hostIt);
+                    if (host.empty() == true) {
+                        ERR("clientTable or subscribeTable is broken.");
+                        continue;
                     }
-
                     std::unique_ptr<TCP> client(new TCP(host, portIt->first));
 
                     // TODO:
-                    // If the client gets disconnected,
-                    // This channel entry must be cleared
-                    // In order to do that,
-                    // There should be an observer to monitor
-                    // each connections and manipulate
-                    // the discovered service table
-                    portIt->second = std::move(client);
+                    // If the client gets disconnected, this channel entry must be cleared
+                    // In order to do that, there should be an observer to monitor
+                    // each connections and manipulate the discovered service table
+                    INFO("A new TCP client for topic(%s) is created!!", topic.c_str());
+                    std::unique_ptr<TCPPublishInfo> clientInfo(new TCPPublishInfo());
+                    clientInfo->client_handle = std::move(client);
+                    portIt->second = std::move(clientInfo);
                 }
 
-                if (!portIt->second) {
+                if (protocol == AITT_TYPE_SECURE_TCP && !portIt->second->client_handle) {
+                    std::string host = FindHost(hostIt);
+                    if (host.empty() == true) {
+                        ERR("clientTable or subscribeTable is broken.");
+                        continue;
+                    }
+                    std::unique_ptr<TCP> client(new TCP(host, portIt->first));
+
+                    INFO("[SECURE_TCP] A new TCP client for topic(%s) is created!!",
+                            topic.c_str());
+                    portIt->second->client_handle = std::move(client);
+                }
+
+                if (!portIt->second->client_handle) {
                     ERR("Failed to create a new client instance");
                     continue;
                 }
@@ -134,20 +131,32 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
                         SendPayload(datalen, portIt, data);
                 }
             }
-        }  // connectionEntries
-    }      // publishTable
+        }
+    }
+}
+
+std::string Module::FindHost(HostMap::iterator &host_iterator)
+{
+    std::lock_guard<std::mutex> auto_lock_client(clientTableLock);
+    ClientMap::iterator client_iterator = clientTable.find(host_iterator->first);
+    if (client_iterator != clientTable.end())
+        return client_iterator->second;
+
+    return std::string();
 }
 
 bool Module::SendEncryptedTopic(const std::string &topic, Module::PortMap::iterator &portIt)
 {
     size_t topic_length = topic.length();
+    unsigned char *encrypted_data = nullptr;
 
     try {
         SendEncryptedData(portIt, static_cast<const void *>(&topic_length), sizeof(topic_length));
 
         SendEncryptedData(portIt, static_cast<const void *>(topic.c_str()), topic_length);
     } catch (std::exception &e) {
-        ERR("An exception(%s) occurs during SendEncryptedData().", e.what());
+        ERR("An exception(%s) occurs during SendExactSize().", e.what());
+        free(encrypted_data);
         return false;
     }
 
@@ -157,24 +166,13 @@ bool Module::SendEncryptedTopic(const std::string &topic, Module::PortMap::itera
 void Module::SendEncryptedData(
       Module::PortMap::iterator &port_iterator, const void *data, size_t data_length)
 {
-    size_t padding_buffer_size =
-          (data_length + AES_KEY_BYTE_SIZE) / AES_KEY_BYTE_SIZE * AES_KEY_BYTE_SIZE;
-    if (padding_buffer_size % AES_KEY_BYTE_SIZE != 0) {
-        ERR("padding_buffer_size is not a multiple of AES_KEY_BYTE_SIZE.");
-        return;
-    }
-    DBG("data_length = %zu, padding_buffer_size = %zu", data_length, padding_buffer_size);
+    size_t encrypted_data_size = 0;
+    unsigned char *encrypted_data = port_iterator->second->aes_encryptor->GetEncryptedData(
+          data, data_length, encrypted_data_size);
+    if (encrypted_data != nullptr && encrypted_data_size > 0)
+        SendExactSize(port_iterator, encrypted_data, encrypted_data_size);
 
-    unsigned char padding_buffer[padding_buffer_size];
-    memcpy(padding_buffer, data, data_length);
-
-    unsigned char encrypted_data[padding_buffer_size];
-    for (int i = 0; i < static_cast<int>(padding_buffer_size) / AES_KEY_BYTE_SIZE; i++) {
-        AES::Encrypt(
-              padding_buffer + AES_KEY_BYTE_SIZE * i, encrypted_data + AES_KEY_BYTE_SIZE * i);
-    }
-
-    SendExactSize(port_iterator, encrypted_data, padding_buffer_size);
+    free(encrypted_data);
 }
 
 void Module::SendExactSize(
@@ -184,7 +182,7 @@ void Module::SendExactSize(
     while (0 < remaining_size) {
         const char *data_index = static_cast<const char *>(data) + (data_length - remaining_size);
         size_t size_sent = remaining_size;
-        port_iterator->second->Send(data_index, size_sent);
+        port_iterator->second->client_handle->Send(data_index, size_sent);
         if (size_sent > 0) {
             remaining_size -= size_sent;
         } else if (size_sent == 0) {
@@ -199,7 +197,7 @@ void Module::SendEncryptedPayload(
 {
     size_t payload_size = datalen;
     if (0 == datalen) {
-        // distinguish between connection problems and zero-size messages
+        // Distinguish between connection problems and zero-size messages
         INFO("Send a zero-size message.");
         payload_size = UINT32_MAX;
     }
@@ -213,7 +211,7 @@ void Module::SendEncryptedPayload(
 
         SendEncryptedData(portIt, data, datalen);
     } catch (std::exception &e) {
-        ERR("An exception(%s) occurs during SendEncryptedData().", e.what());
+        ERR("An exception(%s) occurs during SendExactSize().", e.what());
     }
 }
 
@@ -237,7 +235,7 @@ void Module::SendPayload(const size_t &datalen, Module::PortMap::iterator &portI
 {
     size_t payload_size = datalen;
     if (0 == datalen) {
-        // distinguish between connection problems and zero-size messages
+        // Distinguish between connection problems and zero-size messages
         INFO("Send a zero-size message.");
         payload_size = UINT32_MAX;
     }
@@ -270,11 +268,14 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
     listen_info->cbdata = cbdata;
     listen_info->topic = topic;
     listen_info->is_secure = (protocol == AITT_TYPE_SECURE_TCP ? true : false);
-    auto handle = tcpServer->GetHandle();
+    if (listen_info->is_secure == true) {
+        tcpServer->CreateAESEncryptor();
+        listen_info->aes_encryptor = tcpServer->GetAESEncryptor();
+    }
 
+    auto handle = tcpServer->GetHandle();
     main_loop.AddWatch(handle, AcceptConnection, listen_info);
 
-    // 서비스 테이블에 토픽을 키워드로 프로토콜을 등록한다.
     {
         std::lock_guard<std::mutex> autoLock(subscribeTableLock);
         subscribeTable.insert(SubscribeMap::value_type(topic, std::move(tcpServer)));
@@ -324,27 +325,9 @@ void *Module::Unsubscribe(void *handlePtr)
 void Module::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
       const void *msg, const int szmsg)
 {
-    // NOTE:
-    // Iterate discovered service table
+    // NOTE: Iterate discovered service table
     // PublishMap
-    // map {
-    //    "/customTopic/faceRecog": map {
-    //       "clientId.uniq.abcd.123": map {
-    //          11234: pair {
-    //             "protocol": 1,
-    //             "handle": nullptr,
-    //          },
-    //
-    //          ...
-    //
-    //          21234: pair {
-    //             "protocol": 2,
-    //             "handle": nullptr,
-    //          }
-    //       },
-    //    },
-    // }
-
+    // map { topic : map { clientId : map { port : pair { "protocol": 1, "handle": nullptr } } } }
     if (!status.compare(AittDiscovery::WILL_LEAVE_NETWORK)) {
         {
             std::lock_guard<std::mutex> autoLock(clientTableLock);
@@ -353,8 +336,7 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         }
 
         {
-            // NOTE:
-            // Iterate all topics in the publishTable holds discovered client information
+            // NOTE: Iterate all topics in the publishTable holds discovered client information
             std::lock_guard<std::mutex> autoLock(publishTableLock);
             for (auto it = publishTable.begin(); it != publishTable.end(); ++it)
                 it->second.erase(clientId);
@@ -366,12 +348,14 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
     // map {
     //   "host": "192.168.1.11",
     //   "$topic": port,
+    //   "$topic/port" : protocol
+    //   // if protocol == AES_TYPE_SECURE_TCP, the below exists.
+    //   "$topic/port/protocol" : cipher_key
     // }
     auto map = flexbuffers::GetRoot(static_cast<const uint8_t *>(msg), szmsg).AsMap();
     std::string host = map["host"].AsString().c_str();
 
-    // NOTE:
-    // Update the clientTable
+    // NOTE: Update the clientTable
     {
         std::lock_guard<std::mutex> autoLock(clientTableLock);
         auto clientIt = clientTable.find(clientId);
@@ -389,10 +373,22 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
             continue;
 
         auto port = map[topic].AsUInt16();
-
+        std::string protocol_topic = std::string(topic).append("/").append(std::to_string(port));
+        auto protocol = map[protocol_topic].AsUInt16();
+        const unsigned char *key = nullptr;
+        if (protocol == AITT_TYPE_SECURE_TCP) {
+            std::string key_topic =
+                  std::string(protocol_topic).append("/").append(std::to_string(protocol));
+            const char *transmitted_key = map[key_topic].AsString().c_str();
+            key = reinterpret_cast<const unsigned char *>(transmitted_key);
+            {
+                std::lock_guard<std::mutex> autoLock(publishTableLock);
+                UpdatePublishTable(topic, clientId, port, key);
+            }
+        }
         {
             std::lock_guard<std::mutex> autoLock(publishTableLock);
-            UpdatePublishTable(topic, clientId, port);
+            UpdatePublishTable(topic, clientId, port, key);
         }
     }
 }
@@ -403,12 +399,11 @@ void Module::UpdateDiscoveryMsg()
     // flexbuffers
     // {
     //   "host": "127.0.0.1",
-    //   "/customTopic/aitt/faceRecog": $port,
-    //   "/customTopic/aitt/ASR": 102020,
-    //
+    //   "$topic": $port,
     //   ...
-    //
-    //   "/customTopic/aitt/+": 20123,
+    //   "$topic/port" : protocol
+    //   // if protocol == AITT_TYPE_SECURE_TCP, then the below exists.
+    //   "$topic/port/protocol" : key
     // }
     fbb.Map([this, &fbb]() {
         fbb.String("host", ip);
@@ -419,10 +414,21 @@ void Module::UpdateDiscoveryMsg()
         //    ...
         // }
         for (auto it = subscribeTable.begin(); it != subscribeTable.end(); ++it) {
-            if (it->second)
-                fbb.UInt(it->first.c_str(), it->second->GetPort());
-            else
+            if (it->second) {
+                auto port = it->second->GetPort();
+                fbb.UInt(it->first.c_str(), port);
+                if (protocol == AITT_TYPE_SECURE_TCP) {
+                    std::string protocol_topic =
+                          std::string(it->first.c_str()).append("/").append(std::to_string(port));
+                    fbb.UInt(protocol_topic.c_str(), static_cast<int>(protocol));
+                    const unsigned char *key = it->second->GetKey();
+                    std::string key_topic =
+                          protocol_topic.append("/").append(std::to_string(protocol));
+                    fbb.String(key_topic.c_str(), std::string(reinterpret_cast<const char *>(key)));
+                }
+            } else {
                 fbb.UInt(it->first.c_str(), 0);  // this is an error case
+            }
         }
     });
     fbb.Finish();
@@ -451,7 +457,7 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     std::string topic;
 
     try {
-        if (connect_info->is_secure == true) {
+        if (connect_info->parent->is_secure == true) {
             topic = impl->ReceiveDecryptedTopic(connect_info);
             if (topic.empty()) {
                 ERR("A topic is empty.");
@@ -481,8 +487,7 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     }
 
     std::string correlation;
-    // TODO:
-    // Correlation data (string) should be filled
+    // TODO: Correlation data (string) should be filled
 
     parent_info->cb(topic, msg, szmsg, parent_info->cbdata, correlation);
     free(msg);
@@ -516,6 +521,7 @@ std::string Module::ReceiveDecryptedTopic(Module::TCPData *connect_info)
 
     char topic_buffer[topic_length];
     ReceiveDecryptedData(connect_info, topic_buffer, topic_length);
+
     std::string topic = std::string(topic_buffer, topic_length);
     INFO("Complete topic = [%s], topic_len = %zu", topic.c_str(), topic_length);
 
@@ -531,7 +537,7 @@ bool Module::ReceiveDecryptedPayload(Module::TCPData *connect_info, size_t &szms
     }
 
     if (UINT32_MAX == szmsg) {
-        // Distinguish between connection problems and zero-size messages.
+        // Distinguish between connection problems and zero-size messages
         INFO("Got a zero-size message. Skip this payload transmission.");
         szmsg = 0;
     } else {
@@ -545,22 +551,14 @@ bool Module::ReceiveDecryptedPayload(Module::TCPData *connect_info, size_t &szms
 void Module::ReceiveDecryptedData(Module::TCPData *connect_info, void *data, size_t data_length)
 {
     size_t padding_buffer_size =
-          (data_length + AES_KEY_BYTE_SIZE) / AES_KEY_BYTE_SIZE * AES_KEY_BYTE_SIZE;
-    if (padding_buffer_size % AES_KEY_BYTE_SIZE != 0) {
-        ERR("data_length is not a multiple of AES_KEY_BYTE_SIZE.");
-        return;
-    }
+          connect_info->parent->aes_encryptor->GetPaddingBufferSize(data_length);
     DBG("data_length = %zu, padding_buffer_size = %zu", data_length, padding_buffer_size);
 
     unsigned char padding_buffer[padding_buffer_size];
     ReceiveExactSize(connect_info, static_cast<void *>(padding_buffer), padding_buffer_size);
 
-    unsigned char decrypted_data[padding_buffer_size];
-    for (int i = 0; i < (int)padding_buffer_size / AES_KEY_BYTE_SIZE; i++) {
-        AES::Decrypt(
-              padding_buffer + AES_KEY_BYTE_SIZE * i, decrypted_data + AES_KEY_BYTE_SIZE * i);
-    }
-    memcpy(data, decrypted_data, data_length);
+    connect_info->parent->aes_encryptor->GetDecryptedData(
+          padding_buffer, padding_buffer_size, data_length, data);
 }
 
 void Module::ReceiveExactSize(Module::TCPData *connect_info, void *data, size_t data_length)
@@ -611,7 +609,7 @@ bool Module::ReceivePayload(Module::TCPData *connect_info, size_t &szmsg, char *
     }
     ERR("szmsg = [%zu]", szmsg);
     if (UINT32_MAX == szmsg) {
-        // Distinguish between connection problems and zero-size messages.
+        // Distinguish between connection problems and zero-size messages
         INFO("Got a zero-size message. Skip this payload transmission.");
         szmsg = 0;
     } else {
@@ -625,10 +623,8 @@ bool Module::ReceivePayload(Module::TCPData *connect_info, size_t &szmsg, char *
 void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
       MainLoopHandler::MainLoopData *user_data)
 {
-    // TODO:
-    // Update the discovery map
+    // TODO: Update the discovery map
     std::unique_ptr<TCP> client;
-
     TCPServerData *listen_info = dynamic_cast<TCPServerData *>(user_data);
     Module *impl = listen_info->impl;
     {
@@ -639,6 +635,7 @@ void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle
             return;
 
         client = clientIt->second->AcceptPeer();
+        INFO("A TCP connection (client handle=%d) is created.", client->GetHandle());
     }
 
     if (client == nullptr) {
@@ -652,45 +649,55 @@ void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle
     TCPData *ecd = new TCPData;
     ecd->parent = listen_info;
     ecd->client = std::move(client);
-    ecd->is_secure = listen_info->is_secure;
 
     impl->main_loop.AddWatch(cHandle, ReceiveData, ecd);
 }
 
 void Module::UpdatePublishTable(const std::string &topic, const std::string &clientId,
-      unsigned short port)
+      unsigned short port, const unsigned char *key)
 {
     auto topicIt = publishTable.find(topic);
+    std::unique_ptr<TCPPublishInfo> keyInfo(new TCPPublishInfo());
+    if (key == nullptr) {
+        keyInfo = nullptr;
+    } else {
+        keyInfo->client_handle = nullptr;
+        keyInfo->aes_encryptor = new AESEncryptor(key);
+    }
+
     if (topicIt == publishTable.end()) {
         PortMap portMap;
-        portMap.insert(PortMap::value_type(port, nullptr));
+        portMap.insert(PortMap::value_type(port, std::move(keyInfo)));
         HostMap hostMap;
         hostMap.insert(HostMap::value_type(clientId, std::move(portMap)));
         publishTable.insert(PublishMap::value_type(topic, std::move(hostMap)));
+        INFO("A topic(%s) is inserted to the publish table.", topic.c_str());
         return;
     }
 
     auto hostIt = topicIt->second.find(clientId);
     if (hostIt == topicIt->second.end()) {
         PortMap portMap;
-        portMap.insert(PortMap::value_type(port, nullptr));
+        portMap.insert(PortMap::value_type(port, std::move(keyInfo)));
         topicIt->second.insert(HostMap::value_type(clientId, std::move(portMap)));
+        INFO("A HostMap element is added, clientId(%s).", clientId.c_str());
         return;
     }
 
     // NOTE:
-    // The current implementation only has a single port entry.
-    // Therefore, if the hostIt is not empty, there is the previous connection.
+    // The current implementation only has a single port entry
+    // Therefore, if the hostIt is not empty, there is the previous connection
     if (!hostIt->second.empty()) {
         auto portIt = hostIt->second.begin();
-
+        INFO("A client handle already exists. port = %d", port);
         if (portIt->first == port)
-            return;  // Nothing is changed. Keep the current handle.
+            return;  // Nothing is changed, keep the current handle
 
         // Otherwise, delete the connection handle
-        // to make a new connection with the new port.
+        // to make a new connection with the new port
         hostIt->second.clear();
     }
 
-    hostIt->second.insert(PortMap::value_type(port, nullptr));
+    INFO("A PortMap element is inserted. clientId(%s), port = %d", clientId.c_str(), port);
+    hostIt->second.insert(PortMap::value_type(port, std::move(keyInfo)));
 }
