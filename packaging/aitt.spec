@@ -42,6 +42,15 @@ Requires: %{name} = %{version}
 %description plugins
 The %{name}-plugins package contains basic plugin libraries for AITT P2P transport.
 
+%if 0%{test}
+%package unittests
+Summary: Test Programs for %{name}
+Group: System/Testing
+
+%description unittests
+The %{name}-unittests package contains programs for checking quality the %{name}.
+%endif
+
 %package devel
 Summary: AITT development package
 Group: Development/Libraries
@@ -86,9 +95,6 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 
 %files
 %manifest %{name}.manifest
-%if 0%{test}
-%{_bindir}/*
-%endif
 %{_libdir}/lib%{name}*.so*
 %license LICENSE.APLv2
 
@@ -96,6 +102,11 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 %manifest %{name}.manifest
 %{_libdir}/lib%{name}-transport*.so*
 %license LICENSE.APLv2
+
+%if 0%{test}
+%files unittests
+%{_bindir}/*
+%endif
 
 %files devel
 %{_includedir}/*
