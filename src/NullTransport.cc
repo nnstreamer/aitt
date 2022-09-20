@@ -17,13 +17,8 @@
 
 #include "aitt_internal.h"
 
-NullTransport::NullTransport(const std::string& ip, AittDiscovery& discovery)
-      : AittTransport(discovery)
-{
-}
-
-void NullTransport::Publish(
-      const std::string& topic, const void* data, const size_t datalen, AittQoS qos, bool retain)
+NullTransport::NullTransport(AittDiscovery& discovery, const std::string& ip)
+      : AittTransport(AITT_TYPE_UNKNOWN, discovery)
 {
 }
 
@@ -32,8 +27,13 @@ void NullTransport::Publish(const std::string& topic, const void* data, const si
 {
 }
 
-void* NullTransport::Subscribe(
-      const std::string& topic, const SubscribeCallback& cb, void* cbdata, AittQoS qos)
+void NullTransport::Publish(const std::string& topic, const void* data, const size_t datalen,
+      AittQoS qos, bool retain)
+{
+}
+
+void* NullTransport::Subscribe(const std::string& topic, const SubscribeCallback& cb, void* cbdata,
+      AittQoS qos)
 {
     return nullptr;
 }

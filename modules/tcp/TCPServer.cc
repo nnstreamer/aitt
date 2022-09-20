@@ -29,8 +29,10 @@
 
 #define BACKLOG 10  // Accept only 10 simultaneously connections by default
 
-TCP::Server::Server(const std::string &host, unsigned short &port)
-      : handle(-1), addr(nullptr), addrlen(0)
+namespace AittTCPNamespace {
+
+TCP::Server::Server(const std::string &host, unsigned short &port, bool is_secure)
+      : handle(-1), addr(nullptr), addrlen(0), secure(is_secure), key(), iv()
 {
     int ret = 0;
 
@@ -72,6 +74,9 @@ TCP::Server::Server(const std::string &host, unsigned short &port)
         if (ret < 0)
             break;
 
+        if (secure)
+            AESEncryptor::GenerateKey(key, iv);
+
         return;
     } while (0);
 
@@ -92,7 +97,6 @@ TCP::Server::~Server(void)
         return;
 
     free(addr);
-
     if (close(handle) < 0)
         ERR_CODE(errno, "close");
 }
@@ -112,8 +116,13 @@ std::unique_ptr<TCP> TCP::Server::AcceptPeer(void)
         free(peerAddr);
         throw std::runtime_error(strerror(errno));
     }
-
-    return std::unique_ptr<TCP>(new TCP(peerHandle, peerAddr, szAddr));
+    ConnectInfo info;
+    if (secure) {
+        info.secure = true;
+        memcpy(info.key, key, sizeof(key));
+        memcpy(info.iv, iv, sizeof(iv));
+    }
+    return std::unique_ptr<TCP>(new TCP(peerHandle, peerAddr, szAddr, info));
 }
 
 int TCP::Server::GetHandle(void)
@@ -132,17 +141,14 @@ unsigned short TCP::Server::GetPort(void)
     return ntohs(addr.sin_port);
 }
 
-void TCP::Server::CreateAESEncryptor(void)
+const unsigned char *TCP::Server::GetCryptoKey(void)
 {
-    aes_encryptor = new AESEncryptor();
+    return key;
 }
 
-AESEncryptor *TCP::Server::GetAESEncryptor(void)
+const unsigned char *TCP::Server::GetCryptoIv(void)
 {
-    return aes_encryptor;
+    return iv;
 }
 
-const unsigned char *TCP::Server::GetKey(void)
-{
-    return aes_encryptor->GetCipherKey();
-}
+}  // namespace AittTCPNamespace

@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 
-#include "TCPServer.h"
+#include "../TCPServer.h"
 
 #define TEST_SERVER_ADDRESS "127.0.0.1"
 #define TEST_SERVER_INVALID_ADDRESS "287.0.0.1"
@@ -31,6 +31,8 @@
 #define TEST_BUFFER_SIZE 256
 #define TEST_BUFFER_HELLO "Hello World"
 #define TEST_BUFFER_BYE "Good Bye"
+
+using namespace AittTCPNamespace;
 
 class TCPTest : public testing::Test {
   protected:
@@ -43,7 +45,9 @@ class TCPTest : public testing::Test {
         clientThread = std::thread([this](void) mutable -> void {
             std::unique_lock<std::mutex> lk(m);
             ready_cv.wait(lk, [this] { return ready; });
-            client = std::unique_ptr<TCP>(new TCP(TEST_SERVER_ADDRESS, serverPort));
+            TCP::ConnectInfo info;
+            info.port = serverPort;
+            client = std::unique_ptr<TCP>(new TCP(TEST_SERVER_ADDRESS, info));
 
             customTest();
         });
@@ -78,7 +82,9 @@ class TCPTest : public testing::Test {
 TEST(TCP, Negative_Create_InvalidPort_Anytime)
 {
     try {
-        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, TEST_SERVER_AVAILABLE_PORT));
+        TCP::ConnectInfo info;
+        info.port = TEST_SERVER_AVAILABLE_PORT;
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, info));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));
@@ -88,7 +94,9 @@ TEST(TCP, Negative_Create_InvalidPort_Anytime)
 TEST(TCP, Negative_Create_InvalidAddress_Anytime)
 {
     try {
-        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_INVALID_ADDRESS, TEST_SERVER_PORT));
+        TCP::ConnectInfo info;
+        info.port = TEST_SERVER_PORT;
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_INVALID_ADDRESS, info));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));
@@ -127,7 +135,7 @@ TEST_F(TCPTest, Positive_SendRecv_Anytime)
     char byeBuffer[TEST_BUFFER_SIZE];
 
     customTest = [this, &helloBuffer](void) mutable -> void {
-        size_t szData = sizeof(helloBuffer);
+        size_t szData = sizeof(TEST_BUFFER_HELLO);
         client->Recv(static_cast<void *>(helloBuffer), szData);
 
         szData = sizeof(TEST_BUFFER_BYE);
@@ -139,7 +147,7 @@ TEST_F(TCPTest, Positive_SendRecv_Anytime)
     size_t szMsg = sizeof(TEST_BUFFER_HELLO);
     peer->Send(TEST_BUFFER_HELLO, szMsg);
 
-    szMsg = sizeof(byeBuffer);
+    szMsg = sizeof(TEST_BUFFER_BYE);
     peer->Recv(static_cast<void *>(byeBuffer), szMsg);
 
     ASSERT_STREQ(helloBuffer, TEST_BUFFER_HELLO);

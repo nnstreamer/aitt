@@ -28,6 +28,8 @@
 #define TEST_SERVER_PORT 8123
 #define TEST_SERVER_AVAILABLE_PORT 0
 
+using namespace AittTCPNamespace;
+
 TEST(TCPServer, Positive_Create_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
@@ -108,7 +110,9 @@ TEST(TCPServer, Positive_AcceptPeer_Anytime)
     {
         std::unique_lock<std::mutex> lk(m);
         ready_cv.wait(lk, [&ready] { return ready; });
-        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, serverPort));
+        TCP::ConnectInfo info;
+        info.port = serverPort;
+        std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, info));
         connected_cv.wait(lk, [&connected] { return connected; });
     }
 

@@ -23,7 +23,7 @@ enum AittProtocol {
     AITT_TYPE_UNKNOWN = 0,
     AITT_TYPE_MQTT = (0x1 << 0),        // Publish message through the MQTT
     AITT_TYPE_TCP = (0x1 << 1),         // Publish message to peers using the TCP
-    AITT_TYPE_SECURE_TCP = (0x1 << 2),  // Publish message to peers using the TCP with AES
+    AITT_TYPE_TCP_SECURE = (0x1 << 2),  // Publish message to peers using the Secure TCP
     AITT_TYPE_WEBRTC = (0x1 << 3),      // Publish message to peers using the WEBRTC
 };
 
@@ -39,6 +39,9 @@ enum AittConnectionState {
     AITT_CONNECTED = 1,       // A connection was successfully established to the mqtt broker.
     AITT_CONNECT_FAILED = 2,  // Failed to connect to the mqtt broker.
 };
+
+// The maximum size in bytes of a message. It follows MQTT
+#define AITT_MESSAGE_MAX 268435455
 
 #ifdef TIZEN
 #include <tizen.h>

@@ -119,5 +119,5 @@ TEST_F(AITTTCPTest, TCP_Wildcards2_Anytime)
 
 TEST_F(AITTTCPTest, SECURE_TCP_Wildcards_Anytime)
 {
-    TCPWildcardsTopicTemplate(AITT_TYPE_SECURE_TCP);
+    TCPWildcardsTopicTemplate(AITT_TYPE_TCP_SECURE);
 }

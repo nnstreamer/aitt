@@ -33,9 +33,12 @@ using AittTransport = aitt::AittTransport;
 using MainLoopHandler = aitt::MainLoopHandler;
 using AittDiscovery = aitt::AittDiscovery;
 
+#define MODULE_NAMESPACE AittWebRTCNamespace
+namespace AittWebRTCNamespace {
+
 class Module : public AittTransport {
   public:
-    explicit Module(AittProtocol protocol, const std::string &ip, AittDiscovery &discovery);
+    explicit Module(AittProtocol type, AittDiscovery &discovery, const std::string &ip);
     virtual ~Module(void);
 
     // TODO: How about regarding topic as service name?
@@ -64,3 +67,5 @@ class Module : public AittTransport {
     std::map<std::string, std::shared_ptr<SubscribeStream>> subscribe_table_;
     std::mutex subscribe_table_lock_;
 };
+
+}  // namespace AittWebRTCNamespace

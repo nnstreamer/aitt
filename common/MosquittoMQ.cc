@@ -376,7 +376,7 @@ void *MosquittoMQ::Unsubscribe(void *sub_handle)
     int mid = -1;
     int ret = mosquitto_unsubscribe(handle, &mid, topic.c_str());
     if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_unsubscribe(%s) Fail(%d)", topic.c_str(), ret);
+        ERR("mosquitto_unsubscribe(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
         throw AittException(AittException::MQTT_ERR);
     }
 

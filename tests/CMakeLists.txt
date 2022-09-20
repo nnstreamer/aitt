@@ -46,7 +46,7 @@ ADD_TEST(
 )
 
 ###########################################################################
-ADD_EXECUTABLE(${AITT_UT}_module ModuleLoader_test.cc)
+ADD_EXECUTABLE(${AITT_UT}_module ModuleLoader_test.cc $<TARGET_OBJECTS:MODULE_MANAGER>)
 TARGET_LINK_LIBRARIES(${AITT_UT}_module ${UT_NEEDS_LIBRARIES} ${AITT_NEEDS_LIBRARIES} ${CMAKE_DL_LIBS} ${AITT_COMMON})
 TARGET_INCLUDE_DIRECTORIES(${AITT_UT}_module PRIVATE ../src)
 

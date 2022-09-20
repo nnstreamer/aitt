@@ -21,69 +21,44 @@
 
 #include "aitt_internal.h"
 
-static constexpr unsigned char TEST_CIPHER_KEY[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+static constexpr unsigned char TEST_CIPHER_KEY[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+      0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c, 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2,
+      0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+static constexpr unsigned char TEST_CIPHER_IV[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+      0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+
 static const std::string TEST_MESSAGE("TCP encryptions.");
 
-class AESEncryptorTest : public testing::Test {
-  public:
-    static void PrintKey(const unsigned char *key)
-    {
-        for (int i = 0; i < AESEncryptor::AES_KEY_BYTE_SIZE / 8; i++) {
-            DBG("%u %u %u %u %u %u %u %u",
-                key[8 * i + 0], key[8 * i + 1], key[8 * i + 2], key[8 * i + 3], key[8 * i + 4], key[8 * i + 5], key[8 * i + 6], key[8 * i + 7]);
-        }
-    }
-};
+using namespace AittTCPNamespace;
 
-TEST(AESEncryptor, Positive_Create_Anytime)
+TEST(AESEncryptor, Encrypt_P_Anytime)
 {
-    std::unique_ptr<AESEncryptor> aes_encryptor(new AESEncryptor());
-    ASSERT_NE(aes_encryptor, nullptr);
-}
-
-TEST(AESEncryptor, Positive_CreateWithArgument_Anytime)
-{
-    std::unique_ptr<AESEncryptor> aes_encryptor(new AESEncryptor(TEST_CIPHER_KEY));
-    std::string aes_encryptor_key(reinterpret_cast<const char *>(aes_encryptor->GetCipherKey()));
-    std::string test_key(reinterpret_cast<const char *>(TEST_CIPHER_KEY), AESEncryptor::AES_KEY_BYTE_SIZE);
-    ASSERT_STREQ(aes_encryptor_key.c_str(), test_key.c_str());
-}
-
-TEST(AESEncryptor, Positive_GenerateRandomKeys_Anytime)
-{
-    std::unique_ptr<AESEncryptor> aes_encryptor_first(new AESEncryptor());
-    std::unique_ptr<AESEncryptor> aes_encryptor_second(new AESEncryptor());
-    std::string first_key(reinterpret_cast<const char *>(aes_encryptor_first->GetCipherKey()), AESEncryptor::AES_KEY_BYTE_SIZE);
-    std::string second_key(reinterpret_cast<const char *>(aes_encryptor_second->GetCipherKey()), AESEncryptor::AES_KEY_BYTE_SIZE);
-    ASSERT_STRNE(first_key.c_str(), second_key.c_str());
-}
-
-TEST(AESEncryptor, Positive_Encrypt_Anytime)
-{
-    std::unique_ptr<AESEncryptor> aes_encryptor(new AESEncryptor());
-    AESEncryptorTest::PrintKey(aes_encryptor->GetCipherKey());
-
     try {
-        unsigned char encryption_buffer[AESEncryptor::AES_KEY_BYTE_SIZE];
-        aes_encryptor->Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()), encryption_buffer);
+        AESEncryptor encryptor;
+        encryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
+
+        unsigned char encryption_buffer[encryptor.GetCryptogramSize(TEST_MESSAGE.size())];
+        encryptor.Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()),
+              TEST_MESSAGE.size(), encryption_buffer);
     } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), strerror(EINVAL));
+        FAIL() << "Unexpected exception: " << e.what();
     }
 }
 
-TEST(AESEncryptor, Positive_EncryptDecryped_Anytime)
+TEST(AESEncryptor, EncryptDecryped_P_Anytime)
 {
-    std::unique_ptr<AESEncryptor> aes_encryptor(new AESEncryptor());
-    AESEncryptorTest::PrintKey(aes_encryptor->GetCipherKey());
-
     try {
-        unsigned char encryption_buffer[AESEncryptor::AES_KEY_BYTE_SIZE];
-        unsigned char decryption_buffer[AESEncryptor::AES_KEY_BYTE_SIZE];
-        aes_encryptor->Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()), encryption_buffer);
-        aes_encryptor->Decrypt(encryption_buffer, decryption_buffer);
-        std::string decrypted_message(reinterpret_cast<const char *>(decryption_buffer), AESEncryptor::AES_KEY_BYTE_SIZE);
-        DBG("TEST_MESSAGE = (%s), decrypted_message = (%s)", TEST_MESSAGE.c_str(), decrypted_message.c_str());
-        ASSERT_STREQ(decrypted_message.c_str(), TEST_MESSAGE.c_str());
+        AESEncryptor encryptor;
+        encryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
+
+        unsigned char ciphertext[encryptor.GetCryptogramSize(TEST_MESSAGE.size())];
+        unsigned char plaintext[encryptor.GetCryptogramSize(TEST_MESSAGE.size())];
+        size_t len =
+              encryptor.Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()),
+                    TEST_MESSAGE.size(), ciphertext);
+        len = encryptor.Decrypt(ciphertext, len, plaintext);
+        plaintext[len] = 0;
+        ASSERT_STREQ(TEST_MESSAGE.c_str(), reinterpret_cast<char *>(plaintext));
     } catch (std::exception &e) {
         ASSERT_STREQ(e.what(), strerror(EINVAL));
     }

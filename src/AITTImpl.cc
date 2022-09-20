@@ -23,7 +23,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include "MQProxy.h"
+#include "MosquittoMQ.h"
 #include "aitt_internal.h"
 
 #define WEBRTC_ROOM_ID_PREFIX std::string(AITT_MANAGED_TOPIC_PREFIX "webrtc/room/Room.webrtc")
@@ -34,23 +34,18 @@ namespace aitt {
 AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
       const AittOption &option)
       : public_api(parent),
+        discovery(id),
+        modules(my_ip, discovery),
         id_(id),
         mqtt_broker_port_(0),
-        mq(new MQProxy(id, option)),
-        discovery(id, option),
-        reply_id(0),
-        transports{0}
+        reply_id(0)
 {
-    // TODO: Validate my_ip
-    ModuleLoader loader;
-    for (ModuleLoader::Type i = ModuleLoader::TYPE_TCP; i < ModuleLoader::TYPE_TRANSPORT_MAX;
-          i = ModuleLoader::Type(i + 1)) {
-        module_handles.push_back(loader.OpenModule(i));
-        const ModuleLoader::ModuleHandle &handle = module_handles.back();
-        if (handle == nullptr)
-            ERR("OpenModule() Fail");
-
-        transports[i] = loader.LoadTransport(handle.get(), loader.GetProtocol(i), my_ip, discovery);
+    if (option.GetUseCustomMqttBroker()) {
+        mq = modules.NewCustomMQ(id, option);
+        discovery.SetMQ(modules.NewCustomMQ(id + 'd', option));
+    } else {
+        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetClearSession()));
+        discovery.SetMQ(std::unique_ptr<MQ>(new MosquittoMQ(id + 'd', option.GetClearSession())));
     }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
@@ -128,13 +123,9 @@ void AITT::Impl::UnsubscribeAll()
             mq->Unsubscribe(subscribe_info->second);
             break;
         case AITT_TYPE_TCP:
-            transports[ModuleLoader::TYPE_TCP]->Unsubscribe(subscribe_info->second);
-            break;
-        case AITT_TYPE_SECURE_TCP:
-            transports[ModuleLoader::TYPE_SECURE_TCP]->Unsubscribe(subscribe_info->second);
-            break;
+        case AITT_TYPE_TCP_SECURE:
         case AITT_TYPE_WEBRTC:
-            transports[ModuleLoader::TYPE_WEBRTC]->Unsubscribe(subscribe_info->second);
+            modules.Get(subscribe_info->first).Unsubscribe(subscribe_info->second);
             break;
 
         default:
@@ -159,10 +150,10 @@ void AITT::Impl::Publish(const std::string &topic, const void *data, const size_
         mq->Publish(topic, data, datalen, qos, retain);
 
     if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP)
-        transports[ModuleLoader::TYPE_TCP]->Publish(topic, data, datalen, qos, retain);
+        modules.Get(AITT_TYPE_TCP).Publish(topic, data, datalen, qos, retain);
 
-    if ((protocols & AITT_TYPE_SECURE_TCP) == AITT_TYPE_SECURE_TCP)
-        transports[ModuleLoader::TYPE_SECURE_TCP]->Publish(topic, data, datalen, qos, retain);
+    if ((protocols & AITT_TYPE_TCP_SECURE) == AITT_TYPE_TCP_SECURE)
+        modules.Get(AITT_TYPE_TCP_SECURE).Publish(topic, data, datalen, qos, retain);
 
     if ((protocols & AITT_TYPE_WEBRTC) == AITT_TYPE_WEBRTC)
         PublishWebRtc(topic, data, datalen, qos, retain);
@@ -183,7 +174,7 @@ void AITT::Impl::PublishWebRtc(const std::string &topic, const void *data, const
     });
     fbb.Finish();
     auto buf = fbb.GetBuffer();
-    transports[ModuleLoader::TYPE_WEBRTC]->Publish(topic, buf.data(), buf.size(), qos, retain);
+    modules.Get(AITT_TYPE_WEBRTC).Publish(topic, buf.data(), buf.size(), qos, retain);
 }
 
 AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::SubscribeCallback &cb,
@@ -191,18 +182,15 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
 {
     SubscribeInfo *info = new SubscribeInfo();
     info->first = protocol;
-    void *subscribe_handle;
 
-    INFO("[PROTOCOL] %d", static_cast<int>(protocol));
+    void *subscribe_handle;
     switch (protocol) {
     case AITT_TYPE_MQTT:
         subscribe_handle = SubscribeMQ(info, &main_loop, topic, cb, user_data, qos);
         break;
     case AITT_TYPE_TCP:
+    case AITT_TYPE_TCP_SECURE:
         subscribe_handle = SubscribeTCP(info, topic, cb, user_data, qos);
-        break;
-    case AITT_TYPE_SECURE_TCP:
-        subscribe_handle = SubscribeSecureTCP(info, topic, cb, user_data, qos);
         break;
     case AITT_TYPE_WEBRTC:
         subscribe_handle = SubscribeWebRtc(info, topic, cb, user_data, qos);
@@ -272,14 +260,12 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     case AITT_TYPE_MQTT:
         user_data = mq->Unsubscribe(found_info->second);
         break;
-    case AITT_TYPE_TCP: {
-        user_data = transports[ModuleLoader::TYPE_TCP]->Unsubscribe(found_info->second);
+    case AITT_TYPE_TCP:
+    case AITT_TYPE_TCP_SECURE:
+    case AITT_TYPE_WEBRTC:
+        user_data = modules.Get(found_info->first).Unsubscribe(found_info->second);
         break;
-    }
-    case AITT_TYPE_WEBRTC: {
-        user_data = transports[ModuleLoader::TYPE_WEBRTC]->Unsubscribe(found_info->second);
-        break;
-    }
+
     default:
         ERR("Unknown AittProtocol(%d)", found_info->first);
         break;
@@ -403,37 +389,20 @@ void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool e
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    return transports[ModuleLoader::TYPE_TCP]->Subscribe(
-          topic,
-          [handle, cb](const std::string &topic, const void *data, const size_t datalen,
-                void *user_data, const std::string &correlation) -> void {
-              MSG msg;
-              msg.SetID(handle);
-              msg.SetTopic(topic);
-              msg.SetCorrelation(correlation);
-              msg.SetProtocols(AITT_TYPE_TCP);
+    return modules.Get(handle->first)
+          .Subscribe(
+                topic,
+                [handle, cb](const std::string &topic, const void *data, const size_t datalen,
+                      void *user_data, const std::string &correlation) -> void {
+                    MSG msg;
+                    msg.SetID(handle);
+                    msg.SetTopic(topic);
+                    msg.SetCorrelation(correlation);
+                    msg.SetProtocols(handle->first);
 
-              return cb(&msg, data, datalen, user_data);
-          },
-          user_data, qos);
-}
-
-void *AITT::Impl::SubscribeSecureTCP(SubscribeInfo *handle, const std::string &topic,
-      const SubscribeCallback &cb, void *user_data, AittQoS qos)
-{
-    return transports[ModuleLoader::TYPE_SECURE_TCP]->Subscribe(
-          topic,
-          [handle, cb](const std::string &topic, const void *data, const size_t datalen,
-                void *user_data, const std::string &correlation) -> void {
-              MSG msg;
-              msg.SetID(handle);
-              msg.SetTopic(topic);
-              msg.SetCorrelation(correlation);
-              msg.SetProtocols(AITT_TYPE_SECURE_TCP);
-
-              return cb(&msg, data, datalen, user_data);
-          },
-          user_data, qos);
+                    return cb(&msg, data, datalen, user_data);
+                },
+                user_data, qos);
 }
 
 void *AITT::Impl::SubscribeWebRtc(SubscribeInfo *handle, const std::string &topic,
@@ -449,18 +418,19 @@ void *AITT::Impl::SubscribeWebRtc(SubscribeInfo *handle, const std::string &topi
     fbb.Finish();
     auto buf = fbb.GetBuffer();
 
-    return transports[ModuleLoader::TYPE_WEBRTC]->Subscribe(
-          topic,
-          [handle, cb](const std::string &topic, const void *data, const size_t datalen,
-                void *user_data, const std::string &correlation) -> void {
-              MSG msg;
-              msg.SetID(handle);
-              msg.SetTopic(topic);
-              msg.SetCorrelation(correlation);
-              msg.SetProtocols(AITT_TYPE_WEBRTC);
+    return modules.Get(AITT_TYPE_WEBRTC)
+          .Subscribe(
+                topic,
+                [handle, cb](const std::string &topic, const void *data, const size_t datalen,
+                      void *user_data, const std::string &correlation) -> void {
+                    MSG msg;
+                    msg.SetID(handle);
+                    msg.SetTopic(topic);
+                    msg.SetCorrelation(correlation);
+                    msg.SetProtocols(AITT_TYPE_WEBRTC);
 
-              return cb(&msg, data, datalen, user_data);
-          },
-          buf.data(), buf.size(), user_data, qos);
+                    return cb(&msg, data, datalen, user_data);
+                },
+                buf.data(), buf.size(), user_data, qos);
 }
 }  // namespace aitt

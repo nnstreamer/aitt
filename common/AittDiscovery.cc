@@ -20,14 +20,17 @@
 #include <atomic>
 
 #include "AittException.h"
-#include "MQProxy.h"
 #include "aitt_internal.h"
 
 namespace aitt {
 
-AittDiscovery::AittDiscovery(const std::string &id, const AittOption &option)
-      : id_(id), discovery_mq(new MQProxy(id + "d", option)), callback_handle(nullptr)
+AittDiscovery::AittDiscovery(const std::string &id) : id_(id), callback_handle(nullptr)
 {
+}
+
+void AittDiscovery::SetMQ(std::unique_ptr<MQ> mq)
+{
+    discovery_mq = std::move(mq);
 }
 
 void AittDiscovery::Start(const std::string &host, int port, const std::string &username,
@@ -151,6 +154,8 @@ const char *AittDiscovery::GetProtocolStr(AittProtocol protocol)
         return "mqtt";
     case AITT_TYPE_TCP:
         return "tcp";
+    case AITT_TYPE_TCP_SECURE:
+        return "tcp_secure";
     case AITT_TYPE_WEBRTC:
         return "webrtc";
     default:
@@ -167,6 +172,9 @@ AittProtocol AittDiscovery::GetProtocol(const std::string &protocol_str)
 
     if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_TCP)))
         return AITT_TYPE_TCP;
+
+    if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_TCP_SECURE)))
+        return AITT_TYPE_TCP_SECURE;
 
     if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_WEBRTC)))
         return AITT_TYPE_WEBRTC;

@@ -49,7 +49,6 @@ class API AITT {
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocols = AITT_TYPE_MQTT, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
           bool retain = false);
-
     int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
@@ -61,7 +60,6 @@ class API AITT {
     AittSubscribeID Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *cbdata = nullptr, AittProtocol protocol = AITT_TYPE_MQTT,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE);
-
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const size_t datalen, bool end = true);

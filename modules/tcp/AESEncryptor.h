@@ -15,30 +15,30 @@
  */
 #pragma once
 
-#include <stdio.h>
+#include <string>
+#include <vector>
+
+// AES-256 CBC
+#define AITT_TCP_ENCRYPTOR_KEY_LEN 32
+#define AITT_TCP_ENCRYPTOR_IV_LEN 16
+
+namespace AittTCPNamespace {
 
 class AESEncryptor {
   public:
-    constexpr static int AES_KEY_BYTE_SIZE = 16;
+    AESEncryptor();
+    virtual ~AESEncryptor(void);
 
-  public:
-    AESEncryptor(void);
-    explicit AESEncryptor(const unsigned char key[AES_KEY_BYTE_SIZE]);
-    ~AESEncryptor(void);
-
-    unsigned char *GetEncryptedData(
-          const void *data, size_t data_length, size_t &encrypted_data_length);
-    void Encrypt(const unsigned char *target_data, unsigned char *encrypted_data);
-    void GetDecryptedData(unsigned char *padding_buffer, size_t padding_buffer_size,
-          size_t data_length, void *data);
-    void Decrypt(const unsigned char *target_data, unsigned char *decrypted_data);
-    size_t GetPaddingBufferSize(size_t data_length);
-    const unsigned char *GetCipherKey(void);
+    static void GenerateKey(unsigned char (&key)[AITT_TCP_ENCRYPTOR_KEY_LEN],
+          unsigned char (&iv)[AITT_TCP_ENCRYPTOR_IV_LEN]);
+    void Init(const unsigned char *key, const unsigned char *iv);
+    size_t GetCryptogramSize(size_t plain_size);
+    size_t Encrypt(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
+    size_t Decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
 
   private:
-    void GenerateCipherKey(void);
-
-    unsigned char cipher_key[AES_KEY_BYTE_SIZE];
-
-    constexpr static int AES_KEY_BIT_SIZE = AES_KEY_BYTE_SIZE << 3;
+    std::vector<unsigned char> key_;
+    std::vector<unsigned char> iv_;
 };
+
+}  // namespace AittTCPNamespace

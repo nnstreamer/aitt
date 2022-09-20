@@ -3,7 +3,7 @@ plugins {
     id "de.undercouch.download" version "5.0.1"
 }
 
-def thirdPartyDir = new File ("${rootProject.projectDir}/third_party")
+def thirdPartyDir = new File("${rootProject.projectDir}/third_party")
 
 def flatbuffersDir = new File("${thirdPartyDir}/flatbuffers-2.0.0")
 def mosquittoDir = new File("${thirdPartyDir}/mosquitto-2.0.14")
@@ -43,7 +43,9 @@ android {
             path file('./CMakeLists.txt')
         }
     }
-
+    buildFeatures {
+        prefab true
+    }
     buildTypes {
         debug {
             debuggable true
@@ -87,6 +89,8 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.flatbuffers:flatbuffers-java:2.0.0'
+    implementation 'com.android.ndk.thirdparty:openssl:1.1.1g-alpha-1'
+
 
     implementation project(path: ':android:modules:tcp')
     implementation project(path: ':android:modules:webrtc')
@@ -151,7 +155,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest']) {
     }
 
     def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*']
-    def debugTree = fileTree(dir : "${buildDir}/intermediates/javac/debug", excludes: fileFilter)
+    def debugTree = fileTree(dir: "${buildDir}/intermediates/javac/debug", excludes: fileFilter)
 
     def mainSrc = "${project.projectDir}/src/main/java"
 

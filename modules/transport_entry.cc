@@ -20,15 +20,15 @@
 #include "Module.h"
 #include "aitt_internal_definitions.h"
 
-extern "C" {
+using namespace MODULE_NAMESPACE;
 
-API void *AITT_TRANSPORT_NEW(AittProtocol protocol, const char *ip, AittDiscovery &discovery)
+extern "C" {
+API void *AITT_TRANSPORT_NEW(AittProtocol type, AittDiscovery &discovery, const std::string &my_ip)
 {
     assert(STR_EQ == strcmp(__func__, aitt::AittTransport::MODULE_ENTRY_NAME)
            && "Entry point name is not matched");
 
-    std::string ip_address(ip);
-    Module *module = new Module(protocol, ip_address, discovery);
+    Module *module = new Module(type, discovery, my_ip);
 
     // validate that the module creates valid object (which inherits AittTransport)
     AittTransport *transport_module = dynamic_cast<AittTransport *>(module);

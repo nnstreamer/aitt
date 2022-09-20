@@ -28,7 +28,7 @@
 #include "AittDiscovery.h"
 #include "MQ.h"
 #include "MainLoopHandler.h"
-#include "ModuleLoader.h"
+#include "ModuleManager.h"
 
 namespace aitt {
 
@@ -50,18 +50,15 @@ class AITT::Impl {
 
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocols, AittQoS qos, bool retain);
-
     int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const AITT::SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
-
     int PublishWithReplySync(const std::string &topic, const void *data, const size_t datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation, int timeout_ms);
 
     AittSubscribeID Subscribe(const std::string &topic, const AITT::SubscribeCallback &cb,
           void *cbdata, AittProtocol protocols, AittQoS qos);
-
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const int datalen, bool end);
@@ -78,8 +75,7 @@ class AITT::Impl {
           MainLoopHandler::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
-    void *SubscribeSecureTCP(SubscribeInfo *handle, const std::string &topic,
-          const SubscribeCallback &cb, void *user_data, AittQoS qos);
+
     void *SubscribeWebRtc(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
     void HandleTimeout(int timeout_ms, unsigned int &timeout_id, aitt::MainLoopHandler &sync_loop,
@@ -87,21 +83,21 @@ class AITT::Impl {
     void PublishWebRtc(const std::string &topic, const void *data, const size_t datalen,
           AittQoS qos, bool retain);
     void UnsubscribeAll();
+    void ThreadMain(void);
 
     AITT &public_api;
+    AittDiscovery discovery;
+    MainLoopHandler main_loop;
+    std::thread aittThread;
+    ModuleManager modules;
+    std::unique_ptr<MQ> mq;
+    std::vector<SubscribeInfo *> subscribed_list;
+    std::mutex subscribed_list_mutex_;
+
     std::string id_;
     std::string mqtt_broker_ip_;
     int mqtt_broker_port_;
-    std::unique_ptr<MQ> mq;
-    AittDiscovery discovery;
     unsigned short reply_id;
-    std::vector<ModuleLoader::ModuleHandle> module_handles;
-    std::unique_ptr<AittTransport> transports[ModuleLoader::TYPE_TRANSPORT_MAX];
-    MainLoopHandler main_loop;
-    void ThreadMain(void);
-    std::thread aittThread;
-    std::vector<SubscribeInfo *> subscribed_list;
-    std::mutex subscribed_list_mutex_;
 };
 
 }  // namespace aitt

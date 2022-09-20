@@ -20,24 +20,53 @@
 
 #include <string>
 
+#include "AESEncryptor.h"
+
+namespace AittTCPNamespace {
+
 class TCP {
   public:
     class Server;
+    struct ConnectInfo {
+        struct Compare {
+            bool operator()(const ConnectInfo &lhs, const ConnectInfo &rhs) const
+            {
+                return lhs.port < rhs.port;
+            }
+        };
 
-    TCP(const std::string &host, unsigned short port);
+        ConnectInfo();
+        unsigned short port;
+        bool secure;
+        unsigned char key[AITT_TCP_ENCRYPTOR_KEY_LEN];
+        unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];
+    };
+
+    TCP(const std::string &host, const ConnectInfo &ConnectInfo);
     virtual ~TCP(void);
 
     void Send(const void *data, size_t &szData);
-    void Recv(void *data, size_t &szData);
+    void SendSizedData(const void *data, size_t &szData);
+    int Recv(void *data, size_t &szData);
+    int RecvSizedData(void **data, size_t &szData);
     int GetHandle(void);
     unsigned short GetPort(void);
     void GetPeerInfo(std::string &host, unsigned short &port);
 
   private:
-    TCP(int handle, sockaddr *addr, socklen_t addrlen);
-    void SetupOptions(void);
+    TCP(int handle, sockaddr *addr, socklen_t addrlen, const ConnectInfo &connect_info);
+    void SetupOptions(const ConnectInfo &connect_info);
+    int HandleZeroMsg(void **data, size_t &data_size);
+    void SendSizedDataNormal(const void *data, size_t &data_size);
+    int RecvSizedDataNormal(void **data, size_t &data_size);
+    void SendSizedDataSecure(const void *data, size_t &data_size);
+    int RecvSizedDataSecure(void **data, size_t &data_size);
 
     int handle;
     socklen_t addrlen;
     sockaddr *addr;
+    bool secure;
+    AESEncryptor crypto;
 };
+
+}  // namespace AittTCPNamespace

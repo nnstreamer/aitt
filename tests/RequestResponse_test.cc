@@ -255,7 +255,7 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
         EXPECT_TRUE(sub_ok);
         EXPECT_TRUE(reply_ok);
 
-    } catch (std::exception &e) {
+    } catch (aitt::AittException &e) {
         FAIL() << e.what();
     }
 }

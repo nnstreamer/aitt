@@ -33,6 +33,8 @@ __thread __aitt__tls__ __aitt;
 #define BYE_STRING "bye"
 #define SEND_INTERVAL 1000
 
+using namespace AittTCPNamespace;
+
 class AittTcpSample {
   public:
     AittTcpSample(const std::string &host, unsigned short &port)
@@ -202,7 +204,9 @@ int main(int argc, char *argv[])
               SEND_INTERVAL,
               [](gpointer data) -> gboolean {
                   Main *ctx = static_cast<Main *>(data);
-                  std::unique_ptr<TCP> client(new TCP(ctx->host, ctx->port));
+                  TCP::ConnectInfo info;
+                  info.port = ctx->port;
+                  std::unique_ptr<TCP> client(new TCP(ctx->host, info));
 
                   INFO("Assigned client port: %u", client->GetPort());
 

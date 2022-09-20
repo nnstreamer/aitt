@@ -14,113 +14,124 @@
  * limitations under the License.
  */
 #include "AESEncryptor.h"
-#ifndef ANDROID
-#include <openssl/aes.h>
-#endif
-#include <algorithm>
-#include <climits>
-#include <functional>
+
+#include <openssl/err.h>
+#include <openssl/evp.h>
+
+#include <memory>
 #include <random>
 #include <stdexcept>
 
 #include "aitt_internal.h"
 
-using random_bytes_generator =
-      std::independent_bits_engine<std::default_random_engine, CHAR_BIT, unsigned char>;
+namespace AittTCPNamespace {
 
-AESEncryptor::AESEncryptor(void)
+AESEncryptor::AESEncryptor()
 {
-    GenerateCipherKey();
-}
-
-AESEncryptor::AESEncryptor(const unsigned char key[AES_KEY_BYTE_SIZE])
-{
-    memcpy(cipher_key, key, AES_KEY_BYTE_SIZE);
 }
 
 AESEncryptor::~AESEncryptor(void)
 {
 }
 
-void AESEncryptor::GenerateCipherKey(void)
+void AESEncryptor::Init(const unsigned char *key, const unsigned char *iv)
 {
-    std::random_device rd;
-    random_bytes_generator rbg(rd());
-    std::vector<unsigned char> key_vector(AES_KEY_BYTE_SIZE);
-    std::generate(begin(key_vector), end(key_vector), std::ref(rbg));
-    std::copy(key_vector.begin(), key_vector.end(), cipher_key);
+    key_.insert(key_.begin(), key, key + AITT_TCP_ENCRYPTOR_KEY_LEN);
+    iv_.insert(iv_.begin(), iv, iv + AITT_TCP_ENCRYPTOR_IV_LEN);
+
+    DBG_HEX_DUMP(key_.data(), key_.size());
+    DBG_HEX_DUMP(iv_.data(), iv_.size());
 }
 
-unsigned char *AESEncryptor::GetEncryptedData(
-      const void *data, size_t data_length, size_t &encrypted_data_length)
+size_t AESEncryptor::GetCryptogramSize(size_t plain_size)
 {
-    size_t padding_buffer_size = GetPaddingBufferSize(data_length);
-    DBG("data_length = %zu, padding_buffer_size = %zu", data_length, padding_buffer_size);
+    const int BLOCKSIZE = 16;
+    return (plain_size / BLOCKSIZE + 1) * BLOCKSIZE;
+}
 
-    unsigned char padding_buffer[padding_buffer_size];
-    memcpy(padding_buffer, data, data_length);
+void AESEncryptor::GenerateKey(unsigned char (&key)[AITT_TCP_ENCRYPTOR_KEY_LEN],
+      unsigned char (&iv)[AITT_TCP_ENCRYPTOR_IV_LEN])
+{
+    std::mt19937 random_gen{std::random_device{}()};
+    std::uniform_int_distribution<> gen(0, 255);
 
-    unsigned char *encrypted_data = (unsigned char *)malloc(padding_buffer_size);
-    for (int i = 0; i < static_cast<int>(padding_buffer_size) / AESEncryptor::AES_KEY_BYTE_SIZE;
-          i++) {
-        Encrypt(padding_buffer + AESEncryptor::AES_KEY_BYTE_SIZE * i,
-              encrypted_data + AESEncryptor::AES_KEY_BYTE_SIZE * i);
+    size_t i;
+    for (i = 0; i < sizeof(iv); i++) {
+        key[i] = gen(random_gen);
+        iv[i] = gen(random_gen);
     }
-    encrypted_data_length = padding_buffer_size;
-
-    return encrypted_data;
-}
-
-void AESEncryptor::Encrypt(const unsigned char *target_data, unsigned char *encrypted_data)
-{
-#ifndef ANDROID
-    AES_KEY encryption_key;
-    if (AES_set_encrypt_key(cipher_key, AES_KEY_BIT_SIZE, &encryption_key) < 0) {
-        ERR("Fail to AES_set_encrypt_key()");
-        throw std::runtime_error(strerror(errno));
+    for (size_t j = i; j < sizeof(key); j++) {
+        key[j] = gen(random_gen);
     }
-
-    AES_ecb_encrypt(target_data, encrypted_data, &encryption_key, AES_ENCRYPT);
-#endif
 }
 
-void AESEncryptor::GetDecryptedData(
-      unsigned char *padding_buffer, size_t padding_buffer_size, size_t data_length, void *data)
+size_t AESEncryptor::Encrypt(const unsigned char *plaintext, int plaintext_len,
+      unsigned char *ciphertext)
 {
-    unsigned char decrypted_data[padding_buffer_size];
-    for (int i = 0; i < (int)padding_buffer_size / AESEncryptor::AES_KEY_BYTE_SIZE; i++) {
-        Decrypt(padding_buffer + AESEncryptor::AES_KEY_BYTE_SIZE * i,
-              decrypted_data + AESEncryptor::AES_KEY_BYTE_SIZE * i);
-    }
-    memcpy(data, decrypted_data, data_length);
-}
+    int len;
+    int ciphertext_len;
 
-void AESEncryptor::Decrypt(const unsigned char *target_data, unsigned char *decrypted_data)
-{
-#ifndef ANDROID
-    AES_KEY decryption_key;
-    if (AES_set_decrypt_key(cipher_key, AES_KEY_BIT_SIZE, &decryption_key) < 0) {
-        ERR("Fail to AES_set_decrypt_key()");
-        throw std::runtime_error(strerror(errno));
-    }
-
-    AES_ecb_encrypt(target_data, decrypted_data, &decryption_key, AES_DECRYPT);
-#endif
-}
-
-size_t AESEncryptor::GetPaddingBufferSize(size_t data_length)
-{
-    size_t padding_buffer_size = (data_length + AESEncryptor::AES_KEY_BYTE_SIZE)
-                                 / AESEncryptor::AES_KEY_BYTE_SIZE * AESEncryptor::AES_KEY_BYTE_SIZE;
-    if (padding_buffer_size % AESEncryptor::AES_KEY_BYTE_SIZE != 0) {
-        ERR("data_length is not a multiple of AES_KEY_BYTE_SIZE.");
+    if (key_.size() == 0)
         return 0;
+
+    std::unique_ptr<EVP_CIPHER_CTX, void (*)(EVP_CIPHER_CTX *)> ctx(EVP_CIPHER_CTX_new(),
+          [](EVP_CIPHER_CTX *c) { EVP_CIPHER_CTX_free(c); });
+    if (ctx.get() == nullptr) {
+        ERR("EVP_CIPHER_CTX_new() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
     }
 
-    return padding_buffer_size;
+    if (1 != EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_cbc(), NULL, key_.data(), iv_.data())) {
+        ERR("EVP_EncryptInit_ex() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (1 != EVP_EncryptUpdate(ctx.get(), ciphertext, &ciphertext_len, plaintext, plaintext_len)) {
+        ERR("EVP_EncryptUpdate() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (1 != EVP_EncryptFinal_ex(ctx.get(), ciphertext + ciphertext_len, &len)) {
+        ERR("EVP_EncryptFinal_ex() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    return ciphertext_len + len;
 }
 
-const unsigned char *AESEncryptor::GetCipherKey(void)
+size_t AESEncryptor::Decrypt(const unsigned char *ciphertext, int ciphertext_len,
+      unsigned char *plaintext)
 {
-    return cipher_key;
+    int len;
+    int plaintext_len;
+
+    if (key_.size() == 0)
+        return 0;
+
+    std::unique_ptr<EVP_CIPHER_CTX, void (*)(EVP_CIPHER_CTX *)> ctx(EVP_CIPHER_CTX_new(),
+          [](EVP_CIPHER_CTX *c) { EVP_CIPHER_CTX_free(c); });
+    if (ctx.get() == nullptr) {
+        ERR("EVP_CIPHER_CTX_new() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (1 != EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_cbc(), NULL, key_.data(), iv_.data())) {
+        ERR("EVP_DecryptInit_ex() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (1 != EVP_DecryptUpdate(ctx.get(), plaintext, &plaintext_len, ciphertext, ciphertext_len)) {
+        ERR("EVP_DecryptUpdate() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (1 != EVP_DecryptFinal_ex(ctx.get(), plaintext + plaintext_len, &len)) {
+        ERR("EVP_DecryptFinal_ex() Fail(%s)", strerror(errno));
+        throw std::runtime_error(strerror(errno));
+    }
+    plaintext_len += len;
+
+    return plaintext_len;
 }
+
+}  // namespace AittTCPNamespace

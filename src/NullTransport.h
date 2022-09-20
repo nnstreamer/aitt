@@ -21,15 +21,15 @@ using AittDiscovery = aitt::AittDiscovery;
 
 class NullTransport : public AittTransport {
   public:
-    explicit NullTransport(const std::string &ip, AittDiscovery &discovery);
+    explicit NullTransport(AittDiscovery &discovery, const std::string &ip);
     virtual ~NullTransport(void) = default;
-
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
-          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
 
     void Publish(const std::string &topic, const void *data, const size_t datalen,
           const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
           bool retain = false) override;
+
+    void Publish(const std::string &topic, const void *data, const size_t datalen,
+          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
 
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata = nullptr,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;

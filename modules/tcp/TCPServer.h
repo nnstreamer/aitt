@@ -18,27 +18,29 @@
 #include <memory>
 #include <string>
 
-#include "AESEncryptor.h"
 #include "TCP.h"
+
+namespace AittTCPNamespace {
 
 class TCP::Server {
   public:
-    Server(const std::string &host, unsigned short &port);
-    Server(const Server &) = default;
-    Server &operator=(const Server &) = default;
+    Server(const std::string &host, unsigned short &port, bool secure = false);
     virtual ~Server(void);
 
     std::unique_ptr<TCP> AcceptPeer(void);
 
     int GetHandle(void);
     unsigned short GetPort(void);
-    void CreateAESEncryptor(void);
-    AESEncryptor *GetAESEncryptor(void);
-    const unsigned char *GetKey(void);
+    const unsigned char *GetCryptoKey(void);
+    const unsigned char *GetCryptoIv(void);
 
   private:
     int handle;
     sockaddr *addr;
     socklen_t addrlen;
-    AESEncryptor *aes_encryptor;
+    bool secure;
+    unsigned char key[AITT_TCP_ENCRYPTOR_KEY_LEN];
+    unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];
 };
+
+}  // namespace AittTCPNamespace

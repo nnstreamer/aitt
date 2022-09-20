@@ -30,7 +30,9 @@ class AittDiscovery {
     using DiscoveryCallback = std::function<void(const std::string &clientId,
           const std::string &status, const void *msg, const int szmsg)>;
 
-    explicit AittDiscovery(const std::string &id, const AittOption &option);
+    // AittDiscovery() = default;
+    explicit AittDiscovery(const std::string &id);
+    void SetMQ(std::unique_ptr<MQ> mq);
     void Start(const std::string &host, int port, const std::string &username,
           const std::string &password);
     void Stop();

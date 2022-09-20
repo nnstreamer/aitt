@@ -15,14 +15,14 @@
  */
 #include "MqttServer.h"
 
-#include "MQProxy.h"
+#include "MosquittoMQ.h"
 #include "aitt_internal.h"
 
 #define MQTT_HANDLER_MSG_QOS 1
 #define MQTT_HANDLER_MGMT_QOS 2
 
 MqttServer::MqttServer(const Config &config)
-      : mq(new aitt::MQProxy(config.GetLocalId(), AittOption(true, false))),
+      : mq(new aitt::MosquittoMQ(config.GetLocalId(), true)),
         connection_state_(ConnectionState::Disconnected)
 {
     broker_ip_ = config.GetBrokerIp();

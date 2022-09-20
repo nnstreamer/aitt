@@ -40,7 +40,10 @@ class AITTTest : public testing::Test, public AittTests {
                   [](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
                       test->ToggleReady();
-                      DBG("Subscribe invoked: %s %zu", static_cast<const char *>(msg), szmsg);
+                      if (msg)
+                          DBG("Subscribe invoked: %s %zu", static_cast<const char *>(msg), szmsg);
+                      else
+                          DBG("Subscribe invoked: zero size msg(%zu)", szmsg);
                   },
                   static_cast<void *>(this), protocol);
 
@@ -64,7 +67,7 @@ class AITTTest : public testing::Test, public AittTests {
     void PublishDisconnectTemplate(AittProtocol protocol)
     {
         const char character_set[] =
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+              "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
         std::mt19937 random_gen{std::random_device{}()};
         std::uniform_int_distribution<std::string::size_type> gen(0, 61);
 
@@ -81,7 +84,7 @@ class AITTTest : public testing::Test, public AittTests {
 
             int cnt = 0;
             aitt.Subscribe(
-                  STRESS_TEST_TOPIC,
+                  TEST_STRESS_TOPIC,
                   [&](aitt::MSG *handle, const void *msg, const size_t szmsg,
                         void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
@@ -90,9 +93,10 @@ class AITTTest : public testing::Test, public AittTests {
                           FAIL() << "Unexpected value" << cnt;
                       }
 
-                      DBG("A subscription message is arrived. cnt = %d", cnt);
-                      const char *receivedMsg = static_cast<const char *>(msg);
-                      ASSERT_TRUE(!strcmp(receivedMsg, dump_msg));
+                      if (msg) {
+                          ASSERT_TRUE(!strncmp(static_cast<const char *>(msg), dump_msg,
+                                sizeof(dump_msg)));
+                      }
 
                       if (cnt == 10)
                           test->ToggleReady();
@@ -110,14 +114,14 @@ class AITTTest : public testing::Test, public AittTests {
 
                 for (int i = 0; i < 10; i++) {
                     INFO("size = %zu", sizeof(dump_msg));
-                    aitt1.Publish(STRESS_TEST_TOPIC, dump_msg, sizeof(dump_msg), protocol,
-                          AITT_QOS_AT_MOST_ONCE, true);
+                    aitt1.Publish(TEST_STRESS_TOPIC, dump_msg, sizeof(dump_msg), protocol,
+                          AITT_QOS_AT_MOST_ONCE);
                 }
                 g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
 
                 IterateEventLoop();
             }
-            DBG("Client aitt1 is finished.");
+            DBG("Client aitt1 is finished");
 
             // Here, an unexpected callback(szmsg = 0) is received
             // when the publisher is disconnected.
@@ -125,8 +129,8 @@ class AITTTest : public testing::Test, public AittTests {
             ASSERT_TRUE(ready);
             ready = false;
 
-            aitt_retry.Publish(STRESS_TEST_TOPIC, dump_msg, sizeof(dump_msg), protocol,
-                  AITT_QOS_AT_MOST_ONCE, true);
+            aitt_retry.Publish(TEST_STRESS_TOPIC, dump_msg, sizeof(dump_msg), protocol,
+                  AITT_QOS_AT_MOST_ONCE);
 
             g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
 
@@ -134,7 +138,7 @@ class AITTTest : public testing::Test, public AittTests {
 
             ASSERT_TRUE(ready);
 
-            aitt_retry.Publish(STRESS_TEST_TOPIC, nullptr, 0, protocol, AITT_QOS_AT_LEAST_ONCE);
+            aitt_retry.Publish(TEST_STRESS_TOPIC, nullptr, 0, protocol, AITT_QOS_AT_LEAST_ONCE);
             // Check auto release of aitt. There should be no segmentation faults.
         } catch (std::exception &e) {
             FAIL() << "Unexpected exception: " << e.what();
@@ -202,10 +206,8 @@ class AITTTest : public testing::Test, public AittTests {
                         void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
                       ++cnt;
-                      if (cnt == 1) {
-                          ASSERT_TRUE(msg == nullptr);
+                      if (cnt == 1)
                           test->ToggleReady();
-                      }
                       DBG("Subscribe callback called: %d", cnt);
                   },
                   static_cast<void *>(this), protocol);
@@ -364,7 +366,7 @@ TEST_F(AITTTest, Positive_Publish_SECURE_TCP_Anytime)
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
-        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_SECURE_TCP);
+        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_TCP_SECURE);
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
@@ -438,7 +440,7 @@ TEST_F(AITTTest, Positive_Unsubscribe_SECURE_TCP_Anytime)
         subscribeHandle = aitt.Subscribe(
               testTopic,
               [](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {},
-              nullptr, AITT_TYPE_SECURE_TCP);
+              nullptr, AITT_TYPE_TCP_SECURE);
         DBG("Subscribe handle: %p", reinterpret_cast<void *>(subscribeHandle));
         aitt.Unsubscribe(subscribeHandle);
     } catch (std::exception &e) {
@@ -547,7 +549,7 @@ TEST_F(AITTTest, Positve_PublishSubscribe_TCP_Anytime)
 
 TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_Anytime)
 {
-    PubsubTemplate(TEST_MSG, AITT_TYPE_SECURE_TCP);
+    PubsubTemplate(TEST_MSG, AITT_TYPE_TCP_SECURE);
 }
 
 TEST_F(AITTTest, Positve_Publish_0_TCP_Anytime)
@@ -557,7 +559,7 @@ TEST_F(AITTTest, Positve_Publish_0_TCP_Anytime)
 
 TEST_F(AITTTest, Positve_Publish_0_SECURE_TCP_Anytime)
 {
-    PubsubTemplate("", AITT_TYPE_SECURE_TCP);
+    PubsubTemplate("", AITT_TYPE_TCP_SECURE);
 }
 
 TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
@@ -609,27 +611,27 @@ TEST_F(AITTTest, Positve_PublishSubscribe_TCP_twice_Anytime)
 
 TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_twice_Anytime)
 {
-    PublishSubscribeTCPTwiceTemplate(AITT_TYPE_SECURE_TCP);
+    PublishSubscribeTCPTwiceTemplate(AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime_TCP)
+TEST_F(AITTTest, Positive_Subscribe_Retained_TCP_Anytime)
 {
     SubscribeRetainedTCPTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positive_Subscribe_Retained_Anytime_SECURE_TCP)
+TEST_F(AITTTest, Positive_Subscribe_Retained_SECURE_TCP_Anytime)
 {
-    SubscribeRetainedTCPTemplate(AITT_TYPE_SECURE_TCP);
+    SubscribeRetainedTCPTemplate(AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime_TCP)
+TEST_F(AITTTest, TCP_Publish_Disconnect_TCP_Anytime)
 {
     PublishDisconnectTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, TCP_Publish_Disconnect_Anytime_SECURE_TCP)
+TEST_F(AITTTest, TCP_Publish_Disconnect_SECURE_TCP_Anytime)
 {
-    PublishDisconnectTemplate(AITT_TYPE_SECURE_TCP);
+    PublishDisconnectTemplate(AITT_TYPE_TCP_SECURE);
 }
 
 TEST_F(AITTTest, WillSet_N_Anytime)

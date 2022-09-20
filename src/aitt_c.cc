@@ -98,7 +98,7 @@ API aitt_option_h aitt_option_new()
     return handle;
 }
 
-void aitt_option_destroy(aitt_option_h handle)
+API void aitt_option_destroy(aitt_option_h handle)
 {
     if (handle == nullptr) {
         ERR("handle is NULL");

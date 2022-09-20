@@ -13,65 +13,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "ModuleLoader.h"
-
 #include <AITT.h>
 #include <gtest/gtest.h>
 
 #include "AittTests.h"
 #include "AittTransport.h"
+#include "ModuleManager.h"
 #include "aitt_internal.h"
 
-using ModuleLoader = aitt::ModuleLoader;
+using ModuleManager = aitt::ModuleManager;
 
 class ModuleLoaderTest : public testing::Test {
   public:
-    ModuleLoaderTest(void) : discovery("test", AittOption(false, false)) {}
+    ModuleLoaderTest(void) : discovery("test_id"), modules(LOCAL_IP, discovery) {}
 
   protected:
     void SetUp() override {}
     void TearDown() override {}
 
     aitt::AittDiscovery discovery;
-    aitt::ModuleLoader loader;
+    aitt::ModuleManager modules;
 };
 
-TEST_F(ModuleLoaderTest, LoadTransport_P_Anytime)
+TEST_F(ModuleLoaderTest, Get_P_Anytime)
 {
-    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TCP);
-    ASSERT_NE(handle, nullptr);
-
-    std::shared_ptr<aitt::AittTransport> module = loader.LoadTransport(
-          handle.get(), loader.GetProtocol(ModuleLoader::TYPE_TCP), LOCAL_IP, discovery);
-    ASSERT_NE(module, nullptr);
+    aitt::AittTransport &tcp = modules.Get(AITT_TYPE_TCP);
+    EXPECT_TRUE(tcp.GetProtocol() == AITT_TYPE_TCP);
+    aitt::AittTransport &tcp_secure = modules.Get(AITT_TYPE_TCP_SECURE);
+    EXPECT_TRUE(tcp_secure.GetProtocol() == AITT_TYPE_TCP_SECURE);
 }
-
-TEST_F(ModuleLoaderTest, LoadTransport_N_Anytime)
-{
-    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_TRANSPORT_MAX);
-    ASSERT_EQ(handle.get(), nullptr);
-
-    auto module = loader.LoadTransport(
-          handle.get(), loader.GetProtocol(ModuleLoader::TYPE_TRANSPORT_MAX), LOCAL_IP, discovery);
-    ASSERT_NE(module, nullptr);
-}
-
-TEST_F(ModuleLoaderTest, LoadMqttClient_P_Anytime)
-{
-    ModuleLoader::ModuleHandle handle = loader.OpenModule(ModuleLoader::TYPE_CUSTOM_MQTT);
-    if (handle) {
-        EXPECT_NO_THROW({
-            auto module = loader.LoadMqttClient(handle.get(), "test", AittOption(false, true));
-            ASSERT_NE(module, nullptr);
-        });
-    }
-}
-
-TEST_F(ModuleLoaderTest, LoadMqttClient_N_Anytime)
+TEST_F(ModuleLoaderTest, Get_N_Anytime)
 {
     EXPECT_THROW(
           {
-              loader.LoadMqttClient(nullptr, "test", AittOption(false, true));
+              aitt::AittTransport &module = modules.Get(AITT_TYPE_MQTT);
+              FAIL() << "Should not be called" << module.GetProtocol();
+          },
+          aitt::AittException);
+}
+
+TEST_F(ModuleLoaderTest, NewCustomMQ_P)
+{
+    EXPECT_NO_THROW({
+        std::unique_ptr<aitt::MQ> mq = modules.NewCustomMQ("test", AittOption(false, true));
+        mq->SetConnectionCallback([](int status) {});
+    });
+}
+
+TEST_F(ModuleLoaderTest, NewCustomMQ_N_Anytime)
+{
+    EXPECT_THROW(
+          {
+              modules.NewCustomMQ("test", AittOption(false, false));
               FAIL() << "Should not be called";
           },
           aitt::AittException);
