@@ -354,7 +354,7 @@ void AittNativeInterface::setConnectionCallback(JNIEnv *env,
  * @param jniInterfaceObject JNI interface object
  * @param id unique mqtt id
  * @param ip self IP address of device
- * @param clearSession "to clear current session if client disconnects
+ * @param clearSession to clear current session if client disconnects
  * @return returns the aitt interface object in long
  */
 jlong AittNativeInterface::init(JNIEnv *env,
@@ -394,7 +394,7 @@ jlong AittNativeInterface::init(JNIEnv *env,
     try {
         instance->cbObject = env->NewGlobalRef(jniInterfaceObject);
 
-        jclass callbackClass = env->FindClass("com/samsung/android/aitt/Aitt");
+        jclass callbackClass = env->FindClass("com/samsung/android/aittnative/JniInterface");
         cbContext.messageCallbackMethodID =
                 env->GetMethodID(callbackClass, "messageCallback", "(Ljava/lang/String;[B)V");
         cbContext.connectionCallbackMethodID =
@@ -422,7 +422,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Not a valid JNI version");
         return JNI_ERR;
     }
-    jclass klass = env->FindClass("com/samsung/android/aitt/Aitt");
+    jclass klass = env->FindClass("com/samsung/android/aittnative/JniInterface");
     if (nullptr == klass) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "klass is null");
         return JNI_ERR;

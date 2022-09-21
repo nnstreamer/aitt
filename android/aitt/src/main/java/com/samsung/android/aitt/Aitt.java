@@ -22,6 +22,7 @@ import android.util.Pair;
 import androidx.annotation.Nullable;
 
 import com.google.flatbuffers.FlexBuffers;
+import com.samsung.android.aittnative.JniInterface;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -42,22 +43,12 @@ public class Aitt {
     private static final String TAG = "AITT_ANDROID";
     private static final String INVALID_TOPIC = "Invalid topic";
 
-    /**
-     * Load aitt-android library
-     */
-    static {
-        try {
-            System.loadLibrary("aitt-android");
-        }catch (UnsatisfiedLinkError e){
-            // only ignore exception in non-android env
-            if ("Dalvik".equals(System.getProperty("java.vm.name"))) throw e;
-        }
-    }
     private Map<String, ArrayList<SubscribeCallback>> subscribeCallbacks = new HashMap<>();
     private Map<String, HostTable> publishTable = new HashMap<>();
     private Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
     private Map<String, Long> aittSubId = new HashMap<>();
     private ConnectionCallback connectionCallback = null;
+    private JniInterface mJniInterface = new JniInterface();
 
     private long instance = 0;
     private String ip;
@@ -156,12 +147,18 @@ public class Aitt {
         if (id == null || id.isEmpty()) {
             throw new IllegalArgumentException("Invalid id");
         }
-        instance = initJNI(id, ip, clearSession);
+        instance = mJniInterface.init(id, ip, clearSession);
         if (instance == 0L) {
             throw new InstantiationException("Failed to instantiate native instance");
         }
         this.ip = ip;
         this.appContext = appContext;
+        mJniInterface.registerJniCallback(new JniInterface.JniCallback(){
+            @Override
+            public void jniDataPush(String _topic, byte[] payload) {
+                messageCallback(_topic, payload);
+            }
+        });
     }
 
     /**
@@ -173,7 +170,12 @@ public class Aitt {
             throw new IllegalArgumentException("Invalid callback");
         }
         connectionCallback = callback;
-        setConnectionCallbackJNI(instance);
+        mJniInterface.setConnectionCallback(new JniInterface.JniConnectionCallback(){
+            @Override
+            public void jniConnectionCB(int status) {
+                connectionStatusCallback(status);
+            }
+        });
     }
 
     /**
@@ -193,18 +195,18 @@ public class Aitt {
         if (brokerIp == null || brokerIp.isEmpty()) {
             brokerIp = Definitions.AITT_LOCALHOST;
         }
-        connectJNI(instance, brokerIp, port);
+        mJniInterface.connect(brokerIp, port);
         //Subscribe to java discovery topic
-        subscribeJNI(instance, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
+        mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
     }
 
     /**
      * Method to disconnect from MQTT broker
      */
     public void disconnect() {
-        publishJNI(instance, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, new byte[0], 0, Protocol.MQTT.getValue(), QoS.AT_LEAST_ONCE.ordinal(), true);
+        mJniInterface.publish(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, new byte[0], 0, Protocol.MQTT.getValue(), QoS.AT_LEAST_ONCE.ordinal(), true);
 
-        disconnectJNI(instance);
+        mJniInterface.disconnect();
         try {
             close();
         } catch (Exception e) {
@@ -256,7 +258,7 @@ public class Aitt {
         }
 
         if(jniProtocols > 0) {
-            publishJNI(instance, topic, message, message.length, jniProtocols, qos.ordinal(), retain);
+            mJniInterface.publish(topic, message, message.length, jniProtocols, qos.ordinal(), retain);
         }
 
         for(Protocol pro : protocols) {
@@ -364,7 +366,7 @@ public class Aitt {
         }
 
         if(jniProtocols > 0) {
-            Long pObject = subscribeJNI(instance, topic, jniProtocols, qos.ordinal());
+            Long pObject = mJniInterface.subscribe(topic, jniProtocols, qos.ordinal());
             synchronized (this) {
                 aittSubId.put(topic, pObject);
             }
@@ -387,7 +389,7 @@ public class Aitt {
                         messageReceived(message);
                     });
                     byte[] data = transportHandler.getPublishData();
-                    publishJNI(instance, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, data, data.length, Protocol.MQTT.value, QoS.EXACTLY_ONCE.ordinal(), true);
+                    mJniInterface.publish(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, data, data.length, Protocol.MQTT.value, QoS.EXACTLY_ONCE.ordinal(), true);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error during subscribe", e);
@@ -466,7 +468,7 @@ public class Aitt {
                     }
                 }
                 if (paittSubId != null) {
-                    unsubscribeJNI(instance, paittSubId);
+                    mJniInterface.unsubscribe(paittSubId);
                 }
             }
 
@@ -487,7 +489,6 @@ public class Aitt {
      *   2: MQTT connection failed
      */
     private void connectionStatusCallback(int status) {
-
         switch (status) {
             case 0:
                 connectionCallback.onDisconnected();
@@ -665,25 +666,4 @@ public class Aitt {
         }
     }
 
-    /* native API's set */
-    /* Native API to initialize JNI */
-    private native long initJNI(String id, String ip, boolean clearSession);
-
-    /* Native API for connecting to broker */
-    private native void connectJNI(long instance, final String host, int port);
-
-    /* Native API for disconnecting from broker */
-    private native void disconnectJNI(long instance);
-
-    /* Native API for setting connection callback */
-    private native void setConnectionCallbackJNI(long instance);
-
-    /* Native API for publishing to a topic */
-    private native void publishJNI(long instance, final String topic, final byte[] data, long datalen, int protocol, int qos, boolean retain);
-
-    /* Native API for subscribing to a topic */
-    private native long subscribeJNI(long instance, final String topic, int protocol, int qos);
-
-    /* Native API for unsubscribing a topic */
-    private native void unsubscribeJNI(long instance, final long aittSubId);
 }

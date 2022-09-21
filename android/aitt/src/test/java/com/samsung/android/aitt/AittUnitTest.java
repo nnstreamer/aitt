@@ -29,10 +29,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.api.support.membermodification.MemberMatcher;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -40,8 +38,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(Aitt.class)
+@RunWith(RobolectricTestRunner.class)
+@Config(shadows = ShadowJniInterface.class)
 public class AittUnitTest {
    @Mock
    private final Context appContext = mock(Context.class);
@@ -53,58 +51,17 @@ public class AittUnitTest {
    private final String message = "test message";
    private final String aittId = "aitt";
 
+   ShadowJniInterface shadowJniInterface = new ShadowJniInterface();
+
    private Method messageCallbackMethod;
 
    @Before
    public void initialize() {
       try {
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "initJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return 1L;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "connectJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return null;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "disconnectJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return null;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "setConnectionCallbackJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return null;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "publishJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return null;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "subscribeJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return 1L;
-            }
-         });
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "unsubscribeJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return null;
-            }
-         });
-
          messageCallbackMethod = Aitt.class.getDeclaredMethod("messageCallback", String.class, byte[].class);
          messageCallbackMethod.setAccessible(true);
       } catch(Exception e) {
-         fail("Failed to mock Aitt " + e);
+         fail("Failed to Initialize " + e);
       }
    }
 
@@ -235,6 +192,7 @@ public class AittUnitTest {
    public void testAittConstructor_P(){
       String id = "aitt";
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, id);
          assertNotNull("Aitt Instance not null", aitt);
       } catch(Exception e) {
@@ -246,6 +204,7 @@ public class AittUnitTest {
    public void testInitializeInvalidId_N() {
       String _id = "";
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, _id);
          aitt.close();
       } catch(InstantiationException e) {
@@ -257,6 +216,7 @@ public class AittUnitTest {
    public void testInitializeInvalidContext_N() {
       String _id = "";
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(null, _id);
          aitt.close();
       } catch(InstantiationException e) {
@@ -266,16 +226,7 @@ public class AittUnitTest {
 
    @Test(expected = InstantiationException.class)
    public void testConstructorFail_N() throws InstantiationException {
-      try{
-         PowerMockito.replace(MemberMatcher.method(Aitt.class, "initJNI")).with(new InvocationHandler() {
-            @Override
-            public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
-               return 0L;
-            }
-         });
-      } catch(Exception e) {
-         fail("Failed to replace method" + e);
-      }
+      shadowJniInterface.setInitReturn(false);
       String id = "aitt";
       Aitt aitt = new Aitt(appContext,id);
       aitt.close();
@@ -284,6 +235,7 @@ public class AittUnitTest {
    @Test
    public void testConnect_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -298,6 +250,7 @@ public class AittUnitTest {
    @Test
    public void testConnectWithoutIP_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -312,6 +265,7 @@ public class AittUnitTest {
    @Test
    public void testDisconnect_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -326,6 +280,7 @@ public class AittUnitTest {
    @Test
    public void testPublishMqtt_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -343,6 +298,7 @@ public class AittUnitTest {
    @Test
    public void testPublishWebRTC_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -360,6 +316,7 @@ public class AittUnitTest {
    @Test
    public void testPublishInvalidTopic_N(){
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
          aitt.connect(brokerIp, port);
          String _topic = "";
@@ -378,6 +335,7 @@ public class AittUnitTest {
    @Test
    public void testPublishAnyProtocol_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -395,6 +353,7 @@ public class AittUnitTest {
    @Test
    public void testPublishProtocolSet_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -413,6 +372,7 @@ public class AittUnitTest {
    @Test
    public void testPublishInvalidProtocol_N(){
       try{
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
          aitt.connect(brokerIp,port);
          byte[] payload = message.getBytes();
@@ -431,6 +391,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeMqtt_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -453,6 +414,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeWebRTC_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -473,11 +435,10 @@ public class AittUnitTest {
       }
    }
 
-
    @Test
    public void testSubscribeInvalidTopic_N() {
-
       try{
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
          aitt.connect(brokerIp, port);
 
@@ -500,6 +461,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeInvalidCallback_N() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          aitt.connect(brokerIp, port);
@@ -519,6 +481,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeAnyProtocol_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -542,6 +505,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeInvalidProtocol_N() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          aitt.connect(brokerIp, port);
@@ -567,6 +531,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeProtocolSet_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -591,6 +556,7 @@ public class AittUnitTest {
    @Test
    public void testUnsubscribe_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -612,6 +578,7 @@ public class AittUnitTest {
    @Test
    public void testUnsubscribeInvalidTopic_N() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          aitt.connect(brokerIp, port);
@@ -630,6 +597,7 @@ public class AittUnitTest {
    @Test
    public void testSetConnectionCallback_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -657,6 +625,7 @@ public class AittUnitTest {
    @Test
    public void testSetConnectionCallbackInvalidCallback_N() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertThrows(IllegalArgumentException.class, () -> {
@@ -673,6 +642,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeMultipleCallbacks_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -695,6 +665,7 @@ public class AittUnitTest {
    @Test
    public void testDiscoveryMessageCallbackConnected_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -716,6 +687,7 @@ public class AittUnitTest {
    @Test
    public void testDiscoveryMessageCallbackDisconnected_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -737,6 +709,7 @@ public class AittUnitTest {
    @Test
    public void testDiscoveryMessageCallbackEmptyPayload_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
 
          assertNotNull("Aitt Instance not null", aitt);
@@ -754,6 +727,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeCallbackVerifyTopic_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
          aitt.connect(brokerIp, port);
 
@@ -776,6 +750,7 @@ public class AittUnitTest {
    @Test
    public void testSubscribeCallbackVerifyPayload_P() {
       try {
+         shadowJniInterface.setInitReturn(true);
          Aitt aitt = new Aitt(appContext, aittId);
          aitt.connect(brokerIp, port);
 
