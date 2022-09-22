@@ -64,7 +64,8 @@ class WebRTCHandler implements TransportHandler {
 
     /**
      * Method to wrap topic, device IP address, webRTC server instance port number for publishing
-     * @param topic Topic to which the application has subscribed to
+     *
+     * @param topic      Topic to which the application has subscribed to
      * @param serverPort Port number of the WebRTC server instance
      * @return Byte data wrapped, contains topic, device IP, webRTC server port number
      */

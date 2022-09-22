@@ -41,7 +41,7 @@ public class TCPInstrumentedTest {
             aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
 
             // TODO: aitt.disconnect();
-        } catch(Exception e) {
+        } catch (Exception e) {
             fail("Failed to execute testPublishWithTCP_P " + e);
         }
     }
@@ -59,7 +59,7 @@ public class TCPInstrumentedTest {
             }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
 
             // TODO: aitt.disconnect();
-        } catch(Exception e) {
+        } catch (Exception e) {
             fail("Failed testSubscribeWithTCP_P " + e);
         }
     }
@@ -82,7 +82,7 @@ public class TCPInstrumentedTest {
             aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
 
             // TODO: aitt.disconnect();
-        } catch(Exception e) {
+        } catch (Exception e) {
             fail("Failed testPublishSubscribeWithTCP_P " + e);
         }
     }

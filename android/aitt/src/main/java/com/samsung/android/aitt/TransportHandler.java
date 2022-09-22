@@ -23,16 +23,18 @@ import android.content.Context;
 interface TransportHandler {
     /**
      * Method to implement protocol specific subscribe functionalities
-     * @param topic String topic to which subscribe is called
+     *
+     * @param topic               String topic to which subscribe is called
      * @param handlerDataCallback callback object to send data from transport handler layer to aitt layer
      */
     void subscribe(String topic, HandlerDataCallback handlerDataCallback);
 
     /**
      * Method to implement protocol specific publish functionalities
-     * @param topic String topic to which publish is called
-     * @param ip IP address of the destination
-     * @param port port number of the destination
+     *
+     * @param topic   String topic to which publish is called
+     * @param ip      IP address of the destination
+     * @param port    port number of the destination
      * @param message message to be published to specific topic
      */
     void publish(String topic, String ip, int port, byte[] message);
@@ -49,18 +51,21 @@ interface TransportHandler {
 
     /**
      * Method to set application context to transport handler
+     *
      * @param appContext application context
      */
     void setAppContext(Context appContext);
 
     /**
      * Method to set IP address of self device to transport handler
+     *
      * @param ip IP address of the device
      */
     void setSelfIP(String ip);
 
     /**
      * Method to get data to publish self details
+     *
      * @return returns details of self device
      */
     byte[] getPublishData();
@@ -68,7 +73,7 @@ interface TransportHandler {
     /**
      * Interface to implement handler data callback mechanism
      */
-    interface HandlerDataCallback{
+    interface HandlerDataCallback {
         void pushHandlerData(byte[] data);
     }
 }

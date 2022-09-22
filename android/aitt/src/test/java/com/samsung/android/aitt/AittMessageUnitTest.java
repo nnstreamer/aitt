@@ -32,27 +32,27 @@ public class AittMessageUnitTest {
     private final String message = "Aitt Message";
 
     @Test
-    public void testAittMessageInitialize_P01(){
-         AittMessage aittMessage = new AittMessage();
-         assertNotNull("Not null AittMessage Object", aittMessage);
+    public void testAittMessageInitialize_P01() {
+        AittMessage aittMessage = new AittMessage();
+        assertNotNull("Not null AittMessage Object", aittMessage);
     }
 
     @Test
-    public void testAittMessageInitializePayload_P02(){
+    public void testAittMessageInitializePayload_P02() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         assertNotNull("Not null AittMessage Object", aittMessage);
     }
 
     @Test(expected = NullPointerException.class)
-    public void testAittMessageInitializeInvalidPayload_N01() throws NullPointerException{
+    public void testAittMessageInitializeInvalidPayload_N01() throws NullPointerException {
         byte[] payload = null;
         AittMessage aittMessage = new AittMessage(payload);
         assertNull("Null AittMessage Object", aittMessage);
     }
 
     @Test
-    public void testTopic_P03(){
+    public void testTopic_P03() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setTopic(topic);
@@ -61,7 +61,7 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testCorrelation_P04(){
+    public void testCorrelation_P04() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setCorrelation(correlation);
@@ -70,7 +70,7 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testReplyTopic_P05(){
+    public void testReplyTopic_P05() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setReplyTopic(replyTopic);
@@ -79,17 +79,17 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testSequence_P06(){
+    public void testSequence_P06() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setSequence(sequence);
         aittMessage.increaseSequence();
         int newSequence = aittMessage.getSequence();
-        assertEquals("Received sequence and set sequence are equal", sequence+1, newSequence);
+        assertEquals("Received sequence and set sequence are equal", sequence + 1, newSequence);
     }
 
     @Test
-    public void testEndSequence_P07(){
+    public void testEndSequence_P07() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setEndSequence(endSequence);
@@ -98,7 +98,7 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testPayload_P08(){
+    public void testPayload_P08() {
         AittMessage aittMessage = new AittMessage();
         byte[] payload = message.getBytes();
         aittMessage.setPayload(payload);
@@ -114,7 +114,7 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testClearPayload_P09(){
+    public void testClearPayload_P09() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.clearPayload();

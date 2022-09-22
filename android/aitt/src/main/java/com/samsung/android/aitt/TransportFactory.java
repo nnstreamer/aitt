@@ -16,9 +16,9 @@
 package com.samsung.android.aitt;
 
 class TransportFactory {
-    public static TransportHandler createTransport(Aitt.Protocol protocol){
+    public static TransportHandler createTransport(Aitt.Protocol protocol) {
         TransportHandler transportHandler;
-        switch(protocol){
+        switch (protocol) {
             case WEBRTC:
                 transportHandler = new WebRTCHandler();
                 break;

@@ -38,19 +38,21 @@ public class WebRTCServer {
 
     /**
      * WebRTCServer constructor to create its instance
-     * @param appContext Application context of the app creating WebRTCServer instance
+     *
+     * @param appContext   Application context of the app creating WebRTCServer instance
      * @param dataCallback Data callback object to create call back mechanism
      */
-    public WebRTCServer(Context appContext, WebRTC.ReceiveDataCallback dataCallback){
+    public WebRTCServer(Context appContext, WebRTC.ReceiveDataCallback dataCallback) {
         this.appContext = appContext;
         this.dataCallback = dataCallback;
     }
 
     /**
      * Method to start WebRTCServer instance
+     *
      * @return Returns Port number on success and -1 on failure
      */
-    public int start(){
+    public int start() {
         try {
             serverSocket = new ServerSocket(0);
         } catch (IOException e) {
@@ -66,7 +68,7 @@ public class WebRTCServer {
     /**
      * Method to stop running WebRTC server instance
      */
-    public void stop(){
+    public void stop() {
         if (serverThread != null) {
             serverThread.stop();
         }
@@ -77,7 +79,7 @@ public class WebRTCServer {
         } catch (IOException e) {
             Log.e(TAG, "Error during stop", e);
         }
-        for(WebRTC web : connectionList){
+        for (WebRTC web : connectionList) {
             web.disconnect();
         }
     }
@@ -85,15 +87,15 @@ public class WebRTCServer {
     /**
      * Class to implement a server thread
      */
-    private class ServerThread implements Runnable{
+    private class ServerThread implements Runnable {
         private volatile boolean isRunning = true;
 
         @Override
         public void run() {
-            while(isRunning){
+            while (isRunning) {
                 try {
                     Socket socket = serverSocket.accept();
-                    WebRTC web = new WebRTC(appContext , socket);
+                    WebRTC web = new WebRTC(appContext, socket);
                     web.connect();
                     web.registerDataCallback(dataCallback);
                     connectionList.add(web);

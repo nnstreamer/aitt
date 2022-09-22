@@ -44,6 +44,7 @@ import org.webrtc.VideoFrame;
 import org.webrtc.VideoSink;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
+
 import static org.webrtc.SessionDescription.Type.ANSWER;
 import static org.webrtc.SessionDescription.Type.OFFER;
 
@@ -67,7 +68,7 @@ public class WebRTC {
     private boolean isInitiator;
     private boolean isChannelReady;
     private boolean isStarted;
-    private boolean isReciever;
+    private boolean isReceiver;
     private PeerConnection peerConnection;
     private PeerConnectionFactory factory;
     private VideoTrack videoTrackFromSource;
@@ -78,35 +79,38 @@ public class WebRTC {
     private DataChannel localDataChannel;
     private FrameVideoCapturer videoCapturer;
     private ReceiveDataCallback dataCallback;
-    private String recieverIP;
-    private Integer recieverPort;
+    private String receiverIP;
+    private Integer receiverPort;
 
     /**
      * WebRTC constructor to create webRTC instance
+     *
      * @param appContext Application context creating webRTC instance
      */
     public WebRTC(Context appContext) {
         this.appContext = appContext;
-        this.isReciever = false;
+        this.isReceiver = false;
     }
 
     /**
      * WebRTC constructor to create webRTC instance
+     *
      * @param appContext Application context creating webRTC instance
-     * @param socket Java server socket for webrtc signalling
+     * @param socket     Java server socket for webrtc signalling
      */
-    WebRTC(Context appContext , Socket socket) {
-        Log.d(TAG , "InWebRTC Constructor");
+    WebRTC(Context appContext, Socket socket) {
+        Log.d(TAG, "InWebRTC Constructor");
         this.appContext = appContext;
         this.socket = socket;
-        this.isReciever = true;
+        this.isReceiver = true;
     }
 
     /**
      * To create data call-back mechanism
+     *
      * @param cb aitt callback registered to receive a webrtc data
      */
-    public void registerDataCallback(ReceiveDataCallback cb){
+    public void registerDataCallback(ReceiveDataCallback cb) {
         this.dataCallback = cb;
     }
 
@@ -145,26 +149,27 @@ public class WebRTC {
 
     /**
      * Method to establish communication with peer node
-     * @param recieverIP IP Address of the destination(peer) node
-     * @param recieverPort Port number of the destination(peer) node
+     *
+     * @param receiverIP   IP Address of the destination(peer) node
+     * @param receiverPort Port number of the destination(peer) node
      */
-    public void connect(String recieverIP , Integer recieverPort){
-        this.recieverIP = recieverIP;
-        this.recieverPort = recieverPort;
+    public void connect(String receiverIP, Integer receiverPort) {
+        this.receiverIP = receiverIP;
+        this.receiverPort = receiverPort;
         initialize();
     }
 
     /**
      * Method to initialize webRTC APIs while establishing connection
      */
-    private void initialize(){
+    private void initialize() {
         initializePeerConnectionFactory();
         initializePeerConnections();
-        if(!isReciever){
+        if (!isReceiver) {
             createVideoTrack();
             addVideoTrack();
         }
-        isInitiator = isReciever;
+        isInitiator = isReceiver;
 
         sdpThread = new SDPThread();
         new Thread(sdpThread).start();
@@ -186,7 +191,7 @@ public class WebRTC {
                 try {
                     message.put("type", "offer");
                     message.put("sdp", sessionDescription.description);
-                    sendMessage(true , message);
+                    sendMessage(true, message);
                 } catch (JSONException | IOException e) {
                     Log.e(TAG, "Error during create offer", e);
                 }
@@ -196,7 +201,8 @@ public class WebRTC {
 
     /**
      * Method to send signalling messages over socket connection
-     * @param isJSON Boolean to check if message is JSON
+     *
+     * @param isJSON  Boolean to check if message is JSON
      * @param message Data to be sent over webRTC connection
      * @throws IOException Throws IOException if writing to outStream fails
      */
@@ -220,14 +226,16 @@ public class WebRTC {
 
         /**
          * ProxyVideoSink constructor to create its instance
+         *
          * @param dataCb DataCall back to be set to self-object
          */
-        ProxyVideoSink(ReceiveDataCallback dataCb){
+        ProxyVideoSink(ReceiveDataCallback dataCb) {
             this.dataCallback = dataCb;
         }
 
         /**
          * Method to send data through data call back
+         *
          * @param frame VideoFrame to be transferred using media channel
          */
         @Override
@@ -238,6 +246,7 @@ public class WebRTC {
 
         /**
          * Method used to convert VideoFrame to NV21 data format
+         *
          * @param i420Buffer VideoFrame in I420 buffer format
          * @return the video frame in NV21 data format
          */
@@ -286,10 +295,10 @@ public class WebRTC {
     /**
      * Method to create video track
      */
-    private void createVideoTrack(){
+    private void createVideoTrack() {
         videoCapturer = new FrameVideoCapturer();
         VideoSource videoSource = factory.createVideoSource(false);
-        videoCapturer.initialize(null , null ,videoSource.getCapturerObserver());
+        videoCapturer.initialize(null, null, videoSource.getCapturerObserver());
         videoTrackFromSource = factory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
         videoTrackFromSource.setEnabled(true);
     }
@@ -310,13 +319,14 @@ public class WebRTC {
     private void addVideoTrack() {
         MediaStream mediaStream = factory.createLocalMediaStream("ARDAMS");
         mediaStream.addTrack(videoTrackFromSource);
-        if(peerConnection!=null){
+        if (peerConnection != null) {
             peerConnection.addStream(mediaStream);
         }
     }
 
     /**
      * Method to create peer connection
+     *
      * @param factory Peer connection factory object
      * @return return factory object
      */
@@ -355,7 +365,7 @@ public class WebRTC {
                     message.put("id", iceCandidate.sdpMid);
                     message.put(CANDIDATE, iceCandidate.sdp);
                     Log.d(TAG, "onIceCandidate: sending candidate " + message);
-                    sendMessage(true , message);
+                    sendMessage(true, message);
                 } catch (JSONException | IOException e) {
                     Log.e(TAG, "Error during onIceCandidate", e);
                 }
@@ -409,11 +419,11 @@ public class WebRTC {
             @Override
             public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
                 MediaStreamTrack track = rtpReceiver.track();
-                if (track instanceof VideoTrack && isReciever) {
+                if (track instanceof VideoTrack && isReceiver) {
                     Log.i(TAG, "onAddVideoTrack");
                     VideoTrack remoteVideoTrack = (VideoTrack) track;
                     remoteVideoTrack.setEnabled(true);
-                    ProxyVideoSink  videoSink = new ProxyVideoSink(dataCallback);
+                    ProxyVideoSink videoSink = new ProxyVideoSink(dataCallback);
                     remoteVideoTrack.addSink(videoSink);
                 }
             }
@@ -423,16 +433,18 @@ public class WebRTC {
 
     /**
      * Method used to send video data
-     * @param frame Video frame in byte format
-     * @param width width of the video frame
+     *
+     * @param frame  Video frame in byte format
+     * @param width  width of the video frame
      * @param height height of the video frame
      */
-    public void sendVideoData(byte[] frame , int width , int height){
-        videoCapturer.send(frame , width , height);
+    public void sendVideoData(byte[] frame, int width, int height) {
+        videoCapturer.send(frame, width, height);
     }
 
     /**
      * Method to send message data
+     *
      * @param message message to be sent in byte format
      */
     public void sendMessageData(byte[] message) {
@@ -443,7 +455,7 @@ public class WebRTC {
     /**
      * Interface to create data call back mechanism
      */
-    public interface ReceiveDataCallback{
+    public interface ReceiveDataCallback {
         void pushData(byte[] frame);
     }
 
@@ -453,12 +465,13 @@ public class WebRTC {
     private static class Packet implements Serializable {
         boolean isString;
         String obj;
-        Packet(String s){
+
+        Packet(String s) {
             isString = true;
             obj = s;
         }
 
-        Packet(JSONObject json){
+        Packet(JSONObject json) {
             isString = false;
             obj = json.toString();
         }
@@ -466,6 +479,7 @@ public class WebRTC {
 
     /**
      * Method to read incoming message and convert it to byte format
+     *
      * @param buffer Message incoming in Byte buffer format
      * @return returns byteBuffer message in byte format
      */
@@ -580,6 +594,7 @@ public class WebRTC {
 
         /**
          * Method to decode message
+         *
          * @param message Message received in JSON object format
          */
         private void decodeMessage(JSONObject message) {
@@ -624,10 +639,10 @@ public class WebRTC {
         /**
          * Method used to create a socket for SDP negotiation
          */
-        private void createSocket(){
+        private void createSocket() {
             try {
-                if(!isReciever){
-                    socket = new Socket(recieverIP, recieverPort);
+                if (!isReceiver) {
+                    socket = new Socket(receiverIP, receiverPort);
                 }
                 outStream = new ObjectOutputStream(socket.getOutputStream());
                 inputStream = new ObjectInputStream(socket.getInputStream());
@@ -639,9 +654,9 @@ public class WebRTC {
         /**
          * Method to invoke Signalling handshake message
          */
-        private void invokeSendMessage(){
+        private void invokeSendMessage() {
             try {
-                sendMessage(false , "got user media");
+                sendMessage(false, "got user media");
             } catch (Exception e) {
                 Log.e(TAG, "Error during invoke send message", e);
             }
@@ -650,7 +665,7 @@ public class WebRTC {
         /**
          * Method to check if the message in received packet is "got user media"
          */
-        private void checkPacketMessage(String message){
+        private void checkPacketMessage(String message) {
             if (message.equals("got user media")) {
                 maybeStart();
             }
@@ -659,7 +674,7 @@ public class WebRTC {
         /**
          * Method to invoke MaybeStart()
          */
-        private void invokeMaybeStart(){
+        private void invokeMaybeStart() {
             if (!isInitiator && !isStarted) {
                 maybeStart();
             }
