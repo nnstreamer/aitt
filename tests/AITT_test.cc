@@ -236,7 +236,7 @@ class AITTTest : public testing::Test, public AittTests {
     }
 };
 
-TEST_F(AITTTest, Positive_Create_Anytime)
+TEST_F(AITTTest, Create_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -306,7 +306,7 @@ TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Connect_Anytime)
+TEST_F(AITTTest, Connect_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -316,30 +316,30 @@ TEST_F(AITTTest, Positive_Connect_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Disconnect_Anytime)
-{
-    try {
-        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
-        aitt.Connect();
-        aitt.Disconnect();
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
-}
-
-TEST_F(AITTTest, Positive_Connect_twice_Anytime)
+TEST_F(AITTTest, Disconnect_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
         aitt.Disconnect();
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, Connect_twice_P_Anytime)
+{
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.Connect();
+        aitt.Disconnect();
         aitt.Connect();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
 
-TEST_F(AITTTest, Positive_Publish_MQTT_Anytime)
+TEST_F(AITTTest, Publish_MQTT_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -350,7 +350,7 @@ TEST_F(AITTTest, Positive_Publish_MQTT_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Publish_TCP_Anytime)
+TEST_F(AITTTest, Publish_TCP_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -361,7 +361,7 @@ TEST_F(AITTTest, Positive_Publish_TCP_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Publish_SECURE_TCP_Anytime)
+TEST_F(AITTTest, Publish_SECURE_TCP_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -372,7 +372,7 @@ TEST_F(AITTTest, Positive_Publish_SECURE_TCP_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Publish_Multiple_Protocols_Anytime)
+TEST_F(AITTTest, Publish_Multiple_Protocols_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -386,7 +386,7 @@ TEST_F(AITTTest, Positive_Publish_Multiple_Protocols_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Subscribe_WebRTC_Anytime)
+TEST_F(AITTTest, Subscribe_WebRTC_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -400,7 +400,7 @@ TEST_F(AITTTest, Positive_Subscribe_WebRTC_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Unsubscribe_MQTT_Anytime)
+TEST_F(AITTTest, Unsubscribe_MQTT_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -416,7 +416,7 @@ TEST_F(AITTTest, Positive_Unsubscribe_MQTT_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Unsubscribe_TCP_Anytime)
+TEST_F(AITTTest, Unsubscribe_TCP_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -432,7 +432,7 @@ TEST_F(AITTTest, Positive_Unsubscribe_TCP_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positive_Unsubscribe_SECURE_TCP_Anytime)
+TEST_F(AITTTest, Unsubscribe_SECURE_TCP_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -448,7 +448,7 @@ TEST_F(AITTTest, Positive_Unsubscribe_SECURE_TCP_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_MQTT_Anytime)
+TEST_F(AITTTest, PublishSubscribe_MQTT_P_Anytime)
 {
     PubsubTemplate(TEST_MSG, AITT_TYPE_MQTT);
 }
@@ -458,7 +458,7 @@ TEST_F(AITTTest, Positve_Publish_0_MQTT_Anytime)
     PubsubTemplate("", AITT_TYPE_MQTT);
 }
 
-TEST_F(AITTTest, Positve_Unsubscribe_in_Subscribe_MQTT_Anytime)
+TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -493,7 +493,7 @@ TEST_F(AITTTest, Positve_Unsubscribe_in_Subscribe_MQTT_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positve_Subscribe_in_Subscribe_MQTT_Anytime)
+TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -542,27 +542,27 @@ TEST_F(AITTTest, Positve_Subscribe_in_Subscribe_MQTT_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_TCP_Anytime)
+TEST_F(AITTTest, PublishSubscribe_TCP_P_Anytime)
 {
     PubsubTemplate(TEST_MSG, AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_Anytime)
+TEST_F(AITTTest, PublishSubscribe_SECURE_TCP_P_Anytime)
 {
     PubsubTemplate(TEST_MSG, AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, Positve_Publish_0_TCP_Anytime)
+TEST_F(AITTTest, Publish_0_TCP_P_Anytime)
 {
     PubsubTemplate("", AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positve_Publish_0_SECURE_TCP_Anytime)
+TEST_F(AITTTest, Publish_0_SECURE_TCP_P_Anytime)
 {
     PubsubTemplate("", AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
+TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -604,32 +604,32 @@ TEST_F(AITTTest, Positve_PublishSubscribe_Multiple_Protocols_Anytime)
     }
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_TCP_twice_Anytime)
+TEST_F(AITTTest, PublishSubscribe_TCP_twice_P_Anytime)
 {
     PublishSubscribeTCPTwiceTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positve_PublishSubscribe_SECURE_TCP_twice_Anytime)
+TEST_F(AITTTest, PublishSubscribe_SECURE_TCP_twice_P_Anytime)
 {
     PublishSubscribeTCPTwiceTemplate(AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, Positive_Subscribe_Retained_TCP_Anytime)
+TEST_F(AITTTest, Subscribe_Retained_TCP_P_Anytime)
 {
     SubscribeRetainedTCPTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, Positive_Subscribe_Retained_SECURE_TCP_Anytime)
+TEST_F(AITTTest, Subscribe_Retained_SECURE_TCP_P_Anytime)
 {
     SubscribeRetainedTCPTemplate(AITT_TYPE_TCP_SECURE);
 }
 
-TEST_F(AITTTest, TCP_Publish_Disconnect_TCP_Anytime)
+TEST_F(AITTTest, Publish_Disconnect_TCP_P_Anytime)
 {
     PublishDisconnectTemplate(AITT_TYPE_TCP);
 }
 
-TEST_F(AITTTest, TCP_Publish_Disconnect_SECURE_TCP_Anytime)
+TEST_F(AITTTest, Publish_Disconnect_SECURE_TCP_P_Anytime)
 {
     PublishDisconnectTemplate(AITT_TYPE_TCP_SECURE);
 }

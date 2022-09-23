@@ -79,7 +79,7 @@ class TCPTest : public testing::Test {
     std::function<void(void)> customTest;
 };
 
-TEST(TCP, Negative_Create_InvalidPort_Anytime)
+TEST(TCP, Create_InvalidPort_N_Anytime)
 {
     try {
         TCP::ConnectInfo info;
@@ -91,7 +91,7 @@ TEST(TCP, Negative_Create_InvalidPort_Anytime)
     }
 }
 
-TEST(TCP, Negative_Create_InvalidAddress_Anytime)
+TEST(TCP, Create_InvalidAddress_N_Anytime)
 {
     try {
         TCP::ConnectInfo info;
@@ -103,7 +103,7 @@ TEST(TCP, Negative_Create_InvalidAddress_Anytime)
     }
 }
 
-TEST_F(TCPTest, Positive_GetPeerInfo_Anytime)
+TEST_F(TCPTest, GetPeerInfo_P_Anytime)
 {
     std::string peerHost;
     unsigned short peerPort = 0;
@@ -115,21 +115,21 @@ TEST_F(TCPTest, Positive_GetPeerInfo_Anytime)
     ASSERT_GT(peerPort, 0);
 }
 
-TEST_F(TCPTest, Positive_GetHandle_Anytime)
+TEST_F(TCPTest, GetHandle_P_Anytime)
 {
     RunServer();
     int handle = peer->GetHandle();
     ASSERT_GE(handle, 0);
 }
 
-TEST_F(TCPTest, Positive_GetPort_Anytime)
+TEST_F(TCPTest, GetPort_P_Anytime)
 {
     RunServer();
     unsigned short port = peer->GetPort();
     ASSERT_GT(port, 0);
 }
 
-TEST_F(TCPTest, Positive_SendRecv_Anytime)
+TEST_F(TCPTest, SendRecv_P_Anytime)
 {
     char helloBuffer[TEST_BUFFER_SIZE];
     char byeBuffer[TEST_BUFFER_SIZE];

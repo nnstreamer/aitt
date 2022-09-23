@@ -65,7 +65,7 @@ static void onConnectionStateChanged(IfaceServer::ConnectionState state, MqttSer
     }
 }
 
-TEST_F(MqttServerTest, Positive_Connect_Anytime)
+TEST_F(MqttServerTest, Connect_P_Anytime)
 {
     try {
         MqttServer server(webrtc_src_config_);
@@ -98,7 +98,7 @@ static void onConnectionStateChangedPositive_Connect_Src_Sinks_Anytime(
     }
 }
 
-TEST_F(MqttServerTest, Positive_Connect_Src_Sinks_Anytime)
+TEST_F(MqttServerTest, Connect_Src_Sinks_P_Anytime)
 {
     try {
         Positive_Connect_Src_Sinks_Anytime_connect_count = 0;
@@ -145,7 +145,7 @@ TEST_F(MqttServerTest, Positive_Connect_Src_Sinks_Anytime)
     }
 }
 
-TEST_F(MqttServerTest, Negative_Disconnect_Anytime)
+TEST_F(MqttServerTest, Disconnect_N_Anytime)
 {
     EXPECT_THROW(
           {
@@ -164,7 +164,7 @@ TEST_F(MqttServerTest, Negative_Disconnect_Anytime)
           aitt::AittException);
 }
 
-TEST_F(MqttServerTest, Positive_Disconnect_Anytime)
+TEST_F(MqttServerTest, Disconnect_P_Anytime)
 {
     try {
         MqttServer server(webrtc_src_config_);
@@ -187,7 +187,7 @@ TEST_F(MqttServerTest, Positive_Disconnect_Anytime)
     }
 }
 
-TEST_F(MqttServerTest, Negative_Register_Anytime)
+TEST_F(MqttServerTest, Register_N_Anytime)
 {
     EXPECT_THROW(
           {
@@ -204,7 +204,7 @@ TEST_F(MqttServerTest, Negative_Register_Anytime)
           std::runtime_error);
 }
 
-TEST_F(MqttServerTest, Negative_JoinRoom_Invalid_Parameter_Anytime)
+TEST_F(MqttServerTest, JoinRoom_Invalid_Parameter_N_Anytime)
 {
     EXPECT_THROW(
           {
@@ -238,7 +238,7 @@ static void joinRoomOnRegisteredQuit(IfaceServer::ConnectionState state, MqttSer
     }
 }
 
-TEST_F(MqttServerTest, Positive_JoinRoom_Anytime)
+TEST_F(MqttServerTest, JoinRoom_P_Anytime)
 {
     try {
         MqttServer server(webrtc_src_config_);
@@ -302,7 +302,7 @@ static void onSinkMessage(const std::string &msg, MqttServer &server, GMainLoop 
     }
 }
 
-TEST_F(MqttServerTest, Positive_src_sink)
+TEST_F(MqttServerTest, src_sink_P)
 {
     try {
         MqttServer src_server(webrtc_src_config_);
@@ -336,7 +336,7 @@ TEST_F(MqttServerTest, Positive_src_sink)
     }
 }
 
-TEST_F(MqttServerTest, Positive_sink_src)
+TEST_F(MqttServerTest, sink_src_P)
 {
     try {
         MqttServer sink_server(webrtc_first_sink_config_);
@@ -399,7 +399,7 @@ static void onSinkMessageDisconnect(const std::string &msg, MqttServer &server, 
     }
 }
 
-TEST_F(MqttServerTest, Positive_src_sink_disconnect_src_first_Anytime)
+TEST_F(MqttServerTest, src_sink_disconnect_src_first_P_Anytime)
 {
     try {
         MqttServer src_server(webrtc_src_config_);
@@ -433,7 +433,7 @@ TEST_F(MqttServerTest, Positive_src_sink_disconnect_src_first_Anytime)
     }
 }
 
-TEST_F(MqttServerTest, Positive_sink_src_disconnect_src_first_Anytime)
+TEST_F(MqttServerTest, sink_src_disconnect_src_first_P_Anytime)
 {
     try {
         MqttServer sink_server(webrtc_first_sink_config_);
@@ -547,7 +547,7 @@ static void onSinkMessageThreeWay(const std::string &msg, MqttServer &server)
     }
 }
 
-TEST_F(MqttServerTest, Positive_SendMessageThreeWay_Src_Sinks1_Anytime)
+TEST_F(MqttServerTest, SendMessageThreeWay_Src_Sinks1_P_Anytime)
 {
     try {
         handled_sink = 0;

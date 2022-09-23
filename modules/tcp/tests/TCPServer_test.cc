@@ -30,14 +30,14 @@
 
 using namespace AittTCPNamespace;
 
-TEST(TCPServer, Positive_Create_Anytime)
+TEST(TCPServer, Create_P_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
 }
 
-TEST(TCPServer, Negative_Create_Anytime)
+TEST(TCPServer, Create_N_Anytime)
 {
     try {
         unsigned short port = TEST_SERVER_PORT;
@@ -49,7 +49,7 @@ TEST(TCPServer, Negative_Create_Anytime)
     }
 }
 
-TEST(TCPServer, Positive_Create_AutoPort_Anytime)
+TEST(TCPServer, Create_AutoPort_P_Anytime)
 {
     unsigned short port = TEST_SERVER_AVAILABLE_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
@@ -57,7 +57,7 @@ TEST(TCPServer, Positive_Create_AutoPort_Anytime)
     ASSERT_NE(port, 0);
 }
 
-TEST(TCPServer, Positive_GetPort_Anytime)
+TEST(TCPServer, GetPort_P_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
@@ -65,7 +65,7 @@ TEST(TCPServer, Positive_GetPort_Anytime)
     ASSERT_EQ(tcp->GetPort(), TEST_SERVER_PORT);
 }
 
-TEST(TCPServer, Positive_GetHandle_Anytime)
+TEST(TCPServer, GetHandle_P_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
@@ -73,7 +73,7 @@ TEST(TCPServer, Positive_GetHandle_Anytime)
     ASSERT_GE(tcp->GetHandle(), 0);
 }
 
-TEST(TCPServer, Positive_GetPort_AutoPort_Anytime)
+TEST(TCPServer, GetPort_AutoPort_P_Anytime)
 {
     unsigned short port = TEST_SERVER_AVAILABLE_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
@@ -81,7 +81,7 @@ TEST(TCPServer, Positive_GetPort_AutoPort_Anytime)
     ASSERT_EQ(tcp->GetPort(), port);
 }
 
-TEST(TCPServer, Positive_AcceptPeer_Anytime)
+TEST(TCPServer, AcceptPeer_P_Anytime)
 {
     std::mutex m;
     std::condition_variable ready_cv;

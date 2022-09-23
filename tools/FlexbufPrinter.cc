@@ -77,9 +77,10 @@ void FlexbufPrinter::PrettyVector(const flexbuffers::Reference &data, bool inlin
 void FlexbufPrinter::PrettyBlob(const flexbuffers::Reference &data, bool inline_value)
 {
     auto blob = data.AsBlob();
-    auto root = flexbuffers::GetRoot(static_cast<const uint8_t *>(blob.data()), blob.size());
+    DBG_HEX_DUMP(blob.data(), blob.size());
+    // auto root = flexbuffers::GetRoot(static_cast<const uint8_t *>(blob.data()), blob.size());
 
-    PrettyParsing(root, true);
+    // PrettyParsing(root, true);
 }
 
 void FlexbufPrinter::PrettyParsing(const flexbuffers::Reference &data, bool inline_value)

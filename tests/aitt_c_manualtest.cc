@@ -20,6 +20,8 @@
 
 #include "AittTests.h"
 
+#define TEST_C_WILL_TOPIC "test/topic_will"
+
 TEST(AITT_C_MANUAL, will_set_P)
 {
     int ret;
@@ -33,11 +35,11 @@ TEST(AITT_C_MANUAL, will_set_P)
     GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
-          handle, "test/topic_will",
+          handle, TEST_C_WILL_TOPIC,
           [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
-              EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_TOPIC);
+              EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_WILL_TOPIC);
               sub_called = true;
           },
           loop, &sub_handle);
@@ -49,7 +51,7 @@ TEST(AITT_C_MANUAL, will_set_P)
         aitt_h handle_will = aitt_new("test_will", nullptr);
         ASSERT_NE(handle_will, nullptr);
 
-        ret = aitt_will_set(handle_will, "test/topic_will", TEST_C_MSG, strlen(TEST_C_MSG),
+        ret = aitt_will_set(handle_will, TEST_C_WILL_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG),
               AITT_QOS_AT_LEAST_ONCE, false);
         ASSERT_EQ(ret, AITT_ERROR_NONE);
 

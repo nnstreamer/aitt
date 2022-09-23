@@ -33,7 +33,7 @@ using ::testing::Return;
 #define TEST_HOST "localhost"
 #define TEST_HANDLE reinterpret_cast<mosquitto *>(0xbeefbeef)
 
-TEST_F(MQMockTest, Negative_Create_lib_init_Anytime)
+TEST_F(MQMockTest, Create_lib_init_N_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_NOT_SUPPORTED));
     EXPECT_CALL(GetMock(), mosquitto_destroy(nullptr)).WillOnce(Return());
@@ -47,7 +47,7 @@ TEST_F(MQMockTest, Negative_Create_lib_init_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Negative_Create_new_Anytime)
+TEST_F(MQMockTest, Create_new_N_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -63,7 +63,7 @@ TEST_F(MQMockTest, Negative_Create_new_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Publish_Anytime)
+TEST_F(MQMockTest, Publish_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -90,7 +90,7 @@ TEST_F(MQMockTest, Positive_Publish_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Subscribe_Anytime)
+TEST_F(MQMockTest, Subscribe_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -118,7 +118,7 @@ TEST_F(MQMockTest, Positive_Subscribe_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Unsubscribe_Anytime)
+TEST_F(MQMockTest, Unsubscribe_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -150,7 +150,7 @@ TEST_F(MQMockTest, Positive_Unsubscribe_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Create_Anytime)
+TEST_F(MQMockTest, Create_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -169,7 +169,7 @@ TEST_F(MQMockTest, Positive_Create_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Negative_Connect_will_set_Anytime)
+TEST_F(MQMockTest, Connect_will_set_N_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -190,7 +190,7 @@ TEST_F(MQMockTest, Negative_Connect_will_set_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Connect_Anytime)
+TEST_F(MQMockTest, Connect_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
@@ -208,7 +208,7 @@ TEST_F(MQMockTest, Positive_Connect_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Connect_User_Anytime)
+TEST_F(MQMockTest, Connect_User_P_Anytime)
 {
     std::string username = "test";
     std::string password = "test";
@@ -231,7 +231,7 @@ TEST_F(MQMockTest, Positive_Connect_User_Anytime)
     }
 }
 
-TEST_F(MQMockTest, Positive_Disconnect_Anytime)
+TEST_F(MQMockTest, Disconnect_P_Anytime)
 {
     EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
