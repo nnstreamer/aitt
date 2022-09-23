@@ -42,7 +42,6 @@ class ModuleManager {
         TYPE_TCP,         //(0x1 << 1)
         TYPE_TCP_SECURE,  //(0x1 << 2)
         TYPE_WEBRTC,      //(0x1 << 3)
-        TYPE_RTSP,
         TYPE_TRANSPORT_MAX,
     };
 

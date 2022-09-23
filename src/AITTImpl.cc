@@ -42,19 +42,25 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
 {
     if (option.GetUseCustomMqttBroker()) {
         mq = modules.NewCustomMQ(id, option);
+        AittOption discovery_option = option;
+        discovery_option.SetClearSession(false);
         discovery.SetMQ(modules.NewCustomMQ(id + 'd', option));
     } else {
         mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetClearSession()));
-        discovery.SetMQ(std::unique_ptr<MQ>(new MosquittoMQ(id + 'd', option.GetClearSession())));
+        discovery.SetMQ(std::unique_ptr<MQ>(new MosquittoMQ(id + 'd', false)));
     }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);
 }
 
 AITT::Impl::~Impl(void)
 {
-    if (false == mqtt_broker_ip_.empty())
-        Disconnect();
-
+    if (false == mqtt_broker_ip_.empty()) {
+        try {
+            Disconnect();
+        } catch (std::exception &e) {
+            ERR("Disconnect() Fail(%s)", e.what());
+        }
+    }
     while (main_loop.Quit() == false) {
         // wait when called before the thread has completely created.
         usleep(1000);  // 1millisecond
@@ -109,8 +115,8 @@ void AITT::Impl::Disconnect(void)
     mqtt_broker_ip_.clear();
     mqtt_broker_port_ = -1;
 
-    mq->Disconnect();
     discovery.Stop();
+    mq->Disconnect();
 }
 
 void AITT::Impl::UnsubscribeAll()

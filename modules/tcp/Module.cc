@@ -38,7 +38,11 @@ Module::Module(AittProtocol type, AittDiscovery &discovery, const std::string &m
 
 Module::~Module(void)
 {
-    discovery.RemoveDiscoveryCB(discovery_cb);
+    try {
+        discovery.RemoveDiscoveryCB(discovery_cb);
+    } catch (std::exception &e) {
+        ERR("RemoveDiscoveryCB() Fail(%s)", e.what());
+    }
 
     while (main_loop.Quit() == false) {
         // wait when called before the thread has completely created.

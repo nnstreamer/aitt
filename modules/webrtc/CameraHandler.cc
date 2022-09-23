@@ -44,6 +44,11 @@ CameraHandler::~CameraHandler(void)
         camera_destroy(handle_);
 }
 
+CameraHandler::CameraHandler()
+      : handle_(nullptr), is_started_(false), media_packet_preview_cb_(nullptr), user_data_(nullptr)
+{
+}
+
 int CameraHandler::Init(const MediaPacketPreviewCallback &preview_cb, void *user_data)
 {
     int ret = camera_create(CAMERA_DEVICE_CAMERA0, &handle_);

@@ -64,12 +64,6 @@ MosquittoMQ::MosquittoMQ(const std::string &id, bool clear_session)
         mosquitto_connect_v5_callback_set(handle, ConnectCallback);
         mosquitto_disconnect_v5_callback_set(handle, DisconnectCallback);
 
-        ret = mosquitto_loop_start(handle);
-        if (ret != MOSQ_ERR_SUCCESS) {
-            ERR("mosquitto_loop_start() Fail(%s)", mosquitto_strerror(ret));
-            break;
-        }
-
         return;
     } while (0);
 
@@ -82,10 +76,6 @@ MosquittoMQ::~MosquittoMQ(void)
 {
     int ret;
     INFO("Destructor");
-
-    ret = mosquitto_loop_stop(handle, true);
-    if (ret != MOSQ_ERR_SUCCESS)
-        ERR("mosquitto_loop_stop() Fail(%s)", mosquitto_strerror(ret));
 
     callback_lock.lock();
     connect_cb = nullptr;
@@ -145,6 +135,12 @@ void MosquittoMQ::Connect(const std::string &host, int port, const std::string &
         }
     }
 
+    ret = mosquitto_loop_start(handle);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_loop_start() Fail(%s)", mosquitto_strerror(ret));
+        throw AittException(AittException::MQTT_ERR);
+    }
+
     ret = mosquitto_connect(handle, host.c_str(), port, keep_alive);
     if (ret != MOSQ_ERR_SUCCESS) {
         ERR("mosquitto_connect(%s, %d) Fail(%s)", host.c_str(), port, mosquitto_strerror(ret));
@@ -170,6 +166,10 @@ void MosquittoMQ::Disconnect(void)
         throw AittException(AittException::MQTT_ERR);
     }
 
+    ret = mosquitto_loop_stop(handle, false);
+    if (ret != MOSQ_ERR_SUCCESS)
+        ERR("mosquitto_loop_stop() Fail(%s)", mosquitto_strerror(ret));
+
     mosquitto_will_clear(handle);
 }
 
@@ -184,8 +184,11 @@ void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_
     mq->subscriber_iterator = mq->subscribers.begin();
     while (mq->subscriber_iterator != mq->subscribers.end()) {
         auto subscribe_data = *(mq->subscriber_iterator);
-        if (nullptr == subscribe_data)
-            ERR("end() is not valid because elements were added.");
+        if (nullptr == subscribe_data) {
+            ERR("Invalid subscribe data");
+            mq->subscriber_iterator++;
+            continue;
+        }
 
         bool result = AittUtil::CompareTopic(subscribe_data->topic.c_str(), msg->topic);
         if (result)

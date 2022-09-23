@@ -57,9 +57,9 @@ class MosquittoMQ : public MQ {
         void *user_data;
     };
 
-    static void ConnectCallback(mosquitto *mosq, void *obj, int rc, int flag,
+    static void ConnectCallback(struct mosquitto *mosq, void *obj, int rc, int flag,
           const mosquitto_property *props);
-    static void DisconnectCallback(mosquitto *mosq, void *obj, int rc,
+    static void DisconnectCallback(struct mosquitto *mosq, void *obj, int rc,
           const mosquitto_property *props);
     static void MessageCallback(mosquitto *, void *, const mosquitto_message *,
           const mosquitto_property *);

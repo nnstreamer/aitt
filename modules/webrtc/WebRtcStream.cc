@@ -18,6 +18,10 @@
 
 #include "aitt_internal.h"
 
+WebRtcStream::WebRtcStream() : webrtc_handle_(nullptr), is_source_overflow_(false), source_id_(0)
+{
+}
+
 WebRtcStream::~WebRtcStream()
 {
     Destroy();

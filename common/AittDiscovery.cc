@@ -47,8 +47,9 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
 
 void AittDiscovery::Stop()
 {
-    discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
     discovery_mq->Unsubscribe(callback_handle);
+    discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
+    discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_AT_MOST_ONCE, true);
     callback_handle = nullptr;
     discovery_mq->Disconnect();
 }
@@ -89,8 +90,6 @@ void AittDiscovery::DiscoveryMessageCallback(MSG *mq, const std::string &topic, 
     RET_IF(user_data == nullptr);
 
     AittDiscovery *discovery = static_cast<AittDiscovery *>(user_data);
-
-    DBG("Called(id = %s, msg = %p:%d)", discovery->id_.c_str(), msg, szmsg);
 
     size_t end = topic.find("/", DISCOVERY_TOPIC_BASE.length());
     std::string clientId = topic.substr(DISCOVERY_TOPIC_BASE.length(), end);

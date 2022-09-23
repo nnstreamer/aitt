@@ -124,10 +124,10 @@ void ModuleManager::LoadTransport(TransportType type)
 
 std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const AittOption &option)
 {
-    ModuleHandle handle = OpenModule("libaitt-st-broker.so");
+    custom_mqtt_handle = OpenModule("libaitt-st-broker.so");
 
     MQ::ModuleEntry get_instance_fn =
-          reinterpret_cast<MQ::ModuleEntry>(dlsym(handle.get(), MQ::MODULE_ENTRY_NAME));
+          reinterpret_cast<MQ::ModuleEntry>(dlsym(custom_mqtt_handle.get(), MQ::MODULE_ENTRY_NAME));
     if (get_instance_fn == nullptr) {
         ERR("dlsym: %s", dlerror());
         throw AittException(AittException::SYSTEM_ERR);

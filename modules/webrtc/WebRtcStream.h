@@ -32,6 +32,7 @@
 
 class WebRtcStream {
   public:
+    WebRtcStream();
     ~WebRtcStream();
     bool Create(bool is_source, bool need_display);
     void Destroy(void);
