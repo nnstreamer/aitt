@@ -379,22 +379,6 @@ TEST_F(AITTTest, Publish_Multiple_Protocols_P_Anytime)
         aitt.Connect();
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
               (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP));
-        aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
-              (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP | AITT_TYPE_WEBRTC));
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
-}
-
-TEST_F(AITTTest, Subscribe_WebRTC_P_Anytime)
-{
-    try {
-        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
-        aitt.Connect();
-        aitt.Subscribe(
-              testTopic,
-              [](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {},
-              nullptr, AITT_TYPE_WEBRTC);
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }

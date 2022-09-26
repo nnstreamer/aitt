@@ -35,6 +35,11 @@ class API AITT {
           std::function<void(MSG *msg, const void *data, const size_t datalen, void *user_data)>;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
+    using StreamStateCallback =
+          std::function<void(AittStreamState state, void *user_data)>;
+    using StreamSinkCallback = std::function<void(const void *data,
+          const size_t datalen, void *user_data)>;
+
     explicit AITT(const std::string &id, const std::string &ip_addr,
           AittOption option = AittOption(false, false));
     virtual ~AITT(void);
@@ -63,6 +68,20 @@ class API AITT {
     void *Unsubscribe(AittSubscribeID handle);
 
     void SendReply(MSG *msg, const void *data, const size_t datalen, bool end = true);
+
+    AittStreamID CreatePublishStream(const std::string &topic, AittProtocol protocol);
+    AittStreamID CreateSubscribeStream(const std::string &topic, AittProtocol protocol);
+    void DestroyStream(AittStreamID handle);
+    void SetStreamConfig(AittStreamID handle, const std::string &key, const std::string &value);
+    std::string GetStreamConfig(AittStreamID handle, const std::string &key);
+    void StartStream(AittStreamID handle);
+    void StopStream(AittStreamID handle);
+    void SetStreamStateCallback(AittStreamID handle, StreamStateCallback cb,
+          void *user_data = nullptr);
+    void UnsetStreamStateCallback(AittStreamID handle);
+    void SetStreamSinkCallback(AittStreamID handle, StreamSinkCallback cb,
+          void *user_data = nullptr);
+    void UnsetStreamSinkCallback(AittStreamID handle);
 
   private:
     class Impl;

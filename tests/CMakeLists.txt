@@ -18,7 +18,7 @@ ADD_TEST(
         ${AITT_UT}
     COMMAND
         ${CMAKE_COMMAND} -E env
-        LD_LIBRARY_PATH=../modules/tcp/:../:../common/:$ENV{LD_LIBRARY_PATH}
+        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
         ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
 )
 
@@ -57,6 +57,20 @@ ADD_TEST(
         ${AITT_UT}_module
     COMMAND
         ${CMAKE_COMMAND} -E env
-        LD_LIBRARY_PATH=../modules/tcp/:../:../common/:$ENV{LD_LIBRARY_PATH}
+        LD_LIBRARY_PATH=../modules/webrtc/:../modules/tcp/:../:../common/:$ENV{LD_LIBRARY_PATH}
         ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_module --gtest_filter=*_Anytime
+)
+###########################################################################
+ADD_EXECUTABLE(${AITT_UT}_stream AITT_Stream_test.cc)
+TARGET_LINK_LIBRARIES(${AITT_UT}_stream Threads::Threads ${UT_NEEDS_LIBRARIES} ${PROJECT_NAME})
+
+INSTALL(TARGETS ${AITT_UT}_stream DESTINATION ${AITT_TEST_BINDIR})
+
+ADD_TEST(
+    NAME
+        ${AITT_UT}_stream
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_stream --gtest_filter=*_Anytime
 )

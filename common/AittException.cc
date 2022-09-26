@@ -47,6 +47,8 @@ std::string AittException::getErrString() const
         return "MQTT failure";
     case NO_DATA_ERR:
         return "No data found";
+    case RESOURCE_BUSY_ERR:
+        return "Resource busy";
     default:
         return "Unknown Error";
     }

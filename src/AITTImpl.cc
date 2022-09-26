@@ -26,9 +26,6 @@
 #include "MosquittoMQ.h"
 #include "aitt_internal.h"
 
-#define WEBRTC_ROOM_ID_PREFIX std::string(AITT_MANAGED_TOPIC_PREFIX "webrtc/room/Room.webrtc")
-#define WEBRTC_ID_POSTFIX std::string("_for_webrtc")
-
 namespace aitt {
 
 AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
@@ -111,6 +108,7 @@ void AITT::Impl::Connect(const std::string &host, int port, const std::string &u
 void AITT::Impl::Disconnect(void)
 {
     UnsubscribeAll();
+    DestroyAllStream();
 
     mqtt_broker_ip_.clear();
     mqtt_broker_port_ = -1;
@@ -130,7 +128,6 @@ void AITT::Impl::UnsubscribeAll()
             break;
         case AITT_TYPE_TCP:
         case AITT_TYPE_TCP_SECURE:
-        case AITT_TYPE_WEBRTC:
             modules.Get(subscribe_info->first).Unsubscribe(subscribe_info->second);
             break;
 
@@ -142,6 +139,26 @@ void AITT::Impl::UnsubscribeAll()
         delete subscribe_info;
     }
     subscribed_list.clear();
+}
+void AITT::Impl::DestroyAllStream(void)
+{
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    for (auto tag : stream_list_) {
+        if (!tag)
+            continue;
+        //TODO call stream transport
+        delete tag;
+    }
+    stream_list_.clear();
+}
+
+void AITT::Impl::StreamInfoExist(StreamTag *tag)
+{
+    if (std::find(stream_list_.begin(), stream_list_.end(), tag) == stream_list_.end()) {
+        ERR("Unknown stream id(%p)", tag);
+        throw std::runtime_error("stream id");
+    }
 }
 
 void AITT::Impl::ConfigureTransportModule(const std::string &key, const std::string &value,
@@ -160,27 +177,6 @@ void AITT::Impl::Publish(const std::string &topic, const void *data, const size_
 
     if ((protocols & AITT_TYPE_TCP_SECURE) == AITT_TYPE_TCP_SECURE)
         modules.Get(AITT_TYPE_TCP_SECURE).Publish(topic, data, datalen, qos, retain);
-
-    if ((protocols & AITT_TYPE_WEBRTC) == AITT_TYPE_WEBRTC)
-        PublishWebRtc(topic, data, datalen, qos, retain);
-}
-
-void AITT::Impl::PublishWebRtc(const std::string &topic, const void *data, const size_t datalen,
-      AittQoS qos, bool retain)
-{
-    flexbuffers::Builder fbb;
-    fbb.Map([=, &fbb]() {
-        fbb.String("Id", id_ + WEBRTC_ID_POSTFIX);
-        fbb.String("BrokerIp", mqtt_broker_ip_);
-        fbb.Int("BrokerPort", mqtt_broker_port_);
-        fbb.String("RoomId", WEBRTC_ROOM_ID_PREFIX + topic);
-        fbb.String("SourceId", id_ + WEBRTC_ID_POSTFIX);
-        // TODO pass user data to WEBRTC module
-        fbb.UInt("UserDataLength", datalen);
-    });
-    fbb.Finish();
-    auto buf = fbb.GetBuffer();
-    modules.Get(AITT_TYPE_WEBRTC).Publish(topic, buf.data(), buf.size(), qos, retain);
 }
 
 AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::SubscribeCallback &cb,
@@ -197,9 +193,6 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
     case AITT_TYPE_TCP:
     case AITT_TYPE_TCP_SECURE:
         subscribe_handle = SubscribeTCP(info, topic, cb, user_data, qos);
-        break;
-    case AITT_TYPE_WEBRTC:
-        subscribe_handle = SubscribeWebRtc(info, topic, cb, user_data, qos);
         break;
     default:
         ERR("Unknown AittProtocol(%d)", protocol);
@@ -268,7 +261,6 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
         break;
     case AITT_TYPE_TCP:
     case AITT_TYPE_TCP_SECURE:
-    case AITT_TYPE_WEBRTC:
         user_data = modules.Get(found_info->first).Unsubscribe(found_info->second);
         break;
 
@@ -411,32 +403,153 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
                 user_data, qos);
 }
 
-void *AITT::Impl::SubscribeWebRtc(SubscribeInfo *handle, const std::string &topic,
-      const SubscribeCallback &cb, void *user_data, AittQoS qos)
+AittStreamID AITT::Impl::CreatePublishStream(const std::string &topic, AittProtocol protocol)
 {
-    flexbuffers::Builder fbb;
-    fbb.Map([=, &fbb]() {
-        fbb.String("Id", id_ + WEBRTC_ID_POSTFIX);
-        fbb.String("BrokerIp", mqtt_broker_ip_);
-        fbb.String("RoomId", WEBRTC_ROOM_ID_PREFIX + topic);
-        fbb.Int("BrokerPort", mqtt_broker_port_);
-    });
-    fbb.Finish();
-    auto buf = fbb.GetBuffer();
+   //TODO call stream transport
+    auto info = new StreamTag(topic, protocol, AITT_STREAM_ROLE_SRC, nullptr);
+    // TODO: be prepared when there's memory failure
+    {
+        std::unique_lock<std::mutex> lock(stream_list_mutex_);
+        stream_list_.push_back(info);
+    }
 
-    return modules.Get(AITT_TYPE_WEBRTC)
-          .Subscribe(
-                topic,
-                [handle, cb](const std::string &topic, const void *data, const size_t datalen,
-                      void *user_data, const std::string &correlation) -> void {
-                    MSG msg;
-                    msg.SetID(handle);
-                    msg.SetTopic(topic);
-                    msg.SetCorrelation(correlation);
-                    msg.SetProtocols(AITT_TYPE_WEBRTC);
-
-                    return cb(&msg, data, datalen, user_data);
-                },
-                buf.data(), buf.size(), user_data, qos);
+    INFO("Stream topic(%s) : %p", topic.c_str(), info);
+    return reinterpret_cast<AittStreamID>(info);
 }
+
+AittStreamID AITT::Impl::CreateSubscribeStream(const std::string &topic,
+      AittProtocol protocol)
+{
+    //TODO call stream transport
+    auto info = new StreamTag(topic, protocol, AITT_STREAM_ROLE_SINK, nullptr);
+    // TODO: be prepared when there's memory failure
+    {
+        std::unique_lock<std::mutex> lock(stream_list_mutex_);
+        stream_list_.push_back(info);
+    }
+
+    INFO("Stream topic(%s) : %p", topic.c_str(), info);
+    return reinterpret_cast<AittStreamID>(info);
+}
+
+void AITT::Impl::DestroyStream(AittStreamID handle)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *info = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    auto it = std::find(stream_list_.begin(), stream_list_.end(), info);
+    if (it == stream_list_.end()) {
+        ERR("Unknown stream id(%p)", handle);
+        throw std::runtime_error("stream ID");
+    }
+
+    //TODO call stream transport
+
+    stream_list_.erase(it);
+    delete *it;
+}
+
+void AITT::Impl::SetStreamConfig(AittStreamID handle, const std::string &key,
+      const std::string &value)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+std::string AITT::Impl::GetStreamConfig(AittStreamID handle, const std::string &key)
+{
+    std::string value;
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+
+    return value;
+}
+
+void AITT::Impl::StartStream(AittStreamID handle)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+void AITT::Impl::StopStream(AittStreamID handle)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+void AITT::Impl::SetStreamStateCallback(AittStreamID handle, StreamStateCallback cb,
+      void *user_data)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+void AITT::Impl::UnsetStreamStateCallback(AittStreamID handle)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+void AITT::Impl::SetStreamSinkCallback(AittStreamID handle, StreamSinkCallback cb, void *user_data)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
+void AITT::Impl::UnsetStreamSinkCallback(AittStreamID handle)
+{
+    INFO("stream id : %p", handle);
+    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
+
+    std::unique_lock<std::mutex> lock(stream_list_mutex_);
+
+    StreamInfoExist(tag);
+
+    //TODO call stream transport
+}
+
 }  // namespace aitt

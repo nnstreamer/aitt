@@ -15,35 +15,20 @@
  */
 #pragma once
 
-#include <exception>
-#include <string>
-#include <vector>
+#include <AittTypes.h>
 
+#include <string>
 namespace aitt {
 
-class AittException : public std::exception {
+class StreamTag {
   public:
-    enum ErrCode {
-        INVALID_ARG,
-        NO_MEMORY_ERR,
-        OPERATION_FAILED,
-        SYSTEM_ERR,
-        MQTT_ERR,
-        NO_DATA_ERR,
-        RESOURCE_BUSY_ERR,
-    };
-
-    AittException(ErrCode err_code);
-    AittException(ErrCode err_code, const std::string& custom_err_msg);
-
-    ErrCode getErrCode();
-    virtual const char* what() const throw() override;
-
-  private:
-    ErrCode err_code;
-    std::string err_msg;
-
-    std::string getErrString() const;
+    explicit StreamTag(const std::string &topic, AittProtocol protocol, AittStreamRole role,
+          void *handle)
+          : topic_(topic), protocol_(protocol), role_(role), handle_(handle){};
+    std::string topic_;
+    AittProtocol protocol_;
+    AittStreamRole role_;
+    void *handle_;
 };
 
 }  // namespace aitt

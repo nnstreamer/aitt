@@ -18,6 +18,7 @@
 #define API __attribute__((visibility("default")))
 
 typedef void* AittSubscribeID;
+typedef void* AittStreamID;
 
 enum AittProtocol {
     AITT_TYPE_UNKNOWN = 0,
@@ -40,6 +41,18 @@ enum AittConnectionState {
     AITT_CONNECT_FAILED = 2,  // Failed to connect to the mqtt broker.
 };
 
+enum AittStreamState {
+    AITT_STREAM_STATE_INIT = 0,
+    AITT_STREAM_STATE_READY = 1,
+    AITT_STREAM_STATE_PLAYING = 2,
+};
+
+enum AittStreamRole {
+    AITT_STREAM_ROLE_NONE = 0,
+    AITT_STREAM_ROLE_SRC = 1,
+    AITT_STREAM_ROLE_SINK = 2,
+};
+
 // The maximum size in bytes of a message. It follows MQTT
 #define AITT_MESSAGE_MAX 268435455
 
@@ -53,6 +66,7 @@ enum AittConnectionState {
 #define TIZEN_ERROR_INVALID_PARAMETER -EINVAL
 #define TIZEN_ERROR_PERMISSION_DENIED -EACCES
 #define TIZEN_ERROR_OUT_OF_MEMORY -ENOMEM
+#define TIZEN_ERROR_RESOURCE_BUSY -EBUSY
 #define TIZEN_ERROR_TIMED_OUT (-1073741824LL + 1)
 #define TIZEN_ERROR_NOT_SUPPORTED (-1073741824LL + 2)
 #define TIZEN_ERROR_AITT -0x04020000
@@ -63,6 +77,7 @@ enum AittError {
     AITT_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER, /**< Invalid parameter */
     AITT_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED, /**< Permission denied */
     AITT_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,         /**< Out of memory */
+    AITT_ERROR_RESOURCE_BUSY = TIZEN_ERROR_RESOURCE_BUSY,         /**< Resource Busy */
     AITT_ERROR_TIMED_OUT = TIZEN_ERROR_TIMED_OUT,                 /**< Time out */
     AITT_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED,         /**< Not supported */
     AITT_ERROR_UNKNOWN = TIZEN_ERROR_AITT | 0x01,                 /**< Unknown Error */
