@@ -48,7 +48,7 @@ public class Aitt {
     private Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
     private Map<String, Long> aittSubId = new HashMap<>();
     private ConnectionCallback connectionCallback = null;
-    private JniInterface mJniInterface = new JniInterface();
+    private JniInterface mJniInterface;
 
     private long instance = 0;
     private String ip;
@@ -150,18 +150,13 @@ public class Aitt {
         if (id == null || id.isEmpty()) {
             throw new IllegalArgumentException("Invalid id");
         }
+        mJniInterface = new JniInterface();
         instance = mJniInterface.init(id, ip, clearSession);
         if (instance == 0L) {
             throw new InstantiationException("Failed to instantiate native instance");
         }
         this.ip = ip;
         this.appContext = appContext;
-        mJniInterface.registerJniCallback(new JniInterface.JniCallback() {
-            @Override
-            public void jniDataPush(String _topic, byte[] payload) {
-                messageCallback(_topic, payload);
-            }
-        });
     }
 
     /**
@@ -203,7 +198,12 @@ public class Aitt {
         }
         mJniInterface.connect(brokerIp, port);
         //Subscribe to java discovery topic
-        mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
+        mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, new JniInterface.JniCallback() {
+            @Override
+            public void jniDataPush(String _topic, byte[] payload) {
+                messageCallback(_topic, payload);
+            }
+        }, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
     }
 
     /**
@@ -307,7 +307,7 @@ public class Aitt {
     private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object transportHandlerObject, String ip, int port, byte[] message) {
         TransportHandler transportHandler;
         if (transportHandlerObject == null) {
-            transportHandler = TransportFactory.createTransport(protocol);
+            transportHandler = TransportFactory.createTransport(protocol, mJniInterface);
             if (transportHandler != null)
                 transportHandler.setAppContext(appContext);
             portTable.portMap.replace(port, new Pair<>(protocol, transportHandler));
@@ -380,7 +380,12 @@ public class Aitt {
         }
 
         if (jniProtocols > 0) {
-            Long pObject = mJniInterface.subscribe(topic, jniProtocols, qos.ordinal());
+            Long pObject = mJniInterface.subscribe(topic, new JniInterface.JniCallback() {
+                @Override
+                public void jniDataPush(String _topic, byte[] payload) {
+                    messageCallback(_topic, payload);
+                }
+            },jniProtocols, qos.ordinal());
             synchronized (this) {
                 aittSubId.put(topic, pObject);
             }
@@ -388,7 +393,7 @@ public class Aitt {
 
         for (Protocol pro : protocols) {
             try {
-                TransportHandler transportHandler = TransportFactory.createTransport(pro);
+                TransportHandler transportHandler = TransportFactory.createTransport(pro, mJniInterface);
 
                 if (transportHandler != null) {
                     synchronized (this) {
@@ -485,7 +490,7 @@ public class Aitt {
                     }
                 }
                 if (paittSubId != null) {
-                    mJniInterface.unsubscribe(paittSubId);
+                    mJniInterface.unsubscribe(topic, paittSubId);
                 }
             }
 

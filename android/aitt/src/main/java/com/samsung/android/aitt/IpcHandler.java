@@ -17,7 +17,13 @@ package com.samsung.android.aitt;
 
 import android.content.Context;
 
+import com.samsung.android.aittnative.JniInterface;
+
 class IpcHandler implements TransportHandler {
+    private JniInterface mJniInterface;
+    public IpcHandler(JniInterface jniInterface){
+        mJniInterface = jniInterface;
+    }
 
     @Override
     public void setAppContext(Context appContext) {
