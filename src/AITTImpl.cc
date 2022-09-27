@@ -65,6 +65,9 @@ AITT::Impl::~Impl(void)
 
     if (aittThread.joinable())
         aittThread.join();
+
+    discovery.SetMQ(nullptr);
+    mq = nullptr;
 }
 
 void AITT::Impl::ThreadMain(void)

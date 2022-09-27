@@ -35,7 +35,7 @@ class ModuleManager {
     std::unique_ptr<MQ> NewCustomMQ(const std::string &id, const AittOption &option);
 
   private:
-    using ModuleHandle = std::unique_ptr<void, void (*)(const void *)>;
+    using ModuleHandle = std::unique_ptr<void, void (*)(void *)>;
 
     // It should be ("the number of shifts" - 1) of AittProtocol
     enum TransportType {

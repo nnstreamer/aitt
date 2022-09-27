@@ -78,8 +78,8 @@ std::string ModuleManager::GetTransportFileName(TransportType type)
 
 ModuleManager::ModuleHandle ModuleManager::OpenModule(const char *file)
 {
-    ModuleHandle handle(dlopen(file, RTLD_LAZY | RTLD_LOCAL), [](const void *handle) -> void {
-        if (dlclose(const_cast<void *>(handle)))
+    ModuleHandle handle(dlopen(file, RTLD_LAZY | RTLD_LOCAL), [](void *handle) {
+        if (dlclose(handle))
             ERR("dlclose: %s", dlerror());
     });
     if (handle == nullptr)
