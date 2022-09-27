@@ -437,7 +437,7 @@ TEST_F(AITTTest, PublishSubscribe_MQTT_P_Anytime)
     PubsubTemplate(TEST_MSG, AITT_TYPE_MQTT);
 }
 
-TEST_F(AITTTest, Positve_Publish_0_MQTT_Anytime)
+TEST_F(AITTTest, Publish_0_MQTT_P_Anytime)
 {
     PubsubTemplate("", AITT_TYPE_MQTT);
 }

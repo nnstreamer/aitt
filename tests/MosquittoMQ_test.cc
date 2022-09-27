@@ -28,7 +28,7 @@ class MQTest : public testing::Test, public AittTests {
     void TearDown() override { Deinit(); }
 };
 
-TEST_F(MQTest, Positve_Subscribe_in_Subscribe_Anytime)
+TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
 {
     try {
         MosquittoMQ mq("MQ_TEST_ID");
