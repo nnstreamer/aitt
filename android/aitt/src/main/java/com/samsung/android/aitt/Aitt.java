@@ -67,12 +67,11 @@ public class Aitt {
      * List of protocols supported by AITT framework
      */
     public enum Protocol {
-        MQTT(0x1 << 0),    // Publish message through the MQTT
-        TCP(0x1 << 1),     // Publish message to peers using the TCP
-        UDP(0x1 << 2),     // Publish message to peers using the UDP
-        SRTP(0x1 << 3),    // Publish message to peers using the SRTP
-        WEBRTC(0x1 << 4),  // Publish message to peers using the WEBRTC
-        IPC(0x1 << 5);     // Publish message to peers using the IPC
+        MQTT(0x1 << 0),           // Publish message through the MQTT
+        TCP(0x1 << 1),            // Publish message to peers using the TCP
+        TCP_SECURE(0x1 << 2),     // Publish message to peers using the Secure TCP
+        WEBRTC(0x1 << 3),         // Publish message to peers using the WEBRTC
+        IPC(0x1 << 4);            // Publish message to peers using the IPC
 
         private final int value;
 

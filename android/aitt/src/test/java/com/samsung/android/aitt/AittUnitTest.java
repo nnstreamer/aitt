@@ -494,7 +494,7 @@ public class AittUnitTest {
                             byte[] payload = message.getPayload();
                         }
                     },
-                    Aitt.Protocol.UDP, Aitt.QoS.AT_MOST_ONCE);
+                    Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
 
             aitt.disconnect();
         } catch (Exception e) {
