@@ -122,6 +122,7 @@ class Module : public AittTransport {
     void UpdatePublishTable(const std::string &topic, const std::string &host,
           const TCP::ConnectInfo &info);
 
+    const char *const NAME[2] = {"TCP", "SECURE_TCP"};
     MainLoopHandler main_loop;
     std::thread aittThread;
     int discovery_cb;

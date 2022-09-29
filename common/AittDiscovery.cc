@@ -45,6 +45,14 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
           static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
 }
 
+void AittDiscovery::Restart()
+{
+    RET_IF(callback_handle);
+    discovery_mq->Unsubscribe(callback_handle);
+    callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+", DiscoveryMessageCallback,
+          static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
+}
+
 void AittDiscovery::Stop()
 {
     discovery_mq->Unsubscribe(callback_handle);
@@ -54,7 +62,7 @@ void AittDiscovery::Stop()
     discovery_mq->Disconnect();
 }
 
-void AittDiscovery::UpdateDiscoveryMsg(AittProtocol protocol, const void *msg, size_t length)
+void AittDiscovery::UpdateDiscoveryMsg(const std::string &protocol, const void *msg, size_t length)
 {
     auto it = discovery_map.find(protocol);
     if (it == discovery_map.end())
@@ -65,7 +73,7 @@ void AittDiscovery::UpdateDiscoveryMsg(AittProtocol protocol, const void *msg, s
     PublishDiscoveryMsg();
 }
 
-int AittDiscovery::AddDiscoveryCB(AittProtocol protocol, const DiscoveryCallback &cb)
+int AittDiscovery::AddDiscoveryCB(const std::string &protocol, const DiscoveryCallback &cb)
 {
     static std::atomic_int id(0);
     id++;
@@ -105,7 +113,7 @@ void AittDiscovery::DiscoveryMessageCallback(MSG *mq, const std::string &topic, 
 
     if (msg == nullptr) {
         for (const auto &node : discovery->callbacks) {
-            std::pair<AittProtocol, DiscoveryCallback> cb_info = node.second;
+            std::pair<std::string, DiscoveryCallback> cb_info = node.second;
             cb_info.second(clientId, WILL_LEAVE_NETWORK, nullptr, 0);
         }
         return;
@@ -123,8 +131,8 @@ void AittDiscovery::DiscoveryMessageCallback(MSG *mq, const std::string &topic, 
 
         auto blob = map[key].AsBlob();
         for (const auto &node : discovery->callbacks) {
-            std::pair<AittProtocol, DiscoveryCallback> cb_info = node.second;
-            if (cb_info.first == discovery->GetProtocol(key)) {
+            std::pair<std::string, DiscoveryCallback> cb_info = node.second;
+            if (cb_info.first == key) {
                 cb_info.second(clientId, status, blob.data(), blob.size());
             }
         }
@@ -138,8 +146,8 @@ void AittDiscovery::PublishDiscoveryMsg()
     fbb.Map([this, &fbb]() {
         fbb.String("status", JOIN_NETWORK);
 
-        for (const std::pair<const AittProtocol, const DiscoveryBlob &> &node : discovery_map) {
-            fbb.Key(GetProtocolStr(node.first));
+        for (const std::pair<const std::string &, const DiscoveryBlob &> &node : discovery_map) {
+            fbb.Key(node.first);
             fbb.Blob(node.second.data.get(), node.second.len);
         }
     });
@@ -149,41 +157,6 @@ void AittDiscovery::PublishDiscoveryMsg()
     auto buf = fbb.GetBuffer();
     discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, buf.data(), buf.size(), AITT_QOS_EXACTLY_ONCE,
           true);
-}
-
-const char *AittDiscovery::GetProtocolStr(AittProtocol protocol)
-{
-    switch (protocol) {
-    case AITT_TYPE_MQTT:
-        return "mqtt";
-    case AITT_TYPE_TCP:
-        return "tcp";
-    case AITT_TYPE_TCP_SECURE:
-        return "tcp_secure";
-    case AITT_TYPE_WEBRTC:
-        return "webrtc";
-    default:
-        ERR("Unknown protocol(%d)", protocol);
-    }
-
-    return nullptr;
-}
-
-AittProtocol AittDiscovery::GetProtocol(const std::string &protocol_str)
-{
-    if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_MQTT)))
-        return AITT_TYPE_MQTT;
-
-    if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_TCP)))
-        return AITT_TYPE_TCP;
-
-    if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_TCP_SECURE)))
-        return AITT_TYPE_TCP_SECURE;
-
-    if (STR_EQ == protocol_str.compare(GetProtocolStr(AITT_TYPE_WEBRTC)))
-        return AITT_TYPE_WEBRTC;
-
-    return AITT_TYPE_UNKNOWN;
 }
 
 AittDiscovery::DiscoveryBlob::DiscoveryBlob(const void *msg, size_t length)

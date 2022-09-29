@@ -15,8 +15,6 @@
  */
 #pragma once
 
-#include <flatbuffers/flexbuffers.h>
-
 #include <map>
 #include <memory>
 #include <mutex>
@@ -26,13 +24,12 @@
 
 #include "AITT.h"
 #include "AittDiscovery.h"
-#include "AittStreamTag.h"
+#include "AittStream.h"
 #include "MQ.h"
 #include "MainLoopHandler.h"
 #include "ModuleManager.h"
 
 namespace aitt {
-
 class AITT::Impl {
   public:
     explicit Impl(AITT &parent, const std::string &id, const std::string &my_ip,
@@ -64,17 +61,9 @@ class AITT::Impl {
 
     void SendReply(MSG *msg, const void *data, const int datalen, bool end);
 
-    AittStreamID CreatePublishStream(const std::string &topic, AittProtocol protocol);
-    AittStreamID CreateSubscribeStream(const std::string &topic, AittProtocol protocol);
-    void DestroyStream(AittStreamID handle);
-    void SetStreamConfig(AittStreamID handle, const std::string &key, const std::string &value);
-    std::string GetStreamConfig(AittStreamID handle, const std::string &key);
-    void StartStream(AittStreamID handle);
-    void StopStream(AittStreamID handle);
-    void SetStreamStateCallback(AittStreamID handle, StreamStateCallback cb, void *user_data);
-    void UnsetStreamStateCallback(AittStreamID handle);
-    void SetStreamSinkCallback(AittStreamID handle, StreamSinkCallback cb, void *user_data);
-    void UnsetStreamSinkCallback(AittStreamID handle);
+    AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
+          AittStreamRole role);
+    void DestroyStream(AittStream *aitt_stream);
 
   private:
     using Blob = std::pair<const void *, int>;
@@ -89,15 +78,9 @@ class AITT::Impl {
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
 
-    void *SubscribeWebRtc(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
-          void *cbdata, AittQoS qos);
     void HandleTimeout(int timeout_ms, unsigned int &timeout_id, aitt::MainLoopHandler &sync_loop,
           bool &is_timeout);
-    void PublishWebRtc(const std::string &topic, const void *data, const size_t datalen,
-          AittQoS qos, bool retain);
     void UnsubscribeAll();
-    void DestroyAllStream(void);
-    void StreamInfoExist(StreamTag *tag);
     void ThreadMain(void);
 
     AITT &public_api;
@@ -108,8 +91,7 @@ class AITT::Impl {
     std::unique_ptr<MQ> mq;
     std::vector<SubscribeInfo *> subscribed_list;
     std::mutex subscribed_list_mutex_;
-    std::vector<StreamTag *> stream_list_;
-    std::mutex stream_list_mutex_;
+    std::vector<AittStreamModule *> in_use_streams;
 
     std::string id_;
     std::string mqtt_broker_ip_;

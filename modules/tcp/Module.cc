@@ -29,7 +29,7 @@ Module::Module(AittProtocol type, AittDiscovery &discovery, const std::string &m
 {
     aittThread = std::thread(&Module::ThreadMain, this);
 
-    discovery_cb = discovery.AddDiscoveryCB(type,
+    discovery_cb = discovery.AddDiscoveryCB(NAME[secure],
           std::bind(&Module::DiscoveryMessageCallback, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
     DBG("Discovery Callback : %p, %d", this, discovery_cb);
@@ -306,8 +306,7 @@ void Module::UpdateDiscoveryMsg()
     fbb.Finish();
 
     auto buf = fbb.GetBuffer();
-    discovery.UpdateDiscoveryMsg(secure ? AITT_TYPE_TCP_SECURE : AITT_TYPE_TCP, buf.data(),
-          buf.size());
+    discovery.UpdateDiscoveryMsg(NAME[secure], buf.data(), buf.size());
 }
 
 void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,

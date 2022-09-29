@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "AittDiscovery.h"
+#include "AittStreamModule.h"
 #include "AittTransport.h"
 #include "MQ.h"
 #include "NullTransport.h"
@@ -32,6 +33,8 @@ class ModuleManager {
     virtual ~ModuleManager() = default;
 
     AittTransport &Get(AittProtocol type);
+    AittStreamModule *NewStreamModule(AittStreamProtocol type, const std::string &topic,
+          AittStreamRole role);
     std::unique_ptr<MQ> NewCustomMQ(const std::string &id, const AittOption &option);
 
   private:
@@ -41,12 +44,12 @@ class ModuleManager {
     enum TransportType {
         TYPE_TCP,         //(0x1 << 1)
         TYPE_TCP_SECURE,  //(0x1 << 2)
-        TYPE_WEBRTC,      //(0x1 << 3)
         TYPE_TRANSPORT_MAX,
     };
 
     TransportType Convert(AittProtocol type);
-    std::string GetTransportFileName(TransportType type);
+    const char *GetTransportFileName(TransportType type);
+    const char *GetStreamFileName(AittStreamProtocol type);
     ModuleHandle OpenModule(const char *file);
     ModuleHandle OpenTransport(TransportType type);
     void LoadTransport(TransportType type);
@@ -55,6 +58,7 @@ class ModuleManager {
     AittDiscovery &discovery;
     std::vector<ModuleHandle> transport_handles;
     std::unique_ptr<AittTransport> transports[TYPE_TRANSPORT_MAX];
+    std::vector<ModuleHandle> stream_handles;
     ModuleHandle custom_mqtt_handle;
     NullTransport null_transport;
 };

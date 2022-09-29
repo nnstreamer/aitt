@@ -35,9 +35,10 @@ class AittDiscovery {
     void SetMQ(std::unique_ptr<MQ> mq);
     void Start(const std::string &host, int port, const std::string &username,
           const std::string &password);
+    void Restart();
     void Stop();
-    void UpdateDiscoveryMsg(AittProtocol protocol, const void *msg, size_t length);
-    int AddDiscoveryCB(AittProtocol protocol, const DiscoveryCallback &cb);
+    void UpdateDiscoveryMsg(const std::string &protocol, const void *msg, size_t length);
+    int AddDiscoveryCB(const std::string &protocol, const DiscoveryCallback &cb);
     void RemoveDiscoveryCB(int callback_id);
     bool CompareTopic(const std::string &left, const std::string &right);
 
@@ -55,14 +56,12 @@ class AittDiscovery {
     static void DiscoveryMessageCallback(MSG *mq, const std::string &topic, const void *msg,
           const int szmsg, void *user_data);
     void PublishDiscoveryMsg();
-    const char *GetProtocolStr(AittProtocol protocol);
-    AittProtocol GetProtocol(const std::string &protocol_str);
 
     std::string id_;
     std::unique_ptr<MQ> discovery_mq;
     void *callback_handle;
-    std::map<AittProtocol, DiscoveryBlob> discovery_map;
-    std::map<int, std::pair<AittProtocol, DiscoveryCallback>> callbacks;
+    std::map<std::string, DiscoveryBlob> discovery_map;
+    std::map<int, std::pair<std::string, DiscoveryCallback>> callbacks;
 };
 
 // Discovery Message (flexbuffers)

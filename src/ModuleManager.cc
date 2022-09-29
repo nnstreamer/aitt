@@ -30,6 +30,10 @@ ModuleManager::ModuleManager(const std::string &my_ip, AittDiscovery &d)
         transport_handles.push_back(ModuleHandle(nullptr, nullptr));
         LoadTransport(static_cast<TransportType>(i));
     }
+
+    for (int i = AITT_STREAM_TYPE_WEBRTC; i < AITT_STREAM_TYPE_MAX; ++i) {
+        stream_handles.push_back(ModuleHandle(nullptr, nullptr));
+    }
 }
 
 AittTransport &ModuleManager::Get(AittProtocol protocol)
@@ -49,8 +53,6 @@ ModuleManager::TransportType ModuleManager::Convert(AittProtocol type)
         return TYPE_TCP;
     case AITT_TYPE_TCP_SECURE:
         return TYPE_TCP_SECURE;
-    case AITT_TYPE_WEBRTC:
-        return TYPE_WEBRTC;
 
     case AITT_TYPE_MQTT:
     default:
@@ -60,20 +62,33 @@ ModuleManager::TransportType ModuleManager::Convert(AittProtocol type)
     return TYPE_TRANSPORT_MAX;
 }
 
-std::string ModuleManager::GetTransportFileName(TransportType type)
+const char *ModuleManager::GetTransportFileName(TransportType type)
 {
     switch (type) {
     case TYPE_TCP:
     case TYPE_TCP_SECURE:
         return "libaitt-transport-tcp.so";
-    case TYPE_WEBRTC:
-        return "libaitt-transport-webrtc.so";
     default:
         ERR("Unknown Type(%d)", type);
         break;
     }
 
-    return std::string("Unknown");
+    return "Unknown";
+}
+
+const char *ModuleManager::GetStreamFileName(AittStreamProtocol type)
+{
+    switch (type) {
+    case AITT_STREAM_TYPE_WEBRTC:
+        return "libaitt-stream-webrtc.so";
+    case AITT_STREAM_TYPE_RTSP:
+        return "libaitt-stream-rtsp.so";
+    default:
+        ERR("Unknown Type(%d)", type);
+        break;
+    }
+
+    return "Unknown";
 }
 
 ModuleManager::ModuleHandle ModuleManager::OpenModule(const char *file)
@@ -82,8 +97,10 @@ ModuleManager::ModuleHandle ModuleManager::OpenModule(const char *file)
         if (dlclose(handle))
             ERR("dlclose: %s", dlerror());
     });
-    if (handle == nullptr)
+    if (handle == nullptr) {
         ERR("dlopen(%s): %s", file, dlerror());
+        throw AittException(AittException::SYSTEM_ERR);
+    }
 
     return handle;
 }
@@ -93,17 +110,17 @@ ModuleManager::ModuleHandle ModuleManager::OpenTransport(TransportType type)
     if (TYPE_TCP_SECURE == type)
         type = TYPE_TCP;
 
-    std::string filename = GetTransportFileName(type);
-    ModuleHandle handle = OpenModule(filename.c_str());
+    ModuleHandle handle = OpenModule(GetTransportFileName(type));
 
     return handle;
 }
 
 void ModuleManager::LoadTransport(TransportType type)
 {
-    transport_handles[type] = OpenTransport(type);
-    if (transport_handles[type] == nullptr) {
-        ERR("OpenTransport(%d) Fail", type);
+    try {
+        transport_handles[type] = OpenTransport(type);
+    } catch (AittException &e) {
+        ERR("OpenTransport(%d) Fail(%s)", type, e.what());
         return;
     }
 
@@ -122,9 +139,33 @@ void ModuleManager::LoadTransport(TransportType type)
     }
 }
 
+AittStreamModule *ModuleManager::NewStreamModule(AittStreamProtocol type, const std::string &topic,
+      AittStreamRole role)
+{
+    if (nullptr == stream_handles[type])
+        stream_handles[type] = OpenModule(GetStreamFileName(type));
+
+    AittStreamModule::ModuleEntry get_instance_fn = reinterpret_cast<AittStreamModule::ModuleEntry>(
+          dlsym(stream_handles[type].get(), AittStreamModule::MODULE_ENTRY_NAME));
+    if (get_instance_fn == nullptr) {
+        ERR("dlsym: %s", dlerror());
+        throw AittException(AittException::SYSTEM_ERR);
+    }
+
+    AittStreamModule *instance(
+          static_cast<AittStreamModule *>(get_instance_fn(discovery, topic, role)));
+    if (instance == nullptr) {
+        ERR("get_instance_fn(AittStreamModule) Fail");
+        throw AittException(AittException::SYSTEM_ERR);
+    }
+
+    return instance;
+}
+
 std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const AittOption &option)
 {
-    custom_mqtt_handle = OpenModule("libaitt-st-broker.so");
+    if (nullptr == custom_mqtt_handle)
+        custom_mqtt_handle = OpenModule("libaitt-st-broker.so");
 
     MQ::ModuleEntry get_instance_fn =
           reinterpret_cast<MQ::ModuleEntry>(dlsym(custom_mqtt_handle.get(), MQ::MODULE_ENTRY_NAME));

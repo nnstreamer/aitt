@@ -234,6 +234,10 @@ int TCP::RecvSizedDataNormal(void **data, size_t &data_size)
     if (data_len == UINT32_MAX)
         return HandleZeroMsg(data, data_size);
 
+    if (AITT_MESSAGE_MAX < data_len) {
+        ERR("Invalid Size(%zu)", data_len);
+        return -1;
+    }
     void *data_buf = malloc(data_len);
     Recv(data_buf, data_len);
     data_size = data_len;

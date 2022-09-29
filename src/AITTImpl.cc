@@ -15,8 +15,7 @@
  */
 #include "AITTImpl.h"
 
-#include <flatbuffers/flexbuffers.h>
-
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <functional>
@@ -111,7 +110,10 @@ void AITT::Impl::Connect(const std::string &host, int port, const std::string &u
 void AITT::Impl::Disconnect(void)
 {
     UnsubscribeAll();
-    DestroyAllStream();
+
+    for (auto stream : in_use_streams)
+        delete stream;
+    in_use_streams.clear();
 
     mqtt_broker_ip_.clear();
     mqtt_broker_port_ = -1;
@@ -142,26 +144,6 @@ void AITT::Impl::UnsubscribeAll()
         delete subscribe_info;
     }
     subscribed_list.clear();
-}
-void AITT::Impl::DestroyAllStream(void)
-{
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    for (auto tag : stream_list_) {
-        if (!tag)
-            continue;
-        //TODO call stream transport
-        delete tag;
-    }
-    stream_list_.clear();
-}
-
-void AITT::Impl::StreamInfoExist(StreamTag *tag)
-{
-    if (std::find(stream_list_.begin(), stream_list_.end(), tag) == stream_list_.end()) {
-        ERR("Unknown stream id(%p)", tag);
-        throw std::runtime_error("stream id");
-    }
 }
 
 void AITT::Impl::ConfigureTransportModule(const std::string &key, const std::string &value,
@@ -253,7 +235,7 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     auto it = std::find(subscribed_list.begin(), subscribed_list.end(), info);
     if (it == subscribed_list.end()) {
         ERR("Unknown subscribe_id(%p)", subscribe_id);
-        throw std::runtime_error("subscribe_id");
+        throw AittException(AittException::NO_DATA_ERR);
     }
 
     void *user_data = nullptr;
@@ -294,7 +276,7 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
-                  } catch (std::runtime_error &e) {
+                  } catch (AittException &e) {
                       ERR("Unsubscribe() Fail(%s)", e.what());
                   }
               }
@@ -329,7 +311,7 @@ int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data,
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
-                  } catch (std::runtime_error &e) {
+                  } catch (AittException &e) {
                       ERR("Unsubscribe() Fail(%s)", e.what());
                   }
                   sync_loop.Quit();
@@ -406,153 +388,30 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
                 user_data, qos);
 }
 
-AittStreamID AITT::Impl::CreatePublishStream(const std::string &topic, AittProtocol protocol)
+AittStream *AITT::Impl::CreateStream(AittStreamProtocol type, const std::string &topic,
+      AittStreamRole role)
 {
-   //TODO call stream transport
-    auto info = new StreamTag(topic, protocol, AITT_STREAM_ROLE_SRC, nullptr);
-    // TODO: be prepared when there's memory failure
-    {
-        std::unique_lock<std::mutex> lock(stream_list_mutex_);
-        stream_list_.push_back(info);
+    AittStreamModule *stream = nullptr;
+    try {
+        stream = modules.NewStreamModule(type, topic, role);
+        in_use_streams.push_back(stream);
+    } catch (std::exception &e) {
+        ERR("StreamHandler() Fail(%s)", e.what());
     }
+    discovery.Restart();
 
-    INFO("Stream topic(%s) : %p", topic.c_str(), info);
-    return reinterpret_cast<AittStreamID>(info);
+    return stream;
 }
 
-AittStreamID AITT::Impl::CreateSubscribeStream(const std::string &topic,
-      AittProtocol protocol)
+void AITT::Impl::DestroyStream(AittStream *aitt_stream)
 {
-    //TODO call stream transport
-    auto info = new StreamTag(topic, protocol, AITT_STREAM_ROLE_SINK, nullptr);
-    // TODO: be prepared when there's memory failure
-    {
-        std::unique_lock<std::mutex> lock(stream_list_mutex_);
-        stream_list_.push_back(info);
+    auto it = std::find(in_use_streams.begin(), in_use_streams.end(), aitt_stream);
+    if (it == in_use_streams.end()) {
+        ERR("Unknown Stream(%p)", aitt_stream);
+        return;
     }
-
-    INFO("Stream topic(%s) : %p", topic.c_str(), info);
-    return reinterpret_cast<AittStreamID>(info);
-}
-
-void AITT::Impl::DestroyStream(AittStreamID handle)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *info = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    auto it = std::find(stream_list_.begin(), stream_list_.end(), info);
-    if (it == stream_list_.end()) {
-        ERR("Unknown stream id(%p)", handle);
-        throw std::runtime_error("stream ID");
-    }
-
-    //TODO call stream transport
-
-    stream_list_.erase(it);
-    delete *it;
-}
-
-void AITT::Impl::SetStreamConfig(AittStreamID handle, const std::string &key,
-      const std::string &value)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-std::string AITT::Impl::GetStreamConfig(AittStreamID handle, const std::string &key)
-{
-    std::string value;
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-
-    return value;
-}
-
-void AITT::Impl::StartStream(AittStreamID handle)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-void AITT::Impl::StopStream(AittStreamID handle)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-void AITT::Impl::SetStreamStateCallback(AittStreamID handle, StreamStateCallback cb,
-      void *user_data)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-void AITT::Impl::UnsetStreamStateCallback(AittStreamID handle)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-void AITT::Impl::SetStreamSinkCallback(AittStreamID handle, StreamSinkCallback cb, void *user_data)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
-}
-
-void AITT::Impl::UnsetStreamSinkCallback(AittStreamID handle)
-{
-    INFO("stream id : %p", handle);
-    StreamTag *tag = reinterpret_cast<StreamTag *>(handle);
-
-    std::unique_lock<std::mutex> lock(stream_list_mutex_);
-
-    StreamInfoExist(tag);
-
-    //TODO call stream transport
+    in_use_streams.erase(it);
+    delete aitt_stream;
 }
 
 }  // namespace aitt

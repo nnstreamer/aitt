@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2022 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,31 @@
  */
 #pragma once
 
+#include <AittDiscovery.h>
+#include <AittStream.h>
 #include <AittTypes.h>
 
+#include <functional>
 #include <string>
+
+#define AITT_STREAM_NEW aitt_stream_new
+#define TO_STR(s) #s
+#define DEFINE_TO_STR(x) TO_STR(x)
+
 namespace aitt {
 
-class StreamTag {
+class AittStreamModule : public AittStream {
   public:
-    explicit StreamTag(const std::string &topic, AittProtocol protocol, AittStreamRole role,
-          void *handle)
-          : topic_(topic), protocol_(protocol), role_(role), handle_(handle){};
-    std::string topic_;
-    AittProtocol protocol_;
-    AittStreamRole role_;
-    void *handle_;
+    typedef void *(
+          *ModuleEntry)(AittDiscovery &discovery, const std::string &topic, AittStreamRole role);
+
+    static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_STREAM_NEW);
+
+    AittStreamModule() = default;
+    virtual ~AittStreamModule(void) = default;
 };
 
 }  // namespace aitt
+
+#undef TO_STR
+#undef DEFINE_TO_STR

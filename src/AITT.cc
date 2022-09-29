@@ -129,61 +129,15 @@ void AITT::SendReply(MSG *msg, const void *data, size_t datalen, bool end)
     return pImpl->SendReply(msg, data, datalen, end);
 }
 
-AittStreamID AITT::CreatePublishStream(const std::string &topic, AittProtocol protocol)
+AittStream *AITT::CreateStream(AittStreamProtocol type, const std::string &topic,
+      AittStreamRole role)
 {
-    return pImpl->CreatePublishStream(topic, protocol);
+    return pImpl->CreateStream(type, topic, role);
 }
 
-AittStreamID AITT::CreateSubscribeStream(const std::string &topic, AittProtocol protocol)
+void AITT::DestroyStream(AittStream *aitt_stream)
 {
-    return pImpl->CreateSubscribeStream(topic, protocol);
-}
-
-void AITT::DestroyStream(AittStreamID handle)
-{
-    return pImpl->DestroyStream(handle);
-}
-
-void AITT::SetStreamConfig(AittStreamID handle, const std::string &key, const std::string &value)
-{
-    return pImpl->SetStreamConfig(handle, key, value);
-}
-
-std::string AITT::GetStreamConfig(AittStreamID handle, const std::string &key)
-{
-    return pImpl->GetStreamConfig(handle, key);
-}
-
-void AITT::StartStream(AittStreamID handle)
-{
-    return pImpl->StartStream(handle);
-}
-
-void AITT::StopStream(AittStreamID handle)
-{
-    return pImpl->StopStream(handle);
-}
-
-void AITT::SetStreamStateCallback(AittStreamID handle, StreamStateCallback cb,
-      void *user_data)
-{
-    return pImpl->SetStreamStateCallback(handle, cb, user_data);
-}
-
-void AITT::UnsetStreamStateCallback(AittStreamID handle)
-{
-    return pImpl->UnsetStreamStateCallback(handle);
-}
-
-void AITT::SetStreamSinkCallback(AittStreamID handle, StreamSinkCallback cb,
-      void *user_data)
-{
-    return pImpl->SetStreamSinkCallback(handle, cb, user_data);
-}
-
-void AITT::UnsetStreamSinkCallback(AittStreamID handle)
-{
-    return pImpl->UnsetStreamSinkCallback(handle);
+    return pImpl->DestroyStream(aitt_stream);
 }
 
 }  // namespace aitt
