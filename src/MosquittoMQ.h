@@ -48,6 +48,7 @@ class MosquittoMQ : public MQ {
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0);
     void *Unsubscribe(void *handle);
+    bool CompareTopic(const std::string &left, const std::string &right);
 
   private:
     struct SubscribeData {
@@ -63,6 +64,7 @@ class MosquittoMQ : public MQ {
           const mosquitto_property *props);
     static void MessageCallback(mosquitto *, void *, const mosquitto_message *,
           const mosquitto_property *);
+    void MessageCB(const mosquitto_message *msg, const mosquitto_property *props);
     void InvokeCallback(SubscribeData *subscriber, const mosquitto_message *msg,
           const mosquitto_property *props);
 

@@ -55,6 +55,7 @@ class MQ {
     virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0) = 0;
     virtual void *Unsubscribe(void *handle) = 0;
+    virtual bool CompareTopic(const std::string &left, const std::string &right) = 0;
 };
 
 }  // namespace aitt

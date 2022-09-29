@@ -26,7 +26,6 @@
 
 #include "AittException.h"
 #include "AittTypes.h"
-#include "AittUtil.h"
 #include "aitt_internal.h"
 
 namespace aitt {
@@ -179,30 +178,33 @@ void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_
     RET_IF(obj == nullptr);
     MosquittoMQ *mq = static_cast<MosquittoMQ *>(obj);
 
-    std::lock_guard<std::recursive_mutex> auto_lock(mq->callback_lock);
-    mq->subscribers_iterating = true;
-    mq->subscriber_iterator = mq->subscribers.begin();
-    while (mq->subscriber_iterator != mq->subscribers.end()) {
-        auto subscribe_data = *(mq->subscriber_iterator);
+    mq->MessageCB(msg, props);
+}
+
+void MosquittoMQ::MessageCB(const mosquitto_message *msg, const mosquitto_property *props)
+{
+    std::lock_guard<std::recursive_mutex> auto_lock(callback_lock);
+    subscribers_iterating = true;
+    subscriber_iterator = subscribers.begin();
+    while (subscriber_iterator != subscribers.end()) {
+        auto subscribe_data = *(subscriber_iterator);
         if (nullptr == subscribe_data) {
             ERR("Invalid subscribe data");
-            mq->subscriber_iterator++;
+            ++subscriber_iterator;
             continue;
         }
 
-        bool result = AittUtil::CompareTopic(subscribe_data->topic.c_str(), msg->topic);
-        if (result)
-            mq->InvokeCallback(*mq->subscriber_iterator, msg, props);
+        if (CompareTopic(subscribe_data->topic.c_str(), msg->topic))
+            InvokeCallback(*subscriber_iterator, msg, props);
 
-        if (!mq->subscriber_iterator_updated)
-            mq->subscriber_iterator++;
+        if (!subscriber_iterator_updated)
+            ++subscriber_iterator;
         else
-            mq->subscriber_iterator_updated = false;
+            subscriber_iterator_updated = false;
     }
-    mq->subscribers_iterating = false;
-    mq->subscribers.insert(mq->subscribers.end(), mq->new_subscribers.begin(),
-          mq->new_subscribers.end());
-    mq->new_subscribers.clear();
+    subscribers_iterating = false;
+    subscribers.insert(subscribers.end(), new_subscribers.begin(), new_subscribers.end());
+    new_subscribers.clear();
 }
 
 void MosquittoMQ::InvokeCallback(SubscribeData *subscriber, const mosquitto_message *msg,
@@ -384,6 +386,18 @@ void *MosquittoMQ::Unsubscribe(void *sub_handle)
     }
 
     return user_data;
+}
+
+bool MosquittoMQ::CompareTopic(const std::string &left, const std::string &right)
+{
+    bool result = false;
+    int ret = mosquitto_topic_matches_sub(left.c_str(), right.c_str(), &result);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_topic_matches_sub(%s, %s) Fail(%s)", left.c_str(), right.c_str(),
+              mosquitto_strerror(ret));
+        return false;
+    }
+    return result;
 }
 
 MosquittoMQ::SubscribeData::SubscribeData(const std::string &in_topic,

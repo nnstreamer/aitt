@@ -15,7 +15,6 @@
  */
 #include "Module.h"
 
-#include <AittUtil.h>
 #include <flatbuffers/flexbuffers.h>
 #include <unistd.h>
 
@@ -80,7 +79,7 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
     std::lock_guard<std::mutex> auto_lock_publish(publishTableLock);
     for (PublishMap::iterator it = publishTable.begin(); it != publishTable.end(); ++it) {
         // NOTE: Find entries that have matched with the given topic
-        if (!aitt::AittUtil::CompareTopic(it->first, topic))
+        if (!discovery.CompareTopic(it->first, topic))
             continue;
 
         for (HostMap::iterator hostIt = it->second.begin(); hostIt != it->second.end(); ++hostIt) {

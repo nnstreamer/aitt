@@ -39,6 +39,7 @@ class AittDiscovery {
     void UpdateDiscoveryMsg(AittProtocol protocol, const void *msg, size_t length);
     int AddDiscoveryCB(AittProtocol protocol, const DiscoveryCallback &cb);
     void RemoveDiscoveryCB(int callback_id);
+    bool CompareTopic(const std::string &left, const std::string &right);
 
   private:
     struct DiscoveryBlob {

@@ -84,6 +84,11 @@ void AittDiscovery::RemoveDiscoveryCB(int callback_id)
     callbacks.erase(it);
 }
 
+bool AittDiscovery::CompareTopic(const std::string &left, const std::string &right)
+{
+    return discovery_mq->CompareTopic(left, right);
+}
+
 void AittDiscovery::DiscoveryMessageCallback(MSG *mq, const std::string &topic, const void *msg,
       const int szmsg, void *user_data)
 {

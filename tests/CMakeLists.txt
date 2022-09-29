@@ -3,11 +3,11 @@ SET(AITT_UT ${PROJECT_NAME}_ut)
 ADD_DEFINITIONS(-DLOG_STDOUT)
 
 PKG_CHECK_MODULES(UT_NEEDS REQUIRED gmock_main)
-INCLUDE_DIRECTORIES(${UT_NEEDS_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${UT_NEEDS_INCLUDE_DIRS} ../src)
 LINK_DIRECTORIES(${UT_NEEDS_LIBRARY_DIRS})
 
 ###########################################################################
-SET(AITT_UT_SRC AITT_test.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc AITT_TCP_test.cc MosquittoMQ_test.cc)
+SET(AITT_UT_SRC AITT_test.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc AITT_TCP_test.cc)
 ADD_EXECUTABLE(${AITT_UT} ${AITT_UT_SRC})
 TARGET_LINK_LIBRARIES(${AITT_UT} Threads::Threads ${UT_NEEDS_LIBRARIES} ${PROJECT_NAME})
 
@@ -31,8 +31,8 @@ INSTALL(TARGETS ${AITT_UT}_manual DESTINATION ${AITT_TEST_BINDIR})
 
 ###########################################################################
 AUX_SOURCE_DIRECTORY(../mock MOCK_SRC)
-ADD_EXECUTABLE(${AITT_UT}_mq MosquittoMQ_mocktest.cc ${MOCK_SRC})
-TARGET_LINK_LIBRARIES(${AITT_UT}_mq ${UT_NEEDS_LIBRARIES} Threads::Threads ${AITT_COMMON})
+ADD_EXECUTABLE(${AITT_UT}_mq MosquittoMQ_mocktest.cc ${MOCK_SRC} $<TARGET_OBJECTS:INTERNAL_OBJ>)
+TARGET_LINK_LIBRARIES(${AITT_UT}_mq ${UT_NEEDS_LIBRARIES} Threads::Threads ${CMAKE_DL_LIBS} ${AITT_COMMON})
 TARGET_INCLUDE_DIRECTORIES(${AITT_UT}_mq PRIVATE ../mock)
 INSTALL(TARGETS ${AITT_UT}_mq DESTINATION ${AITT_TEST_BINDIR})
 
@@ -46,19 +46,18 @@ ADD_TEST(
 )
 
 ###########################################################################
-ADD_EXECUTABLE(${AITT_UT}_module ModuleLoader_test.cc $<TARGET_OBJECTS:MODULE_MANAGER>)
-TARGET_LINK_LIBRARIES(${AITT_UT}_module ${UT_NEEDS_LIBRARIES} ${AITT_NEEDS_LIBRARIES} ${CMAKE_DL_LIBS} ${AITT_COMMON})
-TARGET_INCLUDE_DIRECTORIES(${AITT_UT}_module PRIVATE ../src)
+ADD_EXECUTABLE(${AITT_UT}_local ModuleLoader_test.cc MosquittoMQ_test.cc $<TARGET_OBJECTS:INTERNAL_OBJ>)
+TARGET_LINK_LIBRARIES(${AITT_UT}_local ${UT_NEEDS_LIBRARIES} ${AITT_NEEDS_LIBRARIES} ${CMAKE_DL_LIBS} ${AITT_COMMON})
 
-INSTALL(TARGETS ${AITT_UT}_module DESTINATION ${AITT_TEST_BINDIR})
+INSTALL(TARGETS ${AITT_UT}_local DESTINATION ${AITT_TEST_BINDIR})
 
 ADD_TEST(
     NAME
-        ${AITT_UT}_module
+        ${AITT_UT}_local
     COMMAND
         ${CMAKE_COMMAND} -E env
-        LD_LIBRARY_PATH=../modules/webrtc/:../modules/tcp/:../:../common/:$ENV{LD_LIBRARY_PATH}
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_module --gtest_filter=*_Anytime
+        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_local --gtest_filter=*_Anytime
 )
 ###########################################################################
 ADD_EXECUTABLE(${AITT_UT}_stream AITT_Stream_test.cc)
