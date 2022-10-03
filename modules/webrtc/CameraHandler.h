@@ -41,7 +41,6 @@ class CameraHandler {
   public:
     using MediaPacketPreviewCallback = std::function<void(media_packet_h, void *)>;
 
-    CameraHandler();
     ~CameraHandler();
     int Init(const MediaPacketPreviewCallback &preview_cb, void *user_data);
     void Deinit(void);

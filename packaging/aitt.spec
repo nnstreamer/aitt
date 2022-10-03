@@ -101,6 +101,7 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 %files plugins
 %manifest %{name}.manifest
 %{_libdir}/lib%{name}-transport*.so*
+%{_libdir}/lib%{name}-stream*.so*
 %license LICENSE.APLv2
 
 %if 0%{test}

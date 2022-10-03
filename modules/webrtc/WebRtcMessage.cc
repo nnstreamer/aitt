@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+#include "WebRtcMessage.h"
+
+#include <flatbuffers/flexbuffers.h>
 #include <json-glib/json-glib.h>
 
 #include "aitt_internal.h"
-
-#include "WebRtcMessage.h"
 
 WebRtcMessage::Type WebRtcMessage::getMessageType(const std::string &message)
 {
@@ -50,4 +51,59 @@ WebRtcMessage::Type WebRtcMessage::getMessageType(const std::string &message)
 
     g_object_unref(parser);
     return type;
+}
+
+std::vector<uint8_t> WebRtcMessage::GenerateDiscoveryMessage(const std::string &topic, bool is_src,
+      const std::string &sdp, const std::vector<std::string> &ice_candidates)
+{
+    std::vector<uint8_t> message;
+
+    flexbuffers::Builder fbb;
+    fbb.Map([=, &fbb]() {
+        fbb.String("topic", topic);
+        fbb.Bool("is_src", is_src);
+        fbb.String("sdp", sdp);
+        fbb.Vector("ice_candidates", [&]() {
+            for (const auto &candidate : ice_candidates) {
+                fbb.String(candidate);
+            }
+        });
+    });
+    fbb.Finish();
+
+    message = fbb.GetBuffer();
+
+    return message;
+}
+
+bool WebRtcMessage::IsValidDiscoveryMessage(const std::vector<uint8_t> &discovery_message)
+{
+    if (!flexbuffers::GetRoot(discovery_message).IsMap())
+        return false;
+
+    auto discovery_info = flexbuffers::GetRoot(discovery_message).AsMap();
+    bool topic_exists{discovery_info["topic"].IsString()};
+    bool is_source_exists{discovery_info["is_src"].IsBool()};
+    bool sdp_exists{discovery_info["sdp"].IsString()};
+    bool ice_candidates_exists{discovery_info["ice_candidates"].IsVector()};
+
+    return topic_exists && is_source_exists && sdp_exists && ice_candidates_exists;
+}
+
+WebRtcMessage::DiscoveryInfo WebRtcMessage::ParseDiscoveryMessage(const std::vector<uint8_t> &discovery_message)
+{
+    WebRtcMessage::DiscoveryInfo info;
+    if (!IsValidDiscoveryMessage(discovery_message))
+        return info;
+
+    auto discovery_info_map = flexbuffers::GetRoot(discovery_message).AsMap();
+    info.topic = discovery_info_map["topic"].AsString().str();
+    info.is_src = discovery_info_map["is_src"].AsBool();
+    info.sdp = discovery_info_map["sdp"].AsString().str();
+    auto ice_candidates_info = discovery_info_map["ice_candidates"].AsVector();
+    for (size_t idx = 0; idx < ice_candidates_info.size(); ++idx) {
+        info.ice_candidates.push_back(ice_candidates_info[idx].AsString().str());
+    }
+
+    return info;
 }

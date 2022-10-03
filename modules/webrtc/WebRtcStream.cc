@@ -16,9 +16,10 @@
 
 #include "WebRtcStream.h"
 
+#include "WebRtcMessage.h"
 #include "aitt_internal.h"
 
-WebRtcStream::WebRtcStream() : webrtc_handle_(nullptr), is_source_overflow_(false), source_id_(0)
+WebRtcStream::WebRtcStream() : webrtc_handle_(nullptr), channel_(nullptr), source_id_(0)
 {
 }
 
@@ -40,6 +41,19 @@ bool WebRtcStream::Create(bool is_source, bool need_display)
         ERR("Failed to create webrtc handle");
         return false;
     }
+
+    if (!is_source) {
+        auto add_source_ret =
+              webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_NULL, &source_id_);
+        if (add_source_ret != WEBRTC_ERROR_NONE)
+            ERR("Failed to add media source");
+        auto set_transceiver_codec_ret = webrtc_media_source_set_transceiver_codec(webrtc_handle_,
+              source_id_, WEBRTC_MEDIA_TYPE_VIDEO, WEBRTC_TRANSCEIVER_CODEC_VP8);
+        if (set_transceiver_codec_ret != WEBRTC_ERROR_NONE)
+            ERR("Failed to set transceiver codec");
+    }
+
+    webrtc_create_data_channel(webrtc_handle_, "label", nullptr, &channel_);
     AttachSignals(is_source, need_display);
 
     return true;
@@ -55,6 +69,10 @@ void WebRtcStream::Destroy(void)
     if (stop_ret != WEBRTC_ERROR_NONE)
         ERR("Failed to stop webrtc handle");
 
+    DetachSignals();
+    auto destroy_channel_ret = webrtc_destroy_data_channel(channel_);
+    if (destroy_channel_ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to destroy webrtc channel");
     auto ret = webrtc_destroy(webrtc_handle_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to destroy webrtc handle");
@@ -67,8 +85,6 @@ bool WebRtcStream::Start(void)
         ERR("WebRTC handle is not created");
         return false;
     }
-    if (camera_handler_)
-        camera_handler_->StartPreview();
 
     auto ret = webrtc_start(webrtc_handle_);
     if (ret != WEBRTC_ERROR_NONE)
@@ -83,8 +99,6 @@ bool WebRtcStream::Stop(void)
         ERR("WebRTC handle is not created");
         return false;
     }
-    if (camera_handler_)
-        camera_handler_->StopPreview();
 
     auto ret = webrtc_stop(webrtc_handle_);
     if (ret != WEBRTC_ERROR_NONE)
@@ -113,45 +127,6 @@ bool WebRtcStream::AttachCameraSource(void)
     return ret == WEBRTC_ERROR_NONE;
 }
 
-bool WebRtcStream::AttachCameraPreviewSource(void)
-{
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
-    if (source_id_) {
-        ERR("source already attached");
-        return false;
-    }
-
-    camera_handler_ = std::unique_ptr<CameraHandler>(new CameraHandler());
-    camera_handler_->Init(OnMediaPacketPreview, this);
-
-    auto ret = webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET,
-          &source_id_);
-    if (ret != WEBRTC_ERROR_NONE)
-        ERR("Failed to add media source");
-
-    return ret == WEBRTC_ERROR_NONE;
-}
-
-void WebRtcStream::OnMediaPacketPreview(media_packet_h media_packet, void *user_data)
-{
-    ERR("%s", __func__);
-    auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
-    RET_IF(webrtc_stream == nullptr);
-
-    if (webrtc_stream->is_source_overflow_) {
-        return;
-    }
-    if (webrtc_media_packet_source_push_packet(webrtc_stream->webrtc_handle_,
-              webrtc_stream->source_id_, media_packet)
-          != WEBRTC_ERROR_NONE) {
-        media_packet_destroy(media_packet);
-    }
-}
-
 bool WebRtcStream::DetachCameraSource(void)
 {
     if (!webrtc_handle_) {
@@ -164,28 +139,11 @@ bool WebRtcStream::DetachCameraSource(void)
         return false;
     }
 
-    camera_handler_ = nullptr;
-
     auto ret = webrtc_remove_media_source(webrtc_handle_, source_id_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to remove media source");
 
     return ret == WEBRTC_ERROR_NONE;
-}
-
-void WebRtcStream::SetDisplayObject(unsigned int id, void *object)
-{
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return;
-    }
-
-    if (!object) {
-        ERR("Object is not specified");
-        return;
-    }
-
-    webrtc_set_display(webrtc_handle_, id, WEBRTC_DISPLAY_TYPE_EVAS, object);
 }
 
 bool WebRtcStream::CreateOfferAsync(std::function<void(std::string)> on_created_cb)
@@ -290,6 +248,20 @@ bool WebRtcStream::AddIceCandidateFromMessage(const std::string &ice_message)
     return ret == WEBRTC_ERROR_NONE;
 }
 
+bool WebRtcStream::AddDiscoveryInformation(const std::vector<uint8_t> &discovery_message)
+{
+    ERR("%s", __func__);
+
+    auto info = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
+    if (!SetRemoteDescription(info.sdp))
+        return false;
+
+    for (const auto &ice_candidate : info.ice_candidates)
+        AddIceCandidateFromMessage(ice_candidate);
+
+    return true;
+}
+
 void WebRtcStream::AttachSignals(bool is_source, bool need_display)
 {
     if (!webrtc_handle_) {
@@ -305,6 +277,10 @@ void WebRtcStream::AttachSignals(bool is_source, bool need_display)
     DBG("webrtc_set_state_changed_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
     ret = webrtc_set_signaling_state_change_cb(webrtc_handle_, OnSignalingStateChanged, this);
     DBG("webrtc_set_signaling_state_change_cb %s",
+          ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
+    ret = webrtc_set_ice_gathering_state_change_cb(webrtc_handle_, OnIceGatheringStateChanged,
+          this);
+    DBG("webrtc_set_ice_gathering_state_change_cb %s",
           ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
     ret = webrtc_set_ice_connection_state_change_cb(webrtc_handle_, OnIceConnectionStateChanged,
           this);
@@ -323,13 +299,28 @@ void WebRtcStream::AttachSignals(bool is_source, bool need_display)
         ret = webrtc_set_track_added_cb(webrtc_handle_, OnTrackAdded, this);
         ERR("webrtc_set_track_added_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
     }
-
-    ret = webrtc_media_packet_source_set_buffer_state_changed_cb(webrtc_handle_, source_id_,
-          OnMediaPacketBufferStateChanged, this);
-    DBG("webrtc_media_packet_source_set_buffer_state_changed_cb %s",
-          ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
+    ret = webrtc_data_channel_set_open_cb(channel_, OnDataChannelOpen, this);
+    DBG("webrtc_data_channel_set_open_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
 
     return;
+}
+
+void WebRtcStream::DetachSignals(void)
+{
+    if (!webrtc_handle_) {
+        ERR("WebRTC handle is not created");
+        return;
+    }
+
+    webrtc_unset_error_cb(webrtc_handle_);
+    webrtc_unset_state_changed_cb(webrtc_handle_);
+    webrtc_unset_signaling_state_change_cb(webrtc_handle_);
+    webrtc_unset_ice_gathering_state_change_cb(webrtc_handle_);
+    webrtc_unset_ice_connection_state_change_cb(webrtc_handle_);
+    webrtc_unset_ice_candidate_cb(webrtc_handle_);
+    webrtc_unset_encoded_video_frame_cb(webrtc_handle_);
+    webrtc_unset_track_added_cb(webrtc_handle_);
+    webrtc_data_channel_unset_open_cb(channel_);
 }
 
 void WebRtcStream::OnError(webrtc_h webrtc, webrtc_error_e error, webrtc_state_e state,
@@ -367,6 +358,17 @@ void WebRtcStream::OnSignalingStateChanged(webrtc_h webrtc, webrtc_signaling_sta
           WebRtcState::ToSignalingState(state));
 }
 
+void WebRtcStream::OnIceGatheringStateChanged(webrtc_h webrtc, webrtc_ice_gathering_state_e state,
+      void *user_data)
+{
+    ERR("%s %d", __func__, state);
+    auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
+    RET_IF(webrtc_stream == nullptr);
+
+    webrtc_stream->GetEventHandler().CallOnIceGatheringStateNotifyCb(
+          WebRtcState::ToIceGatheringState(state));
+}
+
 void WebRtcStream::OnIceConnectionStateChanged(webrtc_h webrtc, webrtc_ice_connection_state_e state,
       void *user_data)
 {
@@ -389,7 +391,11 @@ void WebRtcStream::OnEncodedFrame(webrtc_h webrtc, webrtc_media_type_e type, uns
       media_packet_h packet, void *user_data)
 {
     ERR("%s", __func__);
-    // TODO
+    auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
+    RET_IF(webrtc_stream == nullptr);
+
+    if (type == WEBRTC_MEDIA_TYPE_VIDEO)
+        webrtc_stream->GetEventHandler().CallOnEncodedFrameCb();
 }
 
 void WebRtcStream::OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsigned int id,
@@ -406,13 +412,7 @@ void WebRtcStream::OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsig
         webrtc_stream->GetEventHandler().CallOnTrakAddedCb(id);
 }
 
-void WebRtcStream::OnMediaPacketBufferStateChanged(unsigned int source_id,
-      webrtc_media_packet_source_buffer_state_e state, void *user_data)
+void WebRtcStream::OnDataChannelOpen(webrtc_data_channel_h channel, void *user_data)
 {
     ERR("%s", __func__);
-    auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
-    RET_IF(webrtc_stream == nullptr);
-
-    webrtc_stream->is_source_overflow_ =
-          (state == WEBRTC_MEDIA_PACKET_SOURCE_BUFFER_STATE_OVERFLOW);
 }

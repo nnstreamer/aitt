@@ -17,7 +17,6 @@
 #pragma once
 
 #include <functional>
-#include <string>
 
 #include "WebRtcState.h"
 
@@ -46,6 +45,17 @@ class WebRtcEventHandler {
             on_signaling_state_notify_cb_(state);
     };
     void UnsetOnSignalingStateNotifyCb(void) { on_signaling_state_notify_cb_ = nullptr; };
+
+    void SetOnIceGatheringStateNotifyCb(std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb)
+    {
+        on_ice_gathering_state_notify_cb_ = on_ice_gathering_state_notify_cb;
+    };
+    void CallOnIceGatheringStateNotifyCb(WebRtcState::IceGathering state) const
+    {
+        if (on_ice_gathering_state_notify_cb_)
+            on_ice_gathering_state_notify_cb_(state);
+    };
+    void UnsetOnIceGatheringStateNotifyeCb(void) { on_ice_gathering_state_notify_cb_ = nullptr; };
 
     void SetOnIceConnectionStateNotifyCb(std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb)
     {
@@ -84,6 +94,7 @@ class WebRtcEventHandler {
     std::function<void(void)> on_negotiation_needed_cb_;
     std::function<void(WebRtcState::Stream)> on_state_changed_cb_;
     std::function<void(WebRtcState::Signaling)> on_signaling_state_notify_cb_;
+    std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb_;
     std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb_;
     std::function<void(void)> on_encoded_frame_cb_;
     std::function<void(unsigned int id)> on_track_added_cb_;

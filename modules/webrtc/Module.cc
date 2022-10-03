@@ -18,115 +18,47 @@
 
 #include <flatbuffers/flexbuffers.h>
 
-#include "Config.h"
+#include "AittException.h"
 #include "aitt_internal.h"
 
 namespace AittWebRTCNamespace {
 
-Module::Module(AittProtocol type, AittDiscovery &discovery, const std::string &ip)
-      : AittTransport(type, discovery)
+Module::Module(AittDiscovery &discovery, const std::string &topic, AittStreamRole role)
+      : discovery_(discovery), topic_(topic), role_(role)
 {
+    discovery_cb_ = discovery_.AddDiscoveryCB(topic,
+          std::bind(&Module::DiscoveryMessageCallback, this, std::placeholders::_1,
+                std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 }
 
 Module::~Module(void)
 {
+    discovery_.RemoveDiscoveryCB(discovery_cb_);
 }
 
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen,
-      const std::string &correlation, AittQoS qos, bool retain)
+void Module::SetConfig(const std::string &key, const std::string &value)
 {
-    // TODO
 }
 
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
-      bool retain)
+void Module::SetConfig(const std::string &key, void *obj)
 {
-    std::lock_guard<std::mutex> publish_table_lock(publish_table_lock_);
-
-    auto config = BuildConfigFromFb(data, datalen);
-    if (config.GetUserDataLength()) {
-        publish_table_[topic] =
-              std::make_shared<PublishStream>(topic, BuildConfigFromFb(data, datalen));
-
-        publish_table_[topic]->Start();
-    } else {
-        auto publish_table_itr = publish_table_.find(topic);
-        if (publish_table_itr == publish_table_.end()) {
-            ERR("%s not found", topic.c_str());
-            return;
-        }
-        auto publish_stream = publish_table_itr->second;
-        publish_stream->Stop();
-        publish_table_.erase(publish_table_itr);
-    }
 }
 
-void *Module::Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
-      void *cbdata, AittQoS qos)
-{
-    return nullptr;
+void Module::Start(void)
+{ 
 }
 
-void *Module::Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
-      const void *data, const size_t datalen, void *cbdata, AittQoS qos)
+void Module::SetStateCallback(StateCallback cb, void *user_data)
 {
-    std::lock_guard<std::mutex> subscribe_table_lock(subscribe_table_lock_);
-
-    subscribe_table_[topic] =
-          std::make_shared<SubscribeStream>(topic, BuildConfigFromFb(data, datalen));
-
-    subscribe_table_[topic]->Start(qos == AITT_QOS_EXACTLY_ONCE, cbdata);
-
-    return subscribe_table_[topic].get();
 }
 
-Config Module::BuildConfigFromFb(const void *data, const size_t data_size)
+void Module::SetReceiveCallback(ReceiveCallback cb, void *user_data)
 {
-    Config config;
-    auto webrtc_configs =
-          flexbuffers::GetRoot(static_cast<const uint8_t *>(data), data_size).AsMap();
-    auto webrtc_config_keys = webrtc_configs.Keys();
-    for (size_t idx = 0; idx < webrtc_config_keys.size(); ++idx) {
-        std::string key = webrtc_config_keys[idx].AsString().c_str();
-
-        if (key.compare("Id") == 0)
-            config.SetLocalId(webrtc_configs[key].AsString().c_str());
-        else if (key.compare("RoomId") == 0)
-            config.SetRoomId(webrtc_configs[key].AsString().c_str());
-        else if (key.compare("SourceId") == 0)
-            config.SetSourceId(webrtc_configs[key].AsString().c_str());
-        else if (key.compare("BrokerIp") == 0)
-            config.SetBrokerIp(webrtc_configs[key].AsString().c_str());
-        else if (key.compare("BrokerPort") == 0)
-            config.SetBrokerPort(webrtc_configs[key].AsInt32());
-        else if (key.compare("UserDataLength") == 0)
-            config.SetUserDataLength(webrtc_configs[key].AsUInt32());
-        else {
-            printf("Not supported key name: %s\n", key.c_str());
-        }
-    }
-
-    return config;
 }
 
-void *Module::Unsubscribe(void *handlePtr)
+void Module::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
+      const void *msg, const int szmsg)
 {
-    void *ret = nullptr;
-    std::string topic;
-    std::lock_guard<std::mutex> subscribe_table_lock(subscribe_table_lock_);
-    for (auto itr = subscribe_table_.begin(); itr != subscribe_table_.end(); ++itr) {
-        if (itr->second.get() == handlePtr) {
-            auto topic = itr->first;
-            break;
-        }
-    }
-
-    if (topic.size() != 0) {
-        ret = subscribe_table_[topic]->Stop();
-        subscribe_table_.erase(topic);
-    }
-
-    return ret;
 }
 
 }  // namespace AittWebRTCNamespace

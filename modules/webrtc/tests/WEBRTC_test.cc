@@ -17,582 +17,411 @@
 #include <glib.h>
 #include <gtest/gtest.h>
 
-#include <chrono>
-#include <set>
-#include <thread>
-
-#include "AittException.h"
-#include "Config.h"
-#include "MqttServer.h"
+#include "WebRtcMessage.h"
+#include "WebRtcStream.h"
 #include "aitt_internal.h"
 
-#define DEFAULT_BROKER_IP "127.0.0.1"
-#define DEFAULT_BROKER_PORT 1883
+#define TEST_TOPIC "TEST_TOPIC"
 
-#define DEFAULT_WEBRTC_SRC_ID "webrtc_src"
-#define DEFAULT_FIRST_SINK_ID "webrtc_first_sink"
-#define DEFAULT_SECOND_SINK_ID "webrtc_second_sink"
-#define DEFAULT_ROOM_ID AITT_MANAGED_TOPIC_PREFIX "webrtc/room/Room.webrtc"
-
-class MqttServerTest : public testing::Test {
+class WebRtcMessageTest : public testing::Test {
   protected:
-    void SetUp() override
-    {
-        webrtc_src_config_ = Config(DEFAULT_WEBRTC_SRC_ID, DEFAULT_BROKER_IP, DEFAULT_BROKER_PORT,
-              DEFAULT_ROOM_ID, DEFAULT_WEBRTC_SRC_ID);
-        webrtc_first_sink_config_ = Config(DEFAULT_FIRST_SINK_ID, DEFAULT_BROKER_IP,
-              DEFAULT_BROKER_PORT, DEFAULT_ROOM_ID);
-        webrtc_second_sink_config_ = Config(DEFAULT_SECOND_SINK_ID, DEFAULT_BROKER_IP,
-              DEFAULT_BROKER_PORT, DEFAULT_ROOM_ID);
+    void SetUp() override {}
 
-        loop_ = g_main_loop_new(nullptr, FALSE);
-    }
-
-    void TearDown() override { g_main_loop_unref(loop_); }
-
-  protected:
-    Config webrtc_src_config_;
-    Config webrtc_first_sink_config_;
-    Config webrtc_second_sink_config_;
-    GMainLoop *loop_;
+    void TearDown() override {}
 };
-static void onConnectionStateChanged(IfaceServer::ConnectionState state, MqttServer &server,
-      GMainLoop *loop)
+
+TEST_F(WebRtcMessageTest, test_SDP_Message_Anytime)
 {
-    if (state == IfaceServer::ConnectionState::Registered) {
-        EXPECT_EQ(server.IsConnected(), true) << "should return Connected";
-        g_main_loop_quit(loop);
-    }
+    // TODO
 }
 
-TEST_F(MqttServerTest, Connect_P_Anytime)
+TEST_F(WebRtcMessageTest, test_ICE_Message_Anytime)
 {
-    try {
-        MqttServer server(webrtc_src_config_);
-        EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-
-        auto on_connection_state_changed =
-              std::bind(onConnectionStateChanged, std::placeholders::_1, std::ref(server), loop_);
-        server.SetConnectionStateChangedCb(on_connection_state_changed);
-
-        server.Connect();
-
-        g_main_loop_run(loop_);
-
-        server.UnsetConnectionStateChangedCb();
-        server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
+    // TODO
 }
-static int Positive_Connect_Src_Sinks_Anytime_connect_count;
-static void onConnectionStateChangedPositive_Connect_Src_Sinks_Anytime(
-      IfaceServer::ConnectionState state, MqttServer &server, GMainLoop *loop)
+
+TEST_F(WebRtcMessageTest, test_UNKNOWN_Message_Anytime)
 {
-    if (state == IfaceServer::ConnectionState::Registered) {
-        EXPECT_EQ(server.IsConnected(), true) << "should return Connected";
-        ++Positive_Connect_Src_Sinks_Anytime_connect_count;
-        if (Positive_Connect_Src_Sinks_Anytime_connect_count == 3) {
-            g_main_loop_quit(loop);
+    // TODO
+}
+
+TEST_F(WebRtcMessageTest, test_OnDevice)
+{
+    // TODO
+}
+class WebRtcSrcStreamTest : public testing::Test {
+  protected:
+    void SetUp() override { mainLoop_ = g_main_loop_new(nullptr, FALSE); }
+    void TearDown() override { g_main_loop_unref(mainLoop_); }
+    void IterateEventLoop(void)
+    {
+        g_main_loop_run(mainLoop_);
+        DBG("Go forward");
+    }
+    static void OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
+          WebRtcSrcStreamTest *test)
+    {
+        DBG("OnStreamStateChanged");
+        if (state == WebRtcState::Stream::NEGOTIATING) {
+            auto on_offer_created =
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
+            stream.CreateOfferAsync(on_offer_created);
         }
     }
+    static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSrcStreamTest *test)
+    {
+        DBG("%s", __func__);
+
+        test->local_description_ = sdp;
+        stream.SetLocalDescription(sdp);
+    }
+
+    static void OnSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
+          WebRtcSrcStreamTest *test)
+    {
+        DBG("Singaling State: %s", WebRtcState::SignalingToStr(state).c_str());
+    }
+
+    static void OnIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
+          WebRtcSrcStreamTest *test)
+    {
+        DBG("IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
+        g_main_loop_quit(test->mainLoop_);
+    }
+    GMainLoop *mainLoop_;
+    std::string local_description_;
+};
+
+TEST_F(WebRtcSrcStreamTest, test_Create_WebRtcSrcStream_OnDevice)
+{
+    WebRtcStream stream{};
+    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
 }
 
-TEST_F(MqttServerTest, Connect_Src_Sinks_P_Anytime)
+TEST_F(WebRtcSrcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
 {
-    try {
-        Positive_Connect_Src_Sinks_Anytime_connect_count = 0;
-        MqttServer src_server(webrtc_src_config_);
-        EXPECT_EQ(src_server.IsConnected(), false) << "Should return not connected";
+    WebRtcStream stream{};
+    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
+    EXPECT_EQ(true, stream.AttachCameraSource()) << "Failed to attach camera source";
+    auto on_stream_state_changed_cb =
+          std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
 
-        auto on_src_connection_state_changed =
-              std::bind(onConnectionStateChangedPositive_Connect_Src_Sinks_Anytime,
-                    std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetConnectionStateChangedCb(on_src_connection_state_changed);
+    auto on_signaling_state_changed_cb =
+          std::bind(OnSignalingStateNotify, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnSignalingStateNotifyCb(on_signaling_state_changed_cb);
 
-        src_server.Connect();
+    auto on_ice_gathering_state_changed_cb =
+          std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(on_ice_gathering_state_changed_cb);
+    stream.Start();
+    IterateEventLoop();
+}
 
-        MqttServer first_sink_server(webrtc_first_sink_config_);
-        EXPECT_EQ(first_sink_server.IsConnected(), false) << "Should return not connected";
+TEST_F(WebRtcSrcStreamTest, test_Validate_WebRtcSrcStream_Discovery_Message_OnDevice)
+{
+    WebRtcStream stream{};
+    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
+    EXPECT_EQ(true, stream.AttachCameraSource()) << "Failed to attach camera source";
+    auto on_stream_state_changed_cb =
+          std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
 
-        auto on_first_sink_connection_state_changed =
-              std::bind(onConnectionStateChangedPositive_Connect_Src_Sinks_Anytime,
-                    std::placeholders::_1, std::ref(first_sink_server), loop_);
-        first_sink_server.SetConnectionStateChangedCb(on_first_sink_connection_state_changed);
+    auto on_signaling_state_changed_cb =
+          std::bind(OnSignalingStateNotify, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnSignalingStateNotifyCb(on_signaling_state_changed_cb);
 
-        first_sink_server.Connect();
+    auto on_ice_gathering_state_changed_cb =
+          std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this);
+    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(on_ice_gathering_state_changed_cb);
+    stream.Start();
+    IterateEventLoop();
+    EXPECT_EQ(WebRtcMessage::Type::SDP, WebRtcMessage::getMessageType(local_description_));
+    auto ice_candidates = stream.GetIceCandidates();
+    for (const auto &ice_candidate : ice_candidates) {
+        EXPECT_EQ(WebRtcMessage::Type::ICE, WebRtcMessage::getMessageType(ice_candidate));
+    }
 
-        MqttServer second_sink_server(webrtc_second_sink_config_);
-        EXPECT_EQ(second_sink_server.IsConnected(), false) << "Should return not connected";
+    auto discovery_message = WebRtcMessage::GenerateDiscoveryMessage(TEST_TOPIC, true,
+          local_description_, stream.GetIceCandidates());
 
-        auto on_second_sink_connection_state_changed =
-              std::bind(onConnectionStateChangedPositive_Connect_Src_Sinks_Anytime,
-                    std::placeholders::_1, std::ref(second_sink_server), loop_);
-        second_sink_server.SetConnectionStateChangedCb(on_second_sink_connection_state_changed);
+    auto discovery_info = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
 
-        second_sink_server.Connect();
+    EXPECT_EQ(0, discovery_info.topic.compare(TEST_TOPIC));
+    EXPECT_EQ(true, discovery_info.is_src);
+    EXPECT_EQ(0, discovery_info.sdp.compare(local_description_));
+    for (const auto ice_candidate : ice_candidates) {
+        bool is_ice_candidate_exists{false};
 
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        first_sink_server.UnsetConnectionStateChangedCb();
-        second_sink_server.UnsetConnectionStateChangedCb();
-        src_server.Disconnect();
-        first_sink_server.Disconnect();
-        second_sink_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
+        for (const auto &discovered_ice_candidate : discovery_info.ice_candidates) {
+            if (discovered_ice_candidate.compare(ice_candidate) == 0)
+                is_ice_candidate_exists = true;
+        }
+        EXPECT_EQ(true, is_ice_candidate_exists);
     }
 }
 
-TEST_F(MqttServerTest, Disconnect_N_Anytime)
-{
-    EXPECT_THROW(
-          {
-              try {
-                  MqttServer server(webrtc_src_config_);
-                  EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-
-                  server.Disconnect();
-
-                  g_main_loop_run(loop_);
-              } catch (const aitt::AittException &e) {
-                  // and this tests that it has the correct message
-                  throw;
-              }
-          },
-          aitt::AittException);
-}
-
-TEST_F(MqttServerTest, Disconnect_P_Anytime)
-{
-    try {
-        MqttServer server(webrtc_src_config_);
-        EXPECT_EQ(server.IsConnected(), false);
-
-        auto on_connection_state_changed =
-              std::bind(onConnectionStateChanged, std::placeholders::_1, std::ref(server), loop_);
-        server.SetConnectionStateChangedCb(on_connection_state_changed);
-
-        server.Connect();
-
-        g_main_loop_run(loop_);
-
-        server.UnsetConnectionStateChangedCb();
-        server.Disconnect();
-
-        EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-TEST_F(MqttServerTest, Register_N_Anytime)
-{
-    EXPECT_THROW(
-          {
-              try {
-                  MqttServer server(webrtc_src_config_);
-                  EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-
-                  server.RegisterWithServer();
-              } catch (const std::runtime_error &e) {
-                  // and this tests that it has the correct message
-                  throw;
-              }
-          },
-          std::runtime_error);
-}
-
-TEST_F(MqttServerTest, JoinRoom_Invalid_Parameter_N_Anytime)
-{
-    EXPECT_THROW(
-          {
-              try {
-                  MqttServer server(webrtc_src_config_);
-                  EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-
-                  server.JoinRoom(std::string("InvalidRoomId"));
-
-              } catch (const std::runtime_error &e) {
-                  // and this tests that it has the correct message
-                  throw;
-              }
-          },
-          std::runtime_error);
-}
-
-static void joinRoomOnRegisteredQuit(IfaceServer::ConnectionState state, MqttServer &server,
-      GMainLoop *loop)
-{
-    if (state != IfaceServer::ConnectionState::Registered) {
-        return;
+class WebRtcSourceOffererTest : public testing::Test {
+  protected:
+    void SetUp() override { mainLoop_ = g_main_loop_new(nullptr, FALSE); }
+    void TearDown() override { g_main_loop_unref(mainLoop_); }
+    void IterateEventLoop(void)
+    {
+        g_main_loop_run(mainLoop_);
+        DBG("Go forward");
     }
 
-    EXPECT_EQ(server.IsConnected(), true) << "should return Connected";
-    try {
-        server.JoinRoom(DEFAULT_ROOM_ID);
-        g_main_loop_quit(loop);
-    } catch (...) {
-        FAIL() << "Expected No throw";
+    static void OnSrcStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("OnSrcStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+        if (state == WebRtcState::Stream::NEGOTIATING) {
+            auto on_offer_created =
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
+            stream.CreateOfferAsync(on_offer_created);
+        }
     }
+
+    static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSourceOffererTest *test)
+    {
+        DBG("%s", __func__);
+
+        test->src_description_ = sdp;
+        stream.SetLocalDescription(sdp);
+    }
+
+    static void OnSrcSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("OnSrcSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
+    }
+
+    static void OnSrcIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("Source IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
+        if (state == WebRtcState::IceGathering::COMPLETE) {
+            test->sink_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
+                  "TEST_TOPIC", true, test->src_description_, stream.GetIceCandidates()));
+        }
+    }
+
+    static void OnSinkStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("OnSinkStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+    }
+
+    static void OnAnswerCreated(std::string sdp, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("%s", __func__);
+
+        test->sink_description_ = sdp;
+        stream.SetLocalDescription(sdp);
+    }
+
+    static void OnSinkSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("OnSinkSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
+        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER) {
+            auto on_answer_created =
+                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test);
+            stream.CreateAnswerAsync(on_answer_created);
+        }
+    }
+
+    static void OnSinkIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
+          WebRtcSourceOffererTest *test)
+    {
+        DBG("Sink IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
+        if (WebRtcState::IceGathering::COMPLETE == state) {
+            test->src_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
+                  "TEST_TOPIC", true, test->sink_description_, stream.GetIceCandidates()));
+        }
+    }
+
+    static void OnSinkStreamEncodedFrame(WebRtcSourceOffererTest *test)
+    {
+        DBG("OnSinkStreamEncodedFrame");
+        if (g_main_loop_is_running(test->mainLoop_))
+            g_main_loop_quit(test->mainLoop_);
+    }
+
+    WebRtcStream src_stream_;
+    WebRtcStream sink_stream_;
+    GMainLoop *mainLoop_;
+    std::string src_description_;
+    std::string sink_description_;
+};
+
+TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
+{
+    EXPECT_EQ(true, src_stream_.Create(true, false)) << "Failed to create source stream";
+    EXPECT_EQ(true, src_stream_.AttachCameraSource()) << "Failed to attach camera source";
+    auto on_src_stream_state_changed_cb =
+          std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnStateChangedCb(on_src_stream_state_changed_cb);
+
+    auto on_src_signaling_state_changed_cb =
+          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_src_signaling_state_changed_cb);
+
+    auto on_src_ice_gathering_state_changed_cb = std::bind(OnSrcIceGatheringStateNotify,
+          std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
+          on_src_ice_gathering_state_changed_cb);
+    src_stream_.Start();
+
+    EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
+    auto on_sink_stream_state_changed_cb =
+          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnStateChangedCb(on_sink_stream_state_changed_cb);
+
+    auto on_sink_signaling_state_changed_cb = std::bind(OnSinkSignalingStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_sink_signaling_state_changed_cb);
+
+    auto on_sink_ice_gathering_state_changed_cb = std::bind(OnSinkIceGatheringStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
+          on_sink_ice_gathering_state_changed_cb);
+
+    auto on_sink_encoded_frame_cb = std::bind(OnSinkStreamEncodedFrame, this);
+    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(on_sink_encoded_frame_cb);
+    sink_stream_.Start();
+    IterateEventLoop();
 }
 
-TEST_F(MqttServerTest, JoinRoom_P_Anytime)
+class WebRtcSinkOffererTest : public testing::Test {
+  protected:
+    void SetUp() override { mainLoop_ = g_main_loop_new(nullptr, FALSE); }
+    void TearDown() override { g_main_loop_unref(mainLoop_); }
+    void IterateEventLoop(void)
+    {
+        g_main_loop_run(mainLoop_);
+        DBG("Go forward");
+    }
+
+    static void OnSinkStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("OnSinkStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+        if (state == WebRtcState::Stream::NEGOTIATING) {
+            auto on_offer_created =
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
+            stream.CreateOfferAsync(on_offer_created);
+        }
+    }
+
+    static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSinkOffererTest *test)
+    {
+        DBG("%s", __func__);
+
+        test->sink_description_ = sdp;
+        stream.SetLocalDescription(sdp);
+    }
+
+    static void OnSinkSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("OnSinkSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
+    }
+
+    static void OnSinkIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("Sink IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
+        if (state == WebRtcState::IceGathering::COMPLETE) {
+            test->src_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
+                  "TEST_TOPIC", true, test->sink_description_, stream.GetIceCandidates()));
+        }
+    }
+
+    static void OnSrcStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("OnSrcStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+    }
+
+    static void OnAnswerCreated(std::string sdp, WebRtcStream &stream, WebRtcSinkOffererTest *test)
+    {
+        DBG("%s", __func__);
+
+        test->src_description_ = sdp;
+        stream.SetLocalDescription(sdp);
+    }
+
+    static void OnSrcSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("OnSrcSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
+        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER) {
+            auto on_answer_created =
+                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test);
+            stream.CreateAnswerAsync(on_answer_created);
+        }
+    }
+
+    static void OnSrcIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
+          WebRtcSinkOffererTest *test)
+    {
+        DBG("Src IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
+        if (WebRtcState::IceGathering::COMPLETE == state) {
+            test->sink_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
+                  "TEST_TOPIC", true, test->src_description_, stream.GetIceCandidates()));
+        }
+    }
+
+    static void OnSinkStreamEncodedFrame(WebRtcSinkOffererTest *test)
+    {
+        DBG("OnSinkStreamEncodedFrame");
+        if (g_main_loop_is_running(test->mainLoop_))
+            g_main_loop_quit(test->mainLoop_);
+    }
+
+    WebRtcStream src_stream_;
+    WebRtcStream sink_stream_;
+    GMainLoop *mainLoop_;
+    std::string src_description_;
+    std::string sink_description_;
+};
+
+TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
 {
-    try {
-        MqttServer server(webrtc_src_config_);
-        EXPECT_EQ(server.IsConnected(), false) << "Should return not connected";
-
-        auto join_room_on_registered =
-              std::bind(joinRoomOnRegisteredQuit, std::placeholders::_1, std::ref(server), loop_);
-        server.SetConnectionStateChangedCb(join_room_on_registered);
-
-        server.Connect();
-
-        g_main_loop_run(loop_);
-
-        server.UnsetConnectionStateChangedCb();
-        server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-static void joinRoomOnRegistered(IfaceServer::ConnectionState state, MqttServer &server)
-{
-    if (state != IfaceServer::ConnectionState::Registered) {
-        return;
-    }
-
-    EXPECT_EQ(server.IsConnected(), true) << "should return Connected";
-    try {
-        server.JoinRoom(DEFAULT_ROOM_ID);
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-static void onSrcMessage(const std::string &msg, MqttServer &server, GMainLoop *loop)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        std::string peer_id = msg.substr(17, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_FIRST_SINK_ID)), 0)
-              << "Not expected peer" << peer_id;
-
-    } else if (msg.compare(0, 14, "ROOM_PEER_LEFT") == 0) {
-        std::string peer_id = msg.substr(15, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_FIRST_SINK_ID)), 0)
-              << "Not expected peer" << peer_id;
-        g_main_loop_quit(loop);
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-static void onSinkMessage(const std::string &msg, MqttServer &server, GMainLoop *loop)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        std::string peer_id = msg.substr(17, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer" << peer_id;
-        server.Disconnect();
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-TEST_F(MqttServerTest, src_sink_P)
-{
-    try {
-        MqttServer src_server(webrtc_src_config_);
-        auto join_room_on_registered_src =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(src_server));
-        src_server.SetConnectionStateChangedCb(join_room_on_registered_src);
-
-        auto on_src_message =
-              std::bind(onSrcMessage, std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetRoomMessageArrivedCb(on_src_message);
-        src_server.Connect();
-
-        MqttServer sink_server(webrtc_first_sink_config_);
-        auto join_room_on_registered_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(sink_server));
-        sink_server.SetConnectionStateChangedCb(join_room_on_registered_sink);
-
-        auto on_sink_message =
-              std::bind(onSinkMessage, std::placeholders::_1, std::ref(sink_server), loop_);
-        sink_server.SetRoomMessageArrivedCb(on_sink_message);
-
-        sink_server.Connect();
-
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        sink_server.UnsetConnectionStateChangedCb();
-        src_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-TEST_F(MqttServerTest, sink_src_P)
-{
-    try {
-        MqttServer sink_server(webrtc_first_sink_config_);
-        auto join_room_on_registered_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(sink_server));
-        sink_server.SetConnectionStateChangedCb(join_room_on_registered_sink);
-
-        auto on_sink_message =
-              std::bind(onSinkMessage, std::placeholders::_1, std::ref(sink_server), loop_);
-        sink_server.SetRoomMessageArrivedCb(on_sink_message);
-
-        sink_server.Connect();
-
-        MqttServer src_server(webrtc_src_config_);
-        auto join_room_on_registered_src =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(src_server));
-        src_server.SetConnectionStateChangedCb(join_room_on_registered_src);
-
-        auto on_src_message =
-              std::bind(onSrcMessage, std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetRoomMessageArrivedCb(on_src_message);
-        src_server.Connect();
-
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        sink_server.UnsetConnectionStateChangedCb();
-        src_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-static void onSrcMessageDisconnect(const std::string &msg, MqttServer &server, GMainLoop *loop)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        std::string peer_id = msg.substr(17, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_FIRST_SINK_ID)), 0)
-              << "Not expected peer" << peer_id;
-        server.Disconnect();
-
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-static void onSinkMessageDisconnect(const std::string &msg, MqttServer &server, GMainLoop *loop)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        std::string peer_id = msg.substr(17, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer" << peer_id;
-    } else if (msg.compare(0, 14, "ROOM_PEER_LEFT") == 0) {
-        std::string peer_id = msg.substr(15, std::string::npos);
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer" << peer_id;
-        g_main_loop_quit(loop);
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-TEST_F(MqttServerTest, src_sink_disconnect_src_first_P_Anytime)
-{
-    try {
-        MqttServer src_server(webrtc_src_config_);
-        auto join_room_on_registered_src =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(src_server));
-        src_server.SetConnectionStateChangedCb(join_room_on_registered_src);
-
-        auto on_src_message =
-              std::bind(onSrcMessageDisconnect, std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetRoomMessageArrivedCb(on_src_message);
-        src_server.Connect();
-
-        MqttServer sink_server(webrtc_first_sink_config_);
-        auto join_room_on_registered_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(sink_server));
-        sink_server.SetConnectionStateChangedCb(join_room_on_registered_sink);
-
-        auto on_sink_message = std::bind(onSinkMessageDisconnect, std::placeholders::_1,
-              std::ref(sink_server), loop_);
-        sink_server.SetRoomMessageArrivedCb(on_sink_message);
-
-        sink_server.Connect();
-
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        sink_server.UnsetConnectionStateChangedCb();
-        sink_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-TEST_F(MqttServerTest, sink_src_disconnect_src_first_P_Anytime)
-{
-    try {
-        MqttServer sink_server(webrtc_first_sink_config_);
-        auto join_room_on_registered_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(sink_server));
-        sink_server.SetConnectionStateChangedCb(join_room_on_registered_sink);
-
-        auto on_sink_message = std::bind(onSinkMessageDisconnect, std::placeholders::_1,
-              std::ref(sink_server), loop_);
-        sink_server.SetRoomMessageArrivedCb(on_sink_message);
-
-        sink_server.Connect();
-
-        MqttServer src_server(webrtc_src_config_);
-        auto join_room_on_registered_src =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(src_server));
-        src_server.SetConnectionStateChangedCb(join_room_on_registered_src);
-
-        auto on_src_message =
-              std::bind(onSrcMessageDisconnect, std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetRoomMessageArrivedCb(on_src_message);
-        src_server.Connect();
-
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        sink_server.UnsetConnectionStateChangedCb();
-        sink_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
-}
-
-static int handled_sink;
-static int expected_sink;
-
-std::set<std::string> sink_set;
-
-static void onSrcMessageThreeWay(const std::string &msg, MqttServer &server, GMainLoop *loop)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        auto peer_id = msg.substr(17, std::string::npos);
-        sink_set.insert(peer_id);
-        server.SendMessage(peer_id, "Three");
-
-    } else if (msg.compare(0, 14, "ROOM_PEER_LEFT") == 0) {
-        auto peer_id = msg.substr(15, std::string::npos);
-
-        if (sink_set.find(peer_id) != sink_set.end())
-            sink_set.erase(peer_id);
-
-        if (sink_set.size() == 0 && handled_sink == expected_sink)
-            g_main_loop_quit(loop);
-
-    } else if (msg.compare(0, 13, "ROOM_PEER_MSG") == 0) {
-        auto peer_msg = msg.substr(14, std::string::npos);
-        std::size_t pos = peer_msg.find(' ');
-        if (pos == std::string::npos)
-            FAIL() << "Invalid type of peer message" << msg;
-
-        auto peer_id = peer_msg.substr(0, pos);
-        auto received_msg = peer_msg.substr(pos + 1, std::string::npos);
-
-        if (received_msg.compare("Way") == 0) {
-            server.SendMessage(peer_id, "HandShake");
-            ++handled_sink;
-        } else
-            FAIL() << "Can't understand message" << received_msg;
-
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-static void onSinkMessageThreeWay(const std::string &msg, MqttServer &server)
-{
-    if (msg.compare(0, 16, "ROOM_PEER_JOINED") == 0) {
-        auto peer_id = msg.substr(17, std::string::npos);
-
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer" << peer_id;
-
-    } else if (msg.compare(0, 14, "ROOM_PEER_LEFT") == 0) {
-        auto peer_id = msg.substr(15, std::string::npos);
-
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer" << peer_id;
-
-        server.Disconnect();
-
-    } else if (msg.compare(0, 13, "ROOM_PEER_MSG") == 0) {
-        auto peer_msg = msg.substr(14, std::string::npos);
-        std::size_t pos = peer_msg.find(' ');
-        if (pos == std::string::npos)
-            FAIL() << "Invalid type of peer message" << msg;
-
-        auto peer_id = peer_msg.substr(0, pos);
-        auto received_msg = peer_msg.substr(pos + 1, std::string::npos);
-
-        EXPECT_EQ(peer_id.compare(std::string(DEFAULT_WEBRTC_SRC_ID)), 0)
-              << "Not expected peer " << peer_id;
-
-        if (received_msg.compare("Three") == 0)
-            server.SendMessage(peer_id, "Way");
-        else if (received_msg.compare("HandShake") == 0)
-            server.Disconnect();
-        else
-            FAIL() << "Can't understand message" << received_msg;
-    } else {
-        FAIL() << "Invalid type of Room message " << msg;
-    }
-}
-
-TEST_F(MqttServerTest, SendMessageThreeWay_Src_Sinks1_P_Anytime)
-{
-    try {
-        handled_sink = 0;
-        expected_sink = 2;
-        MqttServer src_server(webrtc_src_config_);
-
-        auto join_room_on_registered_src =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(src_server));
-        src_server.SetConnectionStateChangedCb(join_room_on_registered_src);
-
-        auto on_src_message =
-              std::bind(onSrcMessageThreeWay, std::placeholders::_1, std::ref(src_server), loop_);
-        src_server.SetRoomMessageArrivedCb(on_src_message);
-        src_server.Connect();
-
-        MqttServer first_sink_server(webrtc_first_sink_config_);
-
-        auto join_room_on_registered_first_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(first_sink_server));
-        first_sink_server.SetConnectionStateChangedCb(join_room_on_registered_first_sink);
-
-        auto on_first_sink_message =
-              std::bind(onSinkMessageThreeWay, std::placeholders::_1, std::ref(first_sink_server));
-        first_sink_server.SetRoomMessageArrivedCb(on_first_sink_message);
-        first_sink_server.Connect();
-
-        MqttServer second_sink_server(webrtc_second_sink_config_);
-
-        auto join_room_on_registered_second_sink =
-              std::bind(joinRoomOnRegistered, std::placeholders::_1, std::ref(second_sink_server));
-        second_sink_server.SetConnectionStateChangedCb(join_room_on_registered_second_sink);
-
-        auto on_second_sink_message =
-              std::bind(onSinkMessageThreeWay, std::placeholders::_1, std::ref(second_sink_server));
-        second_sink_server.SetRoomMessageArrivedCb(on_second_sink_message);
-
-        second_sink_server.Connect();
-
-        g_main_loop_run(loop_);
-
-        src_server.UnsetConnectionStateChangedCb();
-        first_sink_server.UnsetConnectionStateChangedCb();
-        second_sink_server.UnsetConnectionStateChangedCb();
-        src_server.Disconnect();
-    } catch (...) {
-        FAIL() << "Expected No throw";
-    }
+    EXPECT_EQ(true, src_stream_.Create(true, false)) << "Failed to create source stream";
+    EXPECT_EQ(true, src_stream_.AttachCameraSource()) << "Failed to attach camera source";
+    auto on_src_stream_state_changed_cb =
+          std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnStateChangedCb(on_src_stream_state_changed_cb);
+
+    auto on_src_signaling_state_changed_cb =
+          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_src_signaling_state_changed_cb);
+
+    auto on_src_ice_gathering_state_changed_cb = std::bind(OnSrcIceGatheringStateNotify,
+          std::placeholders::_1, std::ref(src_stream_), this);
+    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
+          on_src_ice_gathering_state_changed_cb);
+    src_stream_.Start();
+
+    EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
+    auto on_sink_stream_state_changed_cb =
+          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnStateChangedCb(on_sink_stream_state_changed_cb);
+
+    auto on_sink_signaling_state_changed_cb = std::bind(OnSinkSignalingStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_sink_signaling_state_changed_cb);
+
+    auto on_sink_ice_gathering_state_changed_cb = std::bind(OnSinkIceGatheringStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this);
+    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
+          on_sink_ice_gathering_state_changed_cb);
+
+    auto on_sink_encoded_frame_cb = std::bind(OnSinkStreamEncodedFrame, this);
+    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(on_sink_encoded_frame_cb);
+    sink_stream_.Start();
+    IterateEventLoop();
 }

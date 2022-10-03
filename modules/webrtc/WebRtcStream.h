@@ -17,17 +17,14 @@
 #pragma once
 
 #include <functional>
-#include <list>
-#include <memory>
-#include <mutex>
 #include <string>
+#include <atomic>
 #include <vector>
 
 // TODO: webrtc.h is very heavy header file.
 // I think we need to decide whether to include this or not
 #include <webrtc.h>
 
-#include "CameraHandler.h"
 #include "WebRtcEventHandler.h"
 
 class WebRtcStream {
@@ -39,13 +36,11 @@ class WebRtcStream {
     bool Start(void);
     bool Stop(void);
     bool AttachCameraSource(void);
-    bool AttachCameraPreviewSource(void);
-    static void OnMediaPacketPreview(media_packet_h media_packet, void *user_data);
     bool DetachCameraSource(void);
-    void SetDisplayObject(unsigned int id, void *object);
     void AttachSignals(bool is_source, bool need_display);
+    void DetachSignals(void);
     // Cautions : Event handler is not a pointer. So, change event_handle after Set Event handler
-    // doesn't affect event handler which is included int WebRtcStream
+    // doesn't affect event handler which is included in WebRtcStream
     void SetEventHandler(WebRtcEventHandler event_handler) { event_handler_ = event_handler; };
     WebRtcEventHandler &GetEventHandler(void) { return event_handler_; };
 
@@ -71,6 +66,7 @@ class WebRtcStream {
     bool SetRemoteDescription(const std::string &description);
 
     bool AddIceCandidateFromMessage(const std::string &ice_message);
+    bool AddDiscoveryInformation(const std::vector<uint8_t> &discovery_message);
     const std::vector<std::string> &GetIceCandidates() const { return ice_candidates_; };
 
     std::string GetRemoteDescription(void) const { return remote_description_; };
@@ -84,6 +80,8 @@ class WebRtcStream {
           void *user_data);
     static void OnSignalingStateChanged(webrtc_h webrtc, webrtc_signaling_state_e state,
           void *user_data);
+    static void OnIceGatheringStateChanged(webrtc_h webrtc, webrtc_ice_gathering_state_e state,
+          void *user_data);
     static void OnIceConnectionStateChanged(webrtc_h webrtc, webrtc_ice_connection_state_e state,
           void *user_data);
     static void OnIceCandiate(webrtc_h webrtc, const char *candidate, void *user_data);
@@ -91,14 +89,11 @@ class WebRtcStream {
           media_packet_h packet, void *user_data);
     static void OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsigned int id,
           void *user_data);
-    static void OnMediaPacketBufferStateChanged(unsigned int source_id,
-          webrtc_media_packet_source_buffer_state_e state, void *user_data);
+    static void OnDataChannelOpen(webrtc_data_channel_h channel, void *user_data);
 
   private:
     webrtc_h webrtc_handle_;
-    std::unique_ptr<CameraHandler> camera_handler_;
-    // DO we need to make is_source_overflow_ as atomic?
-    bool is_source_overflow_;
+    webrtc_data_channel_h channel_;
     unsigned int source_id_;
     std::string local_description_;
     std::string remote_description_;

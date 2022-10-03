@@ -16,56 +16,37 @@
 
 #pragma once
 
-#include <AittTransport.h>
-#include <MainLoopHandler.h>
-
 #include <map>
 #include <memory>
 #include <mutex>
-#include <set>
 #include <string>
-#include <thread>
 
-#include "PublishStream.h"
-#include "SubscribeStream.h"
+#include <AittStreamModule.h>
 
-using AittTransport = aitt::AittTransport;
-using MainLoopHandler = aitt::MainLoopHandler;
 using AittDiscovery = aitt::AittDiscovery;
+using AittStreamModule = aitt::AittStreamModule;
 
 #define MODULE_NAMESPACE AittWebRTCNamespace
 namespace AittWebRTCNamespace {
 
-class Module : public AittTransport {
+class Module : public AittStreamModule {
   public:
-    explicit Module(AittProtocol type, AittDiscovery &discovery, const std::string &ip);
+    explicit Module(AittDiscovery &discovery, const std::string &topic, AittStreamRole role);
     virtual ~Module(void);
 
-    // TODO: How about regarding topic as service name?
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
-          const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
-          bool retain = false) override;
+    void SetConfig(const std::string &key, const std::string &value) override;
+    void SetConfig(const std::string &key, void *obj) override;
+    void Start(void) override;
 
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
-          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
-
-    // TODO: How about regarding topic as service name?
-    void *Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
-          void *cbdata = nullptr, AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
-
-    void *Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
-          const void *data, const size_t datalen, void *cbdata = nullptr,
-          AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
-
-    void *Unsubscribe(void *handle) override;
+    void SetStateCallback(StateCallback cb, void *user_data) override;
+    void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
 
   private:
-    Config BuildConfigFromFb(const void *data, const size_t data_size);
-
-    std::map<std::string, std::shared_ptr<PublishStream>> publish_table_;
-    std::mutex publish_table_lock_;
-    std::map<std::string, std::shared_ptr<SubscribeStream>> subscribe_table_;
-    std::mutex subscribe_table_lock_;
+    void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
+          const void *msg, const int szmsg);
+      AittDiscovery &discovery_;
+    int discovery_cb_;
+    std::string topic_;
+    AittStreamRole role_;
 };
-
 }  // namespace AittWebRTCNamespace

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 class WebRtcMessage {
   public:
@@ -25,5 +26,17 @@ class WebRtcMessage {
         ICE,
         UNKNOWN,
     };
+    class DiscoveryInfo {
+      public:
+        std::string topic;
+        bool is_src;
+        std::string sdp;
+        std::vector<std::string> ice_candidates;
+    };
     static WebRtcMessage::Type getMessageType(const std::string &message);
+    static std::vector<uint8_t> GenerateDiscoveryMessage(const std::string &topic, bool is_src,
+          const std::string &sdp, const std::vector<std::string> &ice_candidates);
+    static bool IsValidDiscoveryMessage(const std::vector<uint8_t> &discovery_message);
+    static DiscoveryInfo ParseDiscoveryMessage(const std::vector<uint8_t> &discovery_message);
+    static constexpr int DISCOVERY_MESSAGE_KEY_SIZE = 4;
 };

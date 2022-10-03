@@ -16,6 +16,5 @@ ADD_TEST(
         ${AITT_WEBRTC_UT}
     COMMAND
         ${CMAKE_COMMAND} -E env
-        LD_LIBRARY_PATH=../../../common:$ENV{LD_LIBRARY_PATH}
         ${CMAKE_CURRENT_BINARY_DIR}/${AITT_WEBRTC_UT} --gtest_filter=*_Anytime
 )
