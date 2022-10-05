@@ -26,6 +26,8 @@ BuildRequires: pkgconfig(capi-media-webrtc)
 BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(json-glib-1.0)
 BuildRequires: pkgconfig(openssl1.1)
+BuildRequires: pkgconfig(gstreamer-1.0)
+BuildRequires: pkgconfig(gstreamer-video-1.0)
 %if 0%{gcov}
 BuildRequires: lcov
 %endif
@@ -70,6 +72,7 @@ cp %{SOURCE1001} .
     -DPLATFORM="tizen" \
     -DVERSIONING:BOOL=OFF \
     -DWITH_WEBRTC:BOOL=ON \
+    -DWITH_RTSP:BOOL=ON \
     -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
     -DCMAKE_VERBOSE_MAKEFILE=OFF \
     -DBUILD_TESTING:BOOL=%{test} \

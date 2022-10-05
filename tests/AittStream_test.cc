@@ -22,7 +22,7 @@
 
 using namespace aitt;
 
-TEST(AittStreamTest, Full_P)
+TEST(AittStreamTest, Webrtc_Full_P)
 {
     try {
         AITT aitt("streamClientId", LOCAL_IP, AittOption(true, false));
@@ -35,6 +35,38 @@ TEST(AittStreamTest, Full_P)
 
         AittStream *subscriber =
               aitt.CreateStream(AITT_STREAM_TYPE_WEBRTC, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
+        ASSERT_TRUE(subscriber) << "CreateStream() Fail";
+
+        publisher->SetConfig("key", "value");
+        publisher->Start();
+
+        subscriber->SetConfig("key", "value");
+        subscriber->SetStateCallback([](AittStream *stream, int state, void *user_data) {},
+              (void *)"user_data");
+        subscriber->SetReceiveCallback([](AittStream *stream, void *obj, void *user_data) {},
+              (void *)"user-data");
+        subscriber->Start();
+
+        aitt.DestroyStream(publisher);
+        aitt.DestroyStream(subscriber);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST(AittStreamTest, RTSP_Full_P)
+{
+    try {
+        AITT aitt("streamClientId", LOCAL_IP, AittOption(true, false));
+
+        aitt.Connect();
+
+        AittStream *publisher =
+              aitt.CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_PUBLISHER);
+        ASSERT_TRUE(publisher) << "CreateStream() Fail";
+
+        AittStream *subscriber =
+              aitt.CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
         ASSERT_TRUE(subscriber) << "CreateStream() Fail";
 
         publisher->SetConfig("key", "value");
