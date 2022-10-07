@@ -17,6 +17,8 @@
 package com.samsung.android.aitt;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -32,27 +34,27 @@ public class AittMessageUnitTest {
     private final String message = "Aitt Message";
 
     @Test
-    public void testAittMessageInitialize_P01() {
+    public void testAittMessageInitialize_P() {
         AittMessage aittMessage = new AittMessage();
         assertNotNull("Not null AittMessage Object", aittMessage);
     }
 
     @Test
-    public void testAittMessageInitializePayload_P02() {
+    public void testAittMessageInitializePayload_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         assertNotNull("Not null AittMessage Object", aittMessage);
     }
 
     @Test(expected = NullPointerException.class)
-    public void testAittMessageInitializeInvalidPayload_N01() throws NullPointerException {
+    public void testAittMessageInitializeInvalidPayload_N() throws NullPointerException {
         byte[] payload = null;
         AittMessage aittMessage = new AittMessage(payload);
         assertNull("Null AittMessage Object", aittMessage);
     }
 
     @Test
-    public void testTopic_P03() {
+    public void testTopic_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setTopic(topic);
@@ -61,7 +63,15 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testCorrelation_P04() {
+    public void testInvalidTopic_N() {
+        byte[] payload = message.getBytes();
+        AittMessage aittMessage = new AittMessage(payload);
+        String newTopic = aittMessage.getTopic();
+        assertNull("Received topic is null", newTopic);
+    }
+
+    @Test
+    public void testCorrelation_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setCorrelation(correlation);
@@ -70,7 +80,15 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testReplyTopic_P05() {
+    public void testInvalidCorrelation_N() {
+        byte[] payload = message.getBytes();
+        AittMessage aittMessage = new AittMessage(payload);
+        String newCorrelation = aittMessage.getCorrelation();
+        assertNull("Received Correlation is null", newCorrelation);
+    }
+
+    @Test
+    public void testReplyTopic_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setReplyTopic(replyTopic);
@@ -79,7 +97,15 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testSequence_P06() {
+    public void testInvalidReplyTopic_N() {
+        byte[] payload = message.getBytes();
+        AittMessage aittMessage = new AittMessage(payload);
+        String newReplyTopic = aittMessage.getReplyTopic();
+        assertNull("Received replyTopic is null", newReplyTopic);
+    }
+
+    @Test
+    public void testSequence_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setSequence(sequence);
@@ -89,7 +115,15 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testEndSequence_P07() {
+    public void testInvalidSequence_N() {
+        byte[] payload = message.getBytes();
+        AittMessage aittMessage = new AittMessage(payload);
+        int newSequence = aittMessage.getSequence();
+        assertEquals("Received sequence is null", 0, newSequence);
+    }
+
+    @Test
+    public void testEndSequence_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.setEndSequence(endSequence);
@@ -98,7 +132,15 @@ public class AittMessageUnitTest {
     }
 
     @Test
-    public void testPayload_P08() {
+    public void testInvalidEndSequence_N() {
+        byte[] payload = message.getBytes();
+        AittMessage aittMessage = new AittMessage(payload);
+        boolean bool = aittMessage.isEndSequence();
+        assertFalse("Received endSequence is false", bool);
+    }
+
+    @Test
+    public void testPayload_P() {
         AittMessage aittMessage = new AittMessage();
         byte[] payload = message.getBytes();
         aittMessage.setPayload(payload);
@@ -107,14 +149,19 @@ public class AittMessageUnitTest {
     }
 
     @Test(expected = NullPointerException.class)
-    public void TestInvalidPayload_N02() throws NullPointerException {
+    public void testInvalidPayload_N() throws NullPointerException {
         AittMessage aittMessage = new AittMessage();
         byte[] payload = null;
         aittMessage.setPayload(payload);
     }
 
+    @Test(expected = NullPointerException.class)
+    public void testNullPayload_N() throws NullPointerException{
+        AittMessage aittMessage = new AittMessage(null);
+    }
+
     @Test
-    public void testClearPayload_P09() {
+    public void testClearPayload_P() {
         byte[] payload = message.getBytes();
         AittMessage aittMessage = new AittMessage(payload);
         aittMessage.clearPayload();

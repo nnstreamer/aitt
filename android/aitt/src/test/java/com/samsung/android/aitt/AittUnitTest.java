@@ -296,6 +296,25 @@ public class AittUnitTest {
     }
 
     @Test
+    public void testPublishMqttInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+            String _topic = "";
+            byte[] payload = message.getBytes();
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.publish(_topic, payload);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishMqttInvalidTopic" + e);
+        }
+    }
+
+    @Test
     public void testPublishWebRTC_P() {
         try {
             shadowJniInterface.setInitReturn(true);
@@ -314,7 +333,7 @@ public class AittUnitTest {
     }
 
     @Test
-    public void testPublishInvalidTopic_N() {
+    public void testPublishWebRTCInvalidTopic_N() {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
@@ -323,12 +342,12 @@ public class AittUnitTest {
             byte[] payload = message.getBytes();
 
             assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload);
+                aitt.publish(_topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false);
             });
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testPublishInvalidTopic" + e);
+            fail("Failed testPublishWebRTCInvalidTopic" + e);
         }
     }
 
@@ -351,6 +370,25 @@ public class AittUnitTest {
     }
 
     @Test
+    public void testPublishAnyProtocolInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+            String _topic = "";
+            byte[] payload = message.getBytes();
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishAnyProtocolInvalidTopic" + e);
+        }
+    }
+
+    @Test
     public void testPublishProtocolSet_P() {
         try {
             shadowJniInterface.setInitReturn(true);
@@ -366,6 +404,28 @@ public class AittUnitTest {
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testPublishProtocolSet " + e);
+        }
+    }
+
+    @Test
+    public void testPublishProtocolSetInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            assertNotNull("Aitt Instance not null", aitt);
+            aitt.connect(brokerIp, port);
+            String _topic = "";
+            byte[] payload = message.getBytes();
+            EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.publish(_topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishProtocolSetInvalidTopic " + e);
         }
     }
 
@@ -412,31 +472,7 @@ public class AittUnitTest {
     }
 
     @Test
-    public void testSubscribeWebRTC_P() {
-        try {
-            shadowJniInterface.setInitReturn(true);
-            Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
-            aitt.connect(brokerIp, port);
-
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                        @Override
-                        public void onMessageReceived(AittMessage message) {
-                            String _topic = message.getTopic();
-                            byte[] payload = message.getPayload();
-                        }
-                    },
-                    Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
-
-            aitt.disconnect();
-        } catch (Exception e) {
-            fail("Failed testSubscribeWebRTC " + e);
-        }
-    }
-
-    @Test
-    public void testSubscribeInvalidTopic_N() {
+    public void testSubscribeMqttInvalidTopic_N() {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
@@ -454,27 +490,90 @@ public class AittUnitTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeInvalidTopic " + e);
+            fail("Failed testSubscribeMqttInvalidTopic " + e);
         }
     }
 
     @Test
-    public void testSubscribeInvalidCallback_N() {
+    public void testSubscribeMqttInvalidCallback_N() {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
 
             aitt.connect(brokerIp, port);
 
-            String _topic = "topic";
-
             assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, null);
+                aitt.subscribe(topic, null);
             });
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeInvalidCallback " + e);
+            fail("Failed testSubscribeMqttInvalidCallback " + e);
+        }
+    }
+
+
+    @Test
+    public void testSubscribeWebRTC_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            assertNotNull("Aitt Instance not null", aitt);
+            aitt.connect(brokerIp, port);
+
+            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
+                @Override
+                public void onMessageReceived(AittMessage message) {
+                    String _topic = message.getTopic();
+                    byte[] payload = message.getPayload();
+                }
+            }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWebRTC " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeWebRTCInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            String _topic = "";
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
+                    @Override
+                    public void onMessageReceived(AittMessage message) {
+                    }
+                }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWebRTCInvalidTopic " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeWebRTCInvalidCallback_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(topic, null, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWebRTCInvalidCallback " + e);
         }
     }
 
@@ -488,17 +587,57 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                        @Override
-                        public void onMessageReceived(AittMessage message) {
-                            String _topic = message.getTopic();
-                            byte[] payload = message.getPayload();
-                        }
-                    },
-                    Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
+                @Override
+                public void onMessageReceived(AittMessage message) {
+                    String _topic = message.getTopic();
+                    byte[] payload = message.getPayload();
+                }
+            }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
 
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSubscribeAnyProtocol " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeAnyProtocolInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            String _topic = "";
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
+                    @Override
+                    public void onMessageReceived(AittMessage message) {
+                    }
+                }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeAnyProtocolInvalidTopic " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeAnyProtocolInvalidCallback_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeAnyProtocolInvalidCallback " + e);
         }
     }
 
@@ -513,18 +652,17 @@ public class AittUnitTest {
 
             assertThrows(IllegalArgumentException.class, () -> {
                 aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                            @Override
-                            public void onMessageReceived(AittMessage message) {
-                                String _topic = message.getTopic();
-                                byte[] payload = message.getPayload();
-                            }
-                        },
-                        protocols, Aitt.QoS.AT_MOST_ONCE);
+                    @Override
+                    public void onMessageReceived(AittMessage message) {
+                        String _topic = message.getTopic();
+                        byte[] payload = message.getPayload();
+                    }
+                }, protocols, Aitt.QoS.AT_MOST_ONCE);
             });
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeAnyProtocol " + e);
+            fail("Failed testSubscribeInvalidProtocol " + e);
         }
     }
 
@@ -539,17 +677,57 @@ public class AittUnitTest {
 
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
             aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                        @Override
-                        public void onMessageReceived(AittMessage message) {
-                            String _topic = message.getTopic();
-                            byte[] payload = message.getPayload();
-                        }
-                    },
-                    protocols, Aitt.QoS.EXACTLY_ONCE);
+                @Override
+                public void onMessageReceived(AittMessage message) {
+                    String _topic = message.getTopic();
+                    byte[] payload = message.getPayload();
+                }
+            }, protocols, Aitt.QoS.EXACTLY_ONCE);
 
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSubscribeProtocolSet " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeProtocolSetInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            String _topic = "";
+            EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
+                    @Override
+                    public void onMessageReceived(AittMessage message) {
+                    }
+                }, protocols, Aitt.QoS.EXACTLY_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeProtocolSetInvalidTopic " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeProtocolSetInvalidCallback_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            aitt.connect(brokerIp, port);
+            EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(topic, null, protocols, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeProtocolSetInvalidCallback " + e);
         }
     }
 
@@ -709,7 +887,7 @@ public class AittUnitTest {
     }
 
     @Test
-    public void testDiscoveryMessageCallbackEmptyPayload_P() {
+    public void testDiscoveryMessageCallbackEmptyPayload_N() {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
