@@ -62,7 +62,7 @@ void AittDiscovery::Stop()
     discovery_mq->Disconnect();
 }
 
-void AittDiscovery::UpdateDiscoveryMsg(const std::string &protocol, const void *msg, size_t length)
+void AittDiscovery::UpdateDiscoveryMsg(const std::string &protocol, const void *msg, int length)
 {
     auto it = discovery_map.find(protocol);
     if (it == discovery_map.end())
@@ -159,7 +159,7 @@ void AittDiscovery::PublishDiscoveryMsg()
           true);
 }
 
-AittDiscovery::DiscoveryBlob::DiscoveryBlob(const void *msg, size_t length)
+AittDiscovery::DiscoveryBlob::DiscoveryBlob(const void *msg, int length)
       : len(length), data(new char[len])
 {
     memcpy(data.get(), msg, length);

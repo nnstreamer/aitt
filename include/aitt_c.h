@@ -81,8 +81,7 @@ typedef enum AittError aitt_error_e;
  * @see aitt_subscribe()
  * @see aitt_subscribe_full()
  */
-typedef void (
-      *aitt_sub_fn)(aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data);
+typedef void (*aitt_sub_fn)(aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data);
 
 /**
  * @brief Create a new AITT service instance.
@@ -181,7 +180,7 @@ const char *aitt_option_get(aitt_option_h handle, aitt_option_e option);
  *
  * @see aitt_connect()
  */
-int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const size_t msg_len,
+int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const int msg_len,
       aitt_qos_e qos, bool retain);
 
 /**
@@ -240,7 +239,7 @@ int aitt_disconnect(aitt_h handle);
  * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #AITT_ERROR_SYSTEM System errors
  */
-int aitt_publish(aitt_h handle, const char *topic, const void *msg, const size_t msg_len);
+int aitt_publish(aitt_h handle, const char *topic, const void *msg, const int msg_len);
 
 /**
  * @brief Publish a message on a given topic as aitt_publish(), but takes protocols and qos.
@@ -257,7 +256,7 @@ int aitt_publish(aitt_h handle, const char *topic, const void *msg, const size_t
  * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #AITT_ERROR_SYSTEM System errors
  */
-int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const size_t msg_len,
+int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const int msg_len,
       int protocols, aitt_qos_e qos);
 
 /**
@@ -279,7 +278,7 @@ int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const s
  * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #AITT_ERROR_SYSTEM System errors
  */
-int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *msg, const size_t msg_len,
+int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *msg, const int msg_len,
       aitt_protocol_e protocols, aitt_qos_e qos, const char *correlation, aitt_sub_fn cb,
       void *user_data);
 
@@ -298,7 +297,7 @@ int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *msg, c
  * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #AITT_ERROR_SYSTEM System errors
  */
-int aitt_send_reply(aitt_h handle, aitt_msg_h msg_handle, const void *reply, const size_t reply_len,
+int aitt_send_reply(aitt_h handle, aitt_msg_h msg_handle, const void *reply, const int reply_len,
       bool end);
 
 /**

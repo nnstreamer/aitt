@@ -114,22 +114,22 @@ void TCP::SetupOptions(const ConnectInfo &connect_info)
     }
 }
 
-void TCP::Send(const void *data, size_t &szData)
+void TCP::Send(const void *data, int32_t &data_size)
 {
-    size_t sent = 0;
-    while (sent < szData) {
-        int ret = send(handle, static_cast<const char *>(data) + sent, szData - sent, 0);
+    int32_t sent = 0;
+    while (sent < data_size) {
+        int ret = send(handle, static_cast<const char *>(data) + sent, data_size - sent, 0);
         if (ret < 0) {
-            ERR("Fail to send data, handle = %d, size = %zu", handle, szData);
+            ERR("Fail to send data, handle = %d, size = %d", handle, data_size);
             throw std::runtime_error(strerror(errno));
         }
 
         sent += ret;
     }
-    szData = sent;
+    data_size = sent;
 }
 
-void TCP::SendSizedData(const void *data, size_t &szData)
+void TCP::SendSizedData(const void *data, int32_t &szData)
 {
     if (secure)
         SendSizedDataSecure(data, szData);
@@ -137,13 +137,13 @@ void TCP::SendSizedData(const void *data, size_t &szData)
         SendSizedDataNormal(data, szData);
 }
 
-int TCP::Recv(void *data, size_t &szData)
+int TCP::Recv(void *data, int32_t &data_size)
 {
-    size_t received = 0;
-    while (received < szData) {
-        int ret = recv(handle, static_cast<char *>(data) + received, szData - received, 0);
+    int32_t received = 0;
+    while (received < data_size) {
+        int ret = recv(handle, static_cast<char *>(data) + received, data_size - received, 0);
         if (ret < 0) {
-            ERR("Fail to recv data, handle = %d, size = %zu", handle, szData);
+            ERR("Fail to recv data, handle = %d, size = %d", handle, data_size);
             throw std::runtime_error(strerror(errno));
         }
         if (ret == 0) {
@@ -154,11 +154,11 @@ int TCP::Recv(void *data, size_t &szData)
         received += ret;
     }
 
-    szData = received;
+    data_size = received;
     return 0;
 }
 
-int TCP::RecvSizedData(void **data, size_t &szData)
+int TCP::RecvSizedData(void **data, int32_t &szData)
 {
     if (secure)
         return RecvSizedDataSecure(data, szData);
@@ -166,7 +166,7 @@ int TCP::RecvSizedData(void **data, size_t &szData)
         return RecvSizedDataNormal(data, szData);
 }
 
-int TCP::HandleZeroMsg(void **data, size_t &data_size)
+int TCP::HandleZeroMsg(void **data, int32_t &data_size)
 {
     // distinguish between connection problems and zero-size messages
     INFO("Got a zero-size message.");
@@ -205,37 +205,37 @@ unsigned short TCP::GetPort(void)
     return ntohs(addr.sin_port);
 }
 
-void TCP::SendSizedDataNormal(const void *data, size_t &data_size)
+void TCP::SendSizedDataNormal(const void *data, int32_t &data_size)
 {
-    size_t fixed_data_size = data_size;
+    int32_t fixed_data_size = data_size;
     if (0 == data_size) {
         // distinguish between connection problems and zero-size messages
         INFO("Send a zero-size message.");
-        fixed_data_size = UINT32_MAX;
+        fixed_data_size = INT32_MAX;
     }
 
-    size_t size_len = sizeof(fixed_data_size);
+    int32_t size_len = sizeof(fixed_data_size);
     Send(static_cast<const void *>(&fixed_data_size), size_len);
     Send(data, data_size);
 }
 
-int TCP::RecvSizedDataNormal(void **data, size_t &data_size)
+int TCP::RecvSizedDataNormal(void **data, int32_t &data_size)
 {
     int ret;
 
-    size_t data_len = 0;
-    size_t size_len = sizeof(data_len);
+    int32_t data_len = 0;
+    int32_t size_len = sizeof(data_len);
     ret = Recv(static_cast<void *>(&data_len), size_len);
     if (ret < 0) {
         ERR("Recv() Fail(%d)", ret);
         return ret;
     }
 
-    if (data_len == UINT32_MAX)
+    if (data_len == INT32_MAX)
         return HandleZeroMsg(data, data_size);
 
     if (AITT_MESSAGE_MAX < data_len) {
-        ERR("Invalid Size(%zu)", data_len);
+        ERR("Invalid Size(%d)", data_len);
         return -1;
     }
     void *data_buf = malloc(data_len);
@@ -246,37 +246,37 @@ int TCP::RecvSizedDataNormal(void **data, size_t &data_size)
     return 0;
 }
 
-void TCP::SendSizedDataSecure(const void *data, size_t &data_size)
+void TCP::SendSizedDataSecure(const void *data, int32_t &data_size)
 {
-    size_t fixed_data_size = data_size;
+    int32_t fixed_data_size = data_size;
     if (0 == data_size) {
         // distinguish between connection problems and zero-size messages
         INFO("Send a zero-size message.");
-        fixed_data_size = UINT32_MAX;
+        fixed_data_size = INT32_MAX;
     }
 
-    size_t size_len;
+    int32_t size_len;
     if (data_size) {
         unsigned char data_buf[crypto.GetCryptogramSize(data_size)];
-        size_t data_len =
+        int32_t data_len =
               crypto.Encrypt(static_cast<const unsigned char *>(data), data_size, data_buf);
-        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(size_t))];
+        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len = crypto.Encrypt((unsigned char *)&data_len, sizeof(data_len), size_buf);
         Send(size_buf, size_len);
         Send(data_buf, data_len);
     } else {
-        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(size_t))];
+        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len =
               crypto.Encrypt((unsigned char *)&fixed_data_size, sizeof(fixed_data_size), size_buf);
         Send(size_buf, size_len);
     }
 }
 
-int TCP::RecvSizedDataSecure(void **data, size_t &data_size)
+int TCP::RecvSizedDataSecure(void **data, int32_t &data_size)
 {
     int ret;
 
-    size_t cipher_size_len = crypto.GetCryptogramSize(sizeof(size_t));
+    int32_t cipher_size_len = crypto.GetCryptogramSize(sizeof(int32_t));
     unsigned char cipher_size_buf[cipher_size_len];
     ret = Recv(cipher_size_buf, cipher_size_len);
     if (ret < 0) {
@@ -285,14 +285,14 @@ int TCP::RecvSizedDataSecure(void **data, size_t &data_size)
     }
 
     unsigned char plain_size_buf[cipher_size_len];
-    size_t cipher_data_len = 0;
+    int32_t cipher_data_len = 0;
     crypto.Decrypt(cipher_size_buf, cipher_size_len, plain_size_buf);
     memcpy(&cipher_data_len, plain_size_buf, sizeof(cipher_data_len));
-    if (cipher_data_len == UINT32_MAX)
+    if (cipher_data_len == INT32_MAX)
         return HandleZeroMsg(data, data_size);
 
     if (AITT_MESSAGE_MAX < cipher_data_len) {
-        ERR("Invalid Size(%zu)", cipher_data_len);
+        ERR("Invalid Size(%d)", cipher_data_len);
         return -1;
     }
     unsigned char cipher_data_buf[cipher_data_len];

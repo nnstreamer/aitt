@@ -36,10 +36,10 @@ TEST_F(AITTManualTest, WillSet_P)
         aitt.Connect();
         aitt.Subscribe(
               "test/AITT_will",
-              [](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
+              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTManualTest *test = static_cast<AITTManualTest *>(cbdata);
                   test->ToggleReady();
-                  DBG("Subscribe invoked: %s %zu", static_cast<const char *>(msg), szmsg);
+                  DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
               },
               static_cast<void *>(this));
 

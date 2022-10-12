@@ -33,28 +33,28 @@ namespace aitt {
 class API AITT {
   public:
     using SubscribeCallback =
-          std::function<void(MSG *msg, const void *data, const size_t datalen, void *user_data)>;
+          std::function<void(MSG *msg, const void *data, const int datalen, void *user_data)>;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
     explicit AITT(const std::string &id, const std::string &ip_addr,
           AittOption option = AittOption(false, false));
     virtual ~AITT(void);
 
-    void SetWillInfo(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
+    void SetWillInfo(const std::string &topic, const void *data, const int datalen, AittQoS qos,
           bool retain);
     void SetConnectionCallback(ConnectionCallback cb, void *user_data = nullptr);
     void Connect(const std::string &host = AITT_LOCALHOST, int port = AITT_PORT,
           const std::string &username = std::string(), const std::string &password = std::string());
     void Disconnect(void);
 
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
+    void Publish(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocols = AITT_TYPE_MQTT, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
           bool retain = false);
-    int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+    int PublishWithReply(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
 
-    int PublishWithReplySync(const std::string &topic, const void *data, const size_t datalen,
+    int PublishWithReplySync(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation, int timeout_ms = 0);
 
@@ -63,7 +63,7 @@ class API AITT {
           AittQoS qos = AITT_QOS_AT_MOST_ONCE);
     void *Unsubscribe(AittSubscribeID handle);
 
-    void SendReply(MSG *msg, const void *data, const size_t datalen, bool end = true);
+    void SendReply(MSG *msg, const void *data, const int datalen, bool end = true);
 
     AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
           AittStreamRole role);

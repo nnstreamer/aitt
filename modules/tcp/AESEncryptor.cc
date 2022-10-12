@@ -43,7 +43,7 @@ void AESEncryptor::Init(const unsigned char *key, const unsigned char *iv)
     DBG_HEX_DUMP(iv_.data(), iv_.size());
 }
 
-size_t AESEncryptor::GetCryptogramSize(size_t plain_size)
+int AESEncryptor::GetCryptogramSize(int plain_size)
 {
     const int BLOCKSIZE = 16;
     return (plain_size / BLOCKSIZE + 1) * BLOCKSIZE;
@@ -65,7 +65,7 @@ void AESEncryptor::GenerateKey(unsigned char (&key)[AITT_TCP_ENCRYPTOR_KEY_LEN],
     }
 }
 
-size_t AESEncryptor::Encrypt(const unsigned char *plaintext, int plaintext_len,
+int AESEncryptor::Encrypt(const unsigned char *plaintext, int plaintext_len,
       unsigned char *ciphertext)
 {
     int len;
@@ -99,7 +99,7 @@ size_t AESEncryptor::Encrypt(const unsigned char *plaintext, int plaintext_len,
     return ciphertext_len + len;
 }
 
-size_t AESEncryptor::Decrypt(const unsigned char *ciphertext, int ciphertext_len,
+int AESEncryptor::Decrypt(const unsigned char *ciphertext, int ciphertext_len,
       unsigned char *plaintext)
 {
     int len;

@@ -61,7 +61,7 @@ void Module::ThreadMain(void)
     main_loop.Run();
 }
 
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen,
+void Module::Publish(const std::string &topic, const void *data, const int datalen,
       const std::string &correlation, AittQoS qos, bool retain)
 {
     // NOTE:
@@ -120,7 +120,7 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
                 }
 
                 try {
-                    size_t length = topic.length();
+                    int32_t length = topic.length();
                     portIt->second->SendSizedData(topic.c_str(), length);
                     length = datalen;
                     portIt->second->SendSizedData(data, length);
@@ -132,7 +132,7 @@ void Module::Publish(const std::string &topic, const void *data, const size_t da
     }      // publishTable
 }
 
-void Module::Publish(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
+void Module::Publish(const std::string &topic, const void *data, const int datalen, AittQoS qos,
       bool retain)
 {
     Publish(topic, data, datalen, std::string(), qos, retain);
@@ -161,12 +161,6 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
     }
 
     return reinterpret_cast<void *>(handle);
-}
-
-void *Module::Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
-      const void *data, const size_t datalen, void *cbdata, AittQoS qos)
-{
-    return nullptr;
 }
 
 void *Module::Unsubscribe(void *handlePtr)
@@ -324,7 +318,7 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
         return impl->HandleClientDisconnect(handle);
     }
 
-    size_t szmsg = 0;
+    int32_t szmsg = 0;
     char *msg = nullptr;
     std::string topic;
 
@@ -371,7 +365,7 @@ void Module::HandleClientDisconnect(int handle)
 
 std::string Module::GetTopicName(Module::TCPData *tcp_data)
 {
-    size_t topic_length = 0;
+    int32_t topic_length = 0;
     void *topic_data = nullptr;
     int ret = tcp_data->client->RecvSizedData(&topic_data, topic_length);
     if (ret < 0) {
@@ -385,7 +379,7 @@ std::string Module::GetTopicName(Module::TCPData *tcp_data)
     }
 
     std::string topic = std::string(static_cast<char *>(topic_data), topic_length);
-    INFO("Complete topic = [%s], topic_len = %zu", topic.c_str(), topic_length);
+    INFO("Complete topic = [%s], topic_len = %d", topic.c_str(), topic_length);
     free(topic_data);
 
     return topic;

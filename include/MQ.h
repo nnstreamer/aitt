@@ -32,7 +32,7 @@ class MQ {
     typedef void *(*ModuleEntry)(const char *id, const AittOption &option);
 
     using SubscribeCallback = std::function<void(MSG *msg, const std::string &topic,
-          const void *data, const size_t datalen, void *user_data)>;
+          const void *data, const int datalen, void *user_data)>;
     using MQConnectionCallback = std::function<void(int)>;
 
     static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_MQ_NEW);
@@ -43,15 +43,14 @@ class MQ {
     virtual void SetConnectionCallback(const MQConnectionCallback &cb) = 0;
     virtual void Connect(const std::string &host, int port, const std::string &username,
           const std::string &password) = 0;
-    virtual void SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, int qos,
+    virtual void SetWillInfo(const std::string &topic, const void *msg, int szmsg, int qos,
           bool retain) = 0;
     virtual void Disconnect(void) = 0;
-    virtual void Publish(const std::string &topic, const void *data, const size_t datalen,
-          int qos = 0, bool retain = false) = 0;
-    virtual void PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+    virtual void Publish(const std::string &topic, const void *data, const int datalen, int qos = 0,
+          bool retain = false) = 0;
+    virtual void PublishWithReply(const std::string &topic, const void *data, const int datalen,
           int qos, bool retain, const std::string &reply_topic, const std::string &correlation) = 0;
-    virtual void SendReply(MSG *msg, const void *data, const size_t datalen, int qos,
-          bool retain) = 0;
+    virtual void SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain) = 0;
     virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0) = 0;
     virtual void *Unsubscribe(void *handle) = 0;

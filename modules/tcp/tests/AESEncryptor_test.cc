@@ -53,9 +53,8 @@ TEST(AESEncryptor, EncryptDecryped_P_Anytime)
 
         unsigned char ciphertext[encryptor.GetCryptogramSize(TEST_MESSAGE.size())];
         unsigned char plaintext[encryptor.GetCryptogramSize(TEST_MESSAGE.size())];
-        size_t len =
-              encryptor.Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()),
-                    TEST_MESSAGE.size(), ciphertext);
+        int len = encryptor.Encrypt(reinterpret_cast<const unsigned char *>(TEST_MESSAGE.c_str()),
+              TEST_MESSAGE.size(), ciphertext);
         len = encryptor.Decrypt(ciphertext, len, plaintext);
         plaintext[len] = 0;
         ASSERT_STREQ(TEST_MESSAGE.c_str(), reinterpret_cast<char *>(plaintext));

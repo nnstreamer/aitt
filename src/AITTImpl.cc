@@ -75,7 +75,7 @@ void AITT::Impl::ThreadMain(void)
     main_loop.Run();
 }
 
-void AITT::Impl::SetWillInfo(const std::string &topic, const void *data, const size_t datalen,
+void AITT::Impl::SetWillInfo(const std::string &topic, const void *data, const int datalen,
       AittQoS qos, bool retain)
 {
     mq->SetWillInfo(topic, data, datalen, qos, retain);
@@ -151,7 +151,7 @@ void AITT::Impl::ConfigureTransportModule(const std::string &key, const std::str
 {
 }
 
-void AITT::Impl::Publish(const std::string &topic, const void *data, const size_t datalen,
+void AITT::Impl::Publish(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocols, AittQoS qos, bool retain)
 {
     if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT)
@@ -200,7 +200,7 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
     return mq->Subscribe(
           topic,
           [this, handle, loop_handle, cb](MSG *msg, const std::string &topic, const void *data,
-                const size_t datalen, void *mq_user_data) {
+                const int datalen, void *mq_user_data) {
               void *delivery = malloc(datalen);
               if (delivery)
                   memcpy(delivery, data, datalen);
@@ -214,7 +214,7 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
           user_data, qos);
 }
 
-void AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const size_t datalen,
+void AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const int datalen,
       void *user_data, MainLoopHandler::MainLoopResult result, int fd,
       MainLoopHandler::MainLoopData *loop_data)
 {
@@ -260,7 +260,7 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     return user_data;
 }
 
-int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *user_data,
       const std::string &correlation)
 {
@@ -271,8 +271,7 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
 
     Subscribe(
           replyTopic,
-          [this, cb](MSG *sub_msg, const void *sub_data, const size_t sub_datalen,
-                void *sub_cbdata) {
+          [this, cb](MSG *sub_msg, const void *sub_data, const int sub_datalen, void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
@@ -288,9 +287,9 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
     return 0;
 }
 
-int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data,
-      const size_t datalen, AittProtocol protocol, AittQoS qos, bool retain,
-      const SubscribeCallback &cb, void *user_data, const std::string &correlation, int timeout_ms)
+int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data, const int datalen,
+      AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *user_data,
+      const std::string &correlation, int timeout_ms)
 {
     std::string replyTopic = topic + RESPONSE_POSTFIX + std::to_string(reply_id++);
 
@@ -307,7 +306,7 @@ int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data,
 
     subscribe_handle = SubscribeMQ(
           info, &sync_loop, replyTopic,
-          [&](MSG *sub_msg, const void *sub_data, const size_t sub_datalen, void *sub_cbdata) {
+          [&](MSG *sub_msg, const void *sub_data, const int sub_datalen, void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
@@ -375,7 +374,7 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
     return modules.Get(handle->first)
           .Subscribe(
                 topic,
-                [handle, cb](const std::string &topic, const void *data, const size_t datalen,
+                [handle, cb](const std::string &topic, const void *data, const int datalen,
                       void *user_data, const std::string &correlation) -> void {
                     MSG msg;
                     msg.SetID(handle);

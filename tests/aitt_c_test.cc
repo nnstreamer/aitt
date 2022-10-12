@@ -191,7 +191,7 @@ TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
               GMainLoop *loop = static_cast<GMainLoop *>(user_data);
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
@@ -269,12 +269,11 @@ TEST(AITT_C_INTERFACE, sub_N_Anytime)
     EXPECT_NE(ret, AITT_ERROR_NONE);
 
     ret = aitt_subscribe(
-          handle, TEST_C_TOPIC, [](aitt_msg_h, const void *, size_t, void *) {}, nullptr,
-          &sub_handle);
+          handle, TEST_C_TOPIC, [](aitt_msg_h, const void *, int, void *) {}, nullptr, &sub_handle);
     EXPECT_EQ(ret, AITT_ERROR_NOT_READY);
 
     ret = aitt_subscribe(
-          nullptr, TEST_C_TOPIC, [](aitt_msg_h, const void *, size_t, void *) {}, nullptr,
+          nullptr, TEST_C_TOPIC, [](aitt_msg_h, const void *, int, void *) {}, nullptr,
           &sub_handle);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
@@ -282,7 +281,7 @@ TEST(AITT_C_INTERFACE, sub_N_Anytime)
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     ret = aitt_subscribe(
-          handle, nullptr, [](aitt_msg_h, const void *, size_t, void *) {}, nullptr, &sub_handle);
+          handle, nullptr, [](aitt_msg_h, const void *, int, void *) {}, nullptr, &sub_handle);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_subscribe(handle, TEST_C_TOPIC, nullptr, nullptr, &sub_handle);
@@ -316,7 +315,7 @@ TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
               aitt_h handle = static_cast<aitt_h>(user_data);
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
@@ -329,7 +328,7 @@ TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
     ret = aitt_publish_with_reply(
           handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT,
           AITT_QOS_AT_MOST_ONCE, test_correlation,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
               GMainLoop *loop = static_cast<GMainLoop *>(user_data);
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), reply_msg);
@@ -366,18 +365,18 @@ TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
     ret = aitt_publish_with_reply(
           nullptr, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT,
           AITT_QOS_AT_MOST_ONCE, test_correlation,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {}, nullptr);
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(
           handle, nullptr, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE,
           test_correlation,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {}, nullptr);
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(
           handle, TEST_C_TOPIC, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, test_correlation,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {}, nullptr);
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG),
@@ -409,7 +408,7 @@ TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
     static aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
               sub_call_count++;
           },
           nullptr, &sub_handle);

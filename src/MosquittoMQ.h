@@ -38,13 +38,13 @@ class MosquittoMQ : public MQ {
     void SetConnectionCallback(const MQConnectionCallback &cb);
     void Connect(const std::string &host, int port, const std::string &username,
           const std::string &password);
-    void SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, int qos, bool retain);
+    void SetWillInfo(const std::string &topic, const void *msg, int szmsg, int qos, bool retain);
     void Disconnect(void);
-    void Publish(const std::string &topic, const void *data, const size_t datalen, int qos = 0,
+    void Publish(const std::string &topic, const void *data, const int datalen, int qos = 0,
           bool retain = false);
-    void PublishWithReply(const std::string &topic, const void *data, const size_t datalen, int qos,
+    void PublishWithReply(const std::string &topic, const void *data, const int datalen, int qos,
           bool retain, const std::string &reply_topic, const std::string &correlation);
-    void SendReply(MSG *msg, const void *data, const size_t datalen, int qos, bool retain);
+    void SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain);
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0);
     void *Unsubscribe(void *handle);

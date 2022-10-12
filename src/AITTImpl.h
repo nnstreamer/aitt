@@ -36,7 +36,7 @@ class AITT::Impl {
           const AittOption &option);
     virtual ~Impl(void);
 
-    void SetWillInfo(const std::string &topic, const void *data, const size_t datalen, AittQoS qos,
+    void SetWillInfo(const std::string &topic, const void *data, const int datalen, AittQoS qos,
           bool retain);
     void SetConnectionCallback(ConnectionCallback cb, void *user_data);
     void Connect(const std::string &host, int port, const std::string &username,
@@ -46,12 +46,12 @@ class AITT::Impl {
     void ConfigureTransportModule(const std::string &key, const std::string &value,
           AittProtocol protocols);
 
-    void Publish(const std::string &topic, const void *data, const size_t datalen,
+    void Publish(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocols, AittQoS qos, bool retain);
-    int PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+    int PublishWithReply(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const AITT::SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
-    int PublishWithReplySync(const std::string &topic, const void *data, const size_t datalen,
+    int PublishWithReplySync(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb,
           void *cbdata, const std::string &correlation, int timeout_ms);
 
@@ -72,9 +72,8 @@ class AITT::Impl {
     void ConnectionCB(ConnectionCallback cb, void *user_data, int status);
     AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
           const std::string &topic, const SubscribeCallback &cb, void *cbdata, AittQoS qos);
-    void DetachedCB(SubscribeCallback cb, MSG mq_msg, void *data, const size_t datalen,
-          void *cbdata, MainLoopHandler::MainLoopResult result, int fd,
-          MainLoopHandler::MainLoopData *loop_data);
+    void DetachedCB(SubscribeCallback cb, MSG mq_msg, void *data, const int datalen, void *cbdata,
+          MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
 

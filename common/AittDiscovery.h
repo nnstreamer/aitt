@@ -37,19 +37,19 @@ class AittDiscovery {
           const std::string &password);
     void Restart();
     void Stop();
-    void UpdateDiscoveryMsg(const std::string &protocol, const void *msg, size_t length);
+    void UpdateDiscoveryMsg(const std::string &protocol, const void *msg, int length);
     int AddDiscoveryCB(const std::string &protocol, const DiscoveryCallback &cb);
     void RemoveDiscoveryCB(int callback_id);
     bool CompareTopic(const std::string &left, const std::string &right);
 
   private:
     struct DiscoveryBlob {
-        explicit DiscoveryBlob(const void *msg, size_t length);
+        explicit DiscoveryBlob(const void *msg, int length);
         ~DiscoveryBlob();
         DiscoveryBlob(const DiscoveryBlob &src);
         DiscoveryBlob &operator=(const DiscoveryBlob &src);
 
-        size_t len;
+        int len;
         std::shared_ptr<char> data;
     };
 

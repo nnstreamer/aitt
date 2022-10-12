@@ -147,7 +147,7 @@ void MosquittoMQ::Connect(const std::string &host, int port, const std::string &
     }
 }
 
-void MosquittoMQ::SetWillInfo(const std::string &topic, const void *msg, size_t szmsg, int qos,
+void MosquittoMQ::SetWillInfo(const std::string &topic, const void *msg, int szmsg, int qos,
       bool retain)
 {
     int ret = mosquitto_will_set(handle, topic.c_str(), szmsg, msg, qos, retain);
@@ -259,7 +259,7 @@ void MosquittoMQ::InvokeCallback(SubscribeData *subscriber, const mosquitto_mess
     subscriber->cb(&mq_msg, msg->topic, msg->payload, msg->payloadlen, subscriber->user_data);
 }
 
-void MosquittoMQ::Publish(const std::string &topic, const void *data, const size_t datalen, int qos,
+void MosquittoMQ::Publish(const std::string &topic, const void *data, const int datalen, int qos,
       bool retain)
 {
     int mid = -1;
@@ -270,7 +270,7 @@ void MosquittoMQ::Publish(const std::string &topic, const void *data, const size
     }
 }
 
-void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, const size_t datalen,
+void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, const int datalen,
       int qos, bool retain, const std::string &reply_topic, const std::string &correlation)
 {
     int ret;
@@ -296,7 +296,7 @@ void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, c
     }
 }
 
-void MosquittoMQ::SendReply(MSG *msg, const void *data, const size_t datalen, int qos, bool retain)
+void MosquittoMQ::SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain)
 {
     RET_IF(msg == nullptr);
 

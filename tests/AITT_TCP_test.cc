@@ -40,10 +40,9 @@ class AITTTCPTest : public testing::Test, public AittTests {
             int cnt = 0;
             aitt.Subscribe(
                   "test/+",
-                  [&](aitt::MSG *handle, const void *msg, const size_t szmsg,
-                        void *cbdata) -> void {
+                  [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                       AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
-                      INFO("Got Message(Topic:%s, size:%zu)", handle->GetTopic().c_str(), szmsg);
+                      INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
                       ++cnt;
 
                       std::stringstream ss;
@@ -84,9 +83,9 @@ TEST_F(AITTTCPTest, TCP_Wildcards1_Anytime)
 
         aitt.Subscribe(
               "test/#",
-              [&](aitt::MSG *handle, const void *msg, const size_t szmsg, void *cbdata) -> void {
+              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
-                  INFO("Got Message(Topic:%s, size:%zu)", handle->GetTopic().c_str(), szmsg);
+                  INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
                   static int cnt = 0;
                   ++cnt;
                   if (cnt == 3)

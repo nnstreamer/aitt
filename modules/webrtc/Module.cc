@@ -45,7 +45,7 @@ void Module::SetConfig(const std::string &key, void *obj)
 }
 
 void Module::Start(void)
-{ 
+{
 }
 
 void Module::SetStateCallback(StateCallback cb, void *user_data)

@@ -32,7 +32,7 @@ class AittTransport {
     typedef void *(
           *ModuleEntry)(AittProtocol type, AittDiscovery &discovery, const std::string &my_ip);
     using SubscribeCallback = std::function<void(const std::string &topic, const void *msg,
-          const size_t szmsg, void *cbdata, const std::string &correlation)>;
+          const int szmsg, void *cbdata, const std::string &correlation)>;
 
     static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_TRANSPORT_NEW);
 
@@ -42,19 +42,15 @@ class AittTransport {
     }
     virtual ~AittTransport(void) = default;
 
-    virtual void Publish(const std::string &topic, const void *data, const size_t datalen,
+    virtual void Publish(const std::string &topic, const void *data, const int datalen,
           const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
           bool retain = false) = 0;
-
-    virtual void Publish(const std::string &topic, const void *data, const size_t datalen,
+    virtual void Publish(const std::string &topic, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) = 0;
-
     virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *cbdata = nullptr, AittQoS qos = AITT_QOS_AT_MOST_ONCE) = 0;
-    virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb, const void *data,
-          const size_t datalen, void *cbdata = nullptr, AittQoS qos = AITT_QOS_AT_MOST_ONCE) = 0;
-
     virtual void *Unsubscribe(void *handle) = 0;
+
     AittProtocol GetProtocol() { return protocol; }
 
   protected:

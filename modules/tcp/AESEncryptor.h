@@ -32,9 +32,9 @@ class AESEncryptor {
     static void GenerateKey(unsigned char (&key)[AITT_TCP_ENCRYPTOR_KEY_LEN],
           unsigned char (&iv)[AITT_TCP_ENCRYPTOR_IV_LEN]);
     void Init(const unsigned char *key, const unsigned char *iv);
-    size_t GetCryptogramSize(size_t plain_size);
-    size_t Encrypt(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
-    size_t Decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
+    int GetCryptogramSize(int plain_size);
+    int Encrypt(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
+    int Decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
 
   private:
     std::vector<unsigned char> key_;

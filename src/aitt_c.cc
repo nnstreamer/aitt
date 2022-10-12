@@ -169,7 +169,7 @@ API const char *aitt_option_get(aitt_option_h handle, aitt_option_e option)
     return nullptr;
 }
 
-API int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const size_t msg_len,
+API int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const int msg_len,
       aitt_qos_e qos, bool retain)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
@@ -177,7 +177,7 @@ API int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const s
     try {
         handle->aitt->SetWillInfo(topic, msg, msg_len, qos, retain);
     } catch (std::exception &e) {
-        ERR("SetWillInfo(%s, %zu) Fail(%s)", topic, msg_len, e.what());
+        ERR("SetWillInfo(%s, %d) Fail(%s)", topic, msg_len, e.what());
         return AITT_ERROR_SYSTEM;
     }
     return AITT_ERROR_NONE;
@@ -235,12 +235,12 @@ API int aitt_disconnect(aitt_h handle)
     return AITT_ERROR_NONE;
 }
 
-API int aitt_publish(aitt_h handle, const char *topic, const void *msg, const size_t msg_len)
+API int aitt_publish(aitt_h handle, const char *topic, const void *msg, const int msg_len)
 {
     return aitt_publish_full(handle, topic, msg, msg_len, AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE);
 }
 
-API int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const size_t msg_len,
+API int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, const int msg_len,
       int protocols, aitt_qos_e qos)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
@@ -252,7 +252,7 @@ API int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, con
     try {
         handle->aitt->Publish(topic, msg, msg_len, AITT_TYPE_MQTT);
     } catch (std::exception &e) {
-        ERR("Publish(topic:%s, msg_len:%zu) Fail(%s)", topic, msg_len, e.what());
+        ERR("Publish(topic:%s, msg_len:%d) Fail(%s)", topic, msg_len, e.what());
         return AITT_ERROR_SYSTEM;
     }
 
@@ -260,7 +260,7 @@ API int aitt_publish_full(aitt_h handle, const char *topic, const void *msg, con
 }
 
 API int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *msg,
-      const size_t msg_len, aitt_protocol_e protocols, aitt_qos_e qos, const char *correlation,
+      const int msg_len, aitt_protocol_e protocols, aitt_qos_e qos, const char *correlation,
       aitt_sub_fn cb, void *user_data)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
@@ -282,7 +282,7 @@ API int aitt_publish_with_reply(aitt_h handle, const char *topic, const void *ms
 }
 
 API int aitt_send_reply(aitt_h handle, aitt_msg_h msg_handle, const void *reply,
-      const size_t reply_len, bool end)
+      const int reply_len, bool end)
 {
     try {
         aitt::MSG *msg = static_cast<aitt::MSG *>(msg_handle);

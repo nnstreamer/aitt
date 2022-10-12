@@ -36,7 +36,7 @@ TEST(AITT_C_MANUAL, will_set_P)
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_WILL_TOPIC,
-          [](aitt_msg_h msg_handle, const void *msg, size_t msg_len, void *user_data) {
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
               EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_WILL_TOPIC);

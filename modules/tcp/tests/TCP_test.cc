@@ -135,7 +135,7 @@ TEST_F(TCPTest, SendRecv_P_Anytime)
     char byeBuffer[TEST_BUFFER_SIZE];
 
     customTest = [this, &helloBuffer](void) mutable -> void {
-        size_t szData = sizeof(TEST_BUFFER_HELLO);
+        int32_t szData = sizeof(TEST_BUFFER_HELLO);
         client->Recv(static_cast<void *>(helloBuffer), szData);
 
         szData = sizeof(TEST_BUFFER_BYE);
@@ -144,7 +144,7 @@ TEST_F(TCPTest, SendRecv_P_Anytime)
 
     RunServer();
 
-    size_t szMsg = sizeof(TEST_BUFFER_HELLO);
+    int32_t szMsg = sizeof(TEST_BUFFER_HELLO);
     peer->Send(TEST_BUFFER_HELLO, szMsg);
 
     szMsg = sizeof(TEST_BUFFER_BYE);

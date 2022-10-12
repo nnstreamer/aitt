@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <TCP.h>
-#include <TCPServer.h>
+#include "../TCP.h"
+
 #include <getopt.h>
 #include <glib.h>
 
@@ -22,6 +22,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+
+#include "../TCPServer.h"
 
 //#define _LOG_WITH_TIMESTAMP
 #include "aitt_internal.h"
@@ -145,7 +147,7 @@ int main(int argc, char *argv[])
 
                   char buffer[10];
                   void *ptr = static_cast<void *>(buffer);
-                  size_t szData = sizeof(HELLO_STRING);
+                  int32_t szData = sizeof(HELLO_STRING);
                   peer->Recv(ptr, szData);
                   INFO("Gots[%s]", buffer);
 
@@ -211,7 +213,7 @@ int main(int argc, char *argv[])
                   INFO("Assigned client port: %u", client->GetPort());
 
                   INFO("Send[%s]", HELLO_STRING);
-                  size_t szBuffer = sizeof(HELLO_STRING);
+                  int32_t szBuffer = sizeof(HELLO_STRING);
                   client->Send(HELLO_STRING, szBuffer);
 
                   char buffer[10];

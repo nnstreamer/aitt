@@ -27,12 +27,12 @@ using AITT = aitt::AITT;
 class AITTRRTest : public testing::Test, public AittTests {
   public:
     void PublishSyncInCallback(aitt::AITT *aitt, bool *reply1_ok, bool *reply2_ok, aitt::MSG *msg,
-          const void *data, const size_t datalen, void *cbdata)
+          const void *data, const int datalen, void *cbdata)
     {
         aitt->PublishWithReplySync(
               rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
               AITT_QOS_AT_MOST_ONCE, false,
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckReply(msg, data, datalen);
                   *reply1_ok = true;
               },
@@ -45,7 +45,7 @@ class AITTRRTest : public testing::Test, public AittTests {
     }
 
     void CheckReplyCallback(bool toggle, bool *reply_ok, aitt::MSG *msg, const void *data,
-          const size_t datalen, void *cbdata)
+          const int datalen, void *cbdata)
     {
         CheckReply(msg, data, datalen);
         *reply_ok = true;
@@ -57,7 +57,7 @@ class AITTRRTest : public testing::Test, public AittTests {
     void SetUp() override { Init(); }
     void TearDown() override { Deinit(); }
 
-    void CheckReply(aitt::MSG *msg, const void *data, const size_t datalen)
+    void CheckReply(aitt::MSG *msg, const void *data, const int datalen)
     {
         std::string received_data((const char *)data, datalen);
         EXPECT_EQ(msg->GetCorrelation(), correlation);
@@ -65,7 +65,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         EXPECT_EQ(msg->IsEndSequence(), true);
     }
 
-    void CheckSubscribe(aitt::MSG *msg, const void *data, const size_t datalen)
+    void CheckSubscribe(aitt::MSG *msg, const void *data, const int datalen)
     {
         std::string received_data((const char *)data, datalen);
         EXPECT_TRUE(msg->GetTopic() == rr_topic);
@@ -84,7 +84,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
                   aitt.SendReply(msg, reply.c_str(), reply.size());
                   sub_ok = true;
@@ -129,7 +129,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         INFO("Connected");
 
         sub_aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
                   sub_aitt.SendReply(msg, reply.c_str(), reply.size());
                   sub_ok = true;
@@ -176,7 +176,7 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
                   aitt.SendReply(msg, reply.c_str(), reply.size());
                   sub_ok = true;
@@ -213,7 +213,7 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
 
                   aitt.SendReply(msg, reply1.c_str(), reply1.size(), false);
@@ -226,7 +226,7 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
         aitt.PublishWithReply(
               rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
               AITT_QOS_AT_MOST_ONCE, false,
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   std::string reply((const char *)data, datalen);
 
                   EXPECT_EQ(msg->GetCorrelation(), correlation);
@@ -281,7 +281,7 @@ TEST_F(AITTRRTest, RequestResponse_sync_P_Anytime)
         aitt.Connect();
 
         aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   CheckSubscribe(msg, data, datalen);
                   aitt.SendReply(msg, reply.c_str(), reply.size());
                   sub_ok = true;
@@ -341,7 +341,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_P_Anytime)
         int ret = aitt.PublishWithReplySync(
               rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
               AITT_QOS_AT_MOST_ONCE, false,
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   FAIL() << "Should not be called";
               },
               nullptr, correlation, 1);
@@ -361,7 +361,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
         AITT sub_aitt(clientId + "sub", LOCAL_IP, AittOption(true, false));
         sub_aitt.Connect();
         sub_aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   INFO("Subscribe Callback is called");
                   CheckSubscribe(msg, data, datalen);
                   sub_aitt.SendReply(msg, reply.c_str(), reply.size(), false);
@@ -374,7 +374,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
         int ret = aitt.PublishWithReplySync(
               rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
               AITT_QOS_AT_MOST_ONCE, false,
-              [&](aitt::MSG *msg, const void *data, const size_t datalen, void *cbdata) {
+              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
                   INFO("Reply Callback is called");
                   static int invalid = 0;
                   if (invalid)
