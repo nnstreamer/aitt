@@ -64,6 +64,8 @@ void Module::ThreadMain(void)
 void Module::Publish(const std::string &topic, const void *data, const int datalen,
       const std::string &correlation, AittQoS qos, bool retain)
 {
+    RET_IF(datalen < 0);
+
     // NOTE:
     // Iterate discovered service table
     // PublishMap
@@ -329,9 +331,9 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
             return;
         }
 
-        int ret = tcp_data->client->RecvSizedData((void **)&msg, szmsg);
-        if (ret < 0) {
-            ERR("Got a disconnection message.");
+        szmsg = tcp_data->client->RecvSizedData((void **)&msg);
+        if (szmsg < 0) {
+            ERR("Got a disconnection message(%d)", szmsg);
             return impl->HandleClientDisconnect(handle);
         }
     } catch (std::exception &e) {
@@ -367,8 +369,8 @@ std::string Module::GetTopicName(Module::TCPData *tcp_data)
 {
     int32_t topic_length = 0;
     void *topic_data = nullptr;
-    int ret = tcp_data->client->RecvSizedData(&topic_data, topic_length);
-    if (ret < 0) {
+    topic_length = tcp_data->client->RecvSizedData(&topic_data);
+    if (topic_length < 0) {
         ERR("Got a disconnection message.");
         HandleClientDisconnect(tcp_data->client->GetHandle());
         return std::string();

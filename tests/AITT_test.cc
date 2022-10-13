@@ -369,6 +369,18 @@ TEST_F(AITTTest, Publish_SECURE_TCP_P_Anytime)
     }
 }
 
+TEST_F(AITTTest, Publish_minus_size_N_Anytime)
+{
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.Connect();
+        EXPECT_THROW(aitt.Publish(testTopic, TEST_MSG, -1, AITT_TYPE_TCP), aitt::AittException);
+        EXPECT_THROW(aitt.Publish(testTopic, TEST_MSG, -1, AITT_TYPE_MQTT), aitt::AittException);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
 TEST_F(AITTTest, Publish_Multiple_Protocols_P_Anytime)
 {
     try {

@@ -74,9 +74,9 @@ void AITT::Disconnect(void)
 void AITT::Publish(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocols, AittQoS qos, bool retain)
 {
-    if (AITT_PAYLOAD_MAX < datalen) {
+    if (datalen < 0 || AITT_PAYLOAD_MAX < datalen) {
         ERR("Invalid Size(%d)", datalen);
-        throw std::runtime_error("Invalid Size");
+        throw AittException(AittException::INVALID_ARG);
     }
 
     return pImpl->Publish(topic, data, datalen, protocols, qos, retain);
@@ -86,9 +86,9 @@ int AITT::PublishWithReply(const std::string &topic, const void *data, const int
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *cbdata,
       const std::string &correlation)
 {
-    if (AITT_PAYLOAD_MAX < datalen) {
+    if (datalen < 0 || AITT_PAYLOAD_MAX < datalen) {
         ERR("Invalid Size(%d)", datalen);
-        throw std::runtime_error("Invalid Size");
+        throw AittException(AittException::INVALID_ARG);
     }
 
     return pImpl->PublishWithReply(topic, data, datalen, protocol, qos, retain, cb, cbdata,
@@ -99,9 +99,9 @@ int AITT::PublishWithReplySync(const std::string &topic, const void *data, const
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *cbdata,
       const std::string &correlation, int timeout_ms)
 {
-    if (AITT_PAYLOAD_MAX < datalen) {
+    if (datalen < 0 || AITT_PAYLOAD_MAX < datalen) {
         ERR("Invalid Size(%d)", datalen);
-        throw std::runtime_error("Invalid Size");
+        throw AittException(AittException::INVALID_ARG);
     }
 
     return pImpl->PublishWithReplySync(topic, data, datalen, protocol, qos, retain, cb, cbdata,
@@ -121,9 +121,9 @@ void *AITT::Unsubscribe(AittSubscribeID handle)
 
 void AITT::SendReply(MSG *msg, const void *data, int datalen, bool end)
 {
-    if (AITT_PAYLOAD_MAX < datalen) {
+    if (datalen < 0 || AITT_PAYLOAD_MAX < datalen) {
         ERR("Invalid Size(%d)", datalen);
-        throw std::runtime_error("Invalid Size");
+        throw AittException(AittException::INVALID_ARG);
     }
 
     return pImpl->SendReply(msg, data, datalen, end);

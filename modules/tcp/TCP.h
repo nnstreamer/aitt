@@ -45,22 +45,24 @@ class TCP {
     TCP(const std::string &host, const ConnectInfo &ConnectInfo);
     virtual ~TCP(void);
 
-    void Send(const void *data, int32_t &szData);
-    void SendSizedData(const void *data, int32_t &szData);
-    int Recv(void *data, int32_t &szData);
-    int RecvSizedData(void **data, int32_t &szData);
+    void SendSizedData(const void *data, int32_t data_size);
+    int RecvSizedData(void **data);
     int GetHandle(void);
     unsigned short GetPort(void);
     void GetPeerInfo(std::string &host, unsigned short &port);
 
+    // For unittest, it's public
+    int32_t Send(const void *data, int32_t data_size);
+    int32_t Recv(void *data, int32_t szData);
+
   private:
     TCP(int handle, sockaddr *addr, socklen_t addrlen, const ConnectInfo &connect_info);
     void SetupOptions(const ConnectInfo &connect_info);
-    int HandleZeroMsg(void **data, int32_t &data_size);
-    void SendSizedDataNormal(const void *data, int32_t &data_size);
-    int RecvSizedDataNormal(void **data, int32_t &data_size);
-    void SendSizedDataSecure(const void *data, int32_t &data_size);
-    int RecvSizedDataSecure(void **data, int32_t &data_size);
+    int HandleZeroMsg(void **data);
+    void SendSizedDataNormal(const void *data, int32_t data_size);
+    int RecvSizedDataNormal(void **data);
+    void SendSizedDataSecure(const void *data, int32_t data_size);
+    int RecvSizedDataSecure(void **data);
 
     int handle;
     socklen_t addrlen;
