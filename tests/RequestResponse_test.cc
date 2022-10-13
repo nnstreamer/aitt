@@ -112,6 +112,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
         IterateEventLoop();
 
+        aitt.Disconnect();
         EXPECT_TRUE(sub_ok);
         EXPECT_TRUE(reply_ok[0]);
         EXPECT_TRUE(reply_ok[1]);
@@ -137,6 +138,7 @@ class AITTRRTest : public testing::Test, public AittTests {
 
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
         aitt.Connect();
+        usleep(SLEEP_MS * 1000);
 
         using namespace std::placeholders;
         auto replyCB = std::bind(&AITTRRTest::PublishSyncInCallback, GetHandle(), &aitt, &reply1_ok,
@@ -153,6 +155,8 @@ class AITTRRTest : public testing::Test, public AittTests {
         g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
         IterateEventLoop();
 
+        aitt.Disconnect();
+        sub_aitt.Disconnect();
         EXPECT_TRUE(sub_ok);
         EXPECT_TRUE(reply1_ok);
         EXPECT_TRUE(reply2_ok);
@@ -383,7 +387,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
                       reply_ok = true;
                   invalid++;
               },
-              nullptr, correlation, 500);
+              nullptr, correlation, 100);
 
         EXPECT_TRUE(sub_ok == reply_ok);
         EXPECT_EQ(ret, AITT_ERROR_TIMED_OUT);

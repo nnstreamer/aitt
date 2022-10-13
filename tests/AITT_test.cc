@@ -48,8 +48,8 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds until the AITT client gets a server list (discover devices)
-            DBG("Sleep %d secs", SLEEP_MS);
-            sleep(SLEEP_MS);
+            DBG("Sleep %d ms", SLEEP_MS);
+            usleep(SLEEP_MS * 1000);
 
             DBG("Publish(%s) : %s(%zu)", testTopic.c_str(), test_msg, strlen(test_msg));
             aitt.Publish(testTopic, test_msg, strlen(test_msg), protocol);
@@ -109,7 +109,7 @@ class AITTTest : public testing::Test, public AittTests {
                 aitt1.Connect();
 
                 // Wait a few seconds to the AITT client gets server list (discover devices)
-                sleep(SLEEP_MS);
+                usleep(SLEEP_MS * 1000);
 
                 for (int i = 0; i < 10; i++) {
                     INFO("size = %zu", sizeof(dump_msg));
@@ -171,7 +171,7 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds to the AITT client gets server list (discover devices)
-            sleep(SLEEP_MS);
+            usleep(SLEEP_MS * 1000);
 
             // NOTE:
             // Select target peers and send the data through the specified protocol - TCP
@@ -210,7 +210,7 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds to the AITT client gets server list (discover devices)
-            sleep(SLEEP_MS);
+            usleep(SLEEP_MS * 1000);
 
             // NOTE:
             // Publish a message with the retained flag
@@ -579,8 +579,8 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
               static_cast<void *>(this), AITT_TYPE_MQTT);
 
         // Wait a few seconds to the AITT client gets server list (discover devices)
-        DBG("Sleep %d secs", SLEEP_MS);
-        sleep(SLEEP_MS);
+        DBG("Sleep %d ms", SLEEP_MS);
+        usleep(SLEEP_MS * 1000);
 
         DBG("Publish message to %s (%s) / %zu", testTopic.c_str(), TEST_MSG, sizeof(TEST_MSG));
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
