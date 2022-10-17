@@ -16,29 +16,53 @@
 
 #include "RTSPInfo.h"
 
-RTSPInfo::RTSPInfo(const std::string &_url, const std::string &_id, const std::string &_password)
-      : url(_url), id(_id), password(_password)
+#include "aitt_internal.h"
+
+RTSPInfo::RTSPInfo() : url_(""), id_(""), password_("")
 {
-    // encoding secure id and password
 }
 
 RTSPInfo::~RTSPInfo()
 {
 }
 
+void RTSPInfo::SetUrl(const std::string &url)
+{
+    url_ = url;
+}
+
 std::string RTSPInfo::GetUrl()
 {
-    return url;
+    return url_;
+}
+
+void RTSPInfo::SetID(const std::string &id)
+{
+    id_ = id;
 }
 
 std::string RTSPInfo::GetID()
 {
-    // decoding secure id
-    return id;
+    return id_;
+}
+
+void RTSPInfo::SetPassword(const std::string &password)
+{
+    password_ = password;
 }
 
 std::string RTSPInfo::GetPassword()
 {
-    // decoding secure password
-    return password;
+    return password_;
+}
+
+std::string RTSPInfo::GetCompleteUrl()
+{
+    std::string complete_url = url_;
+
+    if (id_.empty() != true && password_.empty() != true) {
+        complete_url.insert(7, id_ + ":" + password_ + "@");
+    }
+
+    return complete_url;
 }

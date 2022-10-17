@@ -17,19 +17,12 @@
 
 #include "aitt_internal.h"
 
-RTSPClient::RTSPClient(const std::string &_url)
-      : url(_url),
-        pipeline(nullptr),
-        state_cb_user_data(nullptr),
-        data_cb_user_data(nullptr),
-        state(0)
+RTSPClient::RTSPClient() : pipeline(nullptr), state(0)
 {
-    DBG("RTSPClient constructor");
 }
 
 RTSPClient::~RTSPClient()
 {
-    DBG("RTSPClient destructor");
 }
 
 void RTSPClient::OnPadAddedCB(GstElement *element, GstPad *pad, gpointer data)
@@ -78,8 +71,8 @@ void RTSPClient::VideoStreamDecodedCB(GstElement *object, GstBuffer *buffer, Gst
 
     /* need queueing and delete old frame */
     std::lock_guard<std::mutex> auto_lock(client->data_cb_lock);
-    if (client->data_cb != nullptr)
-        client->data_cb(frame, client->data_cb_user_data);
+    if (client->data_cb.first != nullptr)
+        client->data_cb.first(frame, client->data_cb.second);
 }
 
 gboolean RTSPClient::MessageReceived(GstBus *bus, GstMessage *message, gpointer data)
@@ -106,8 +99,18 @@ gboolean RTSPClient::MessageReceived(GstBus *bus, GstMessage *message, gpointer 
     return TRUE;
 }
 
-void RTSPClient::CreatePipeline()
+void RTSPClient::CreatePipeline(const std::string &url)
 {
+    if (url.empty() == true) {
+        ERR("RTSP Server url is empty");
+        return;
+    }
+
+    if (pipeline != nullptr) {
+        ERR("pipeline already exists");
+        return;
+    }
+
     DBG("Create Pipeline with url : %s", url.c_str());
 
     GstBus *bus;
@@ -180,29 +183,29 @@ void RTSPClient::DestroyPipeline(void)
 void RTSPClient::SetStateCallback(const StateCallback &cb, void *user_data)
 {
     std::lock_guard<std::mutex> auto_lock(state_cb_lock);
-    state_cb = cb;
-    state_cb_user_data = user_data;
+
+    state_cb = std::make_pair(cb, user_data);
 }
 
 void RTSPClient::SetDataCallback(const DataCallback &cb, void *user_data)
 {
     std::lock_guard<std::mutex> auto_lock(data_cb_lock);
-    data_cb = cb;
-    data_cb_user_data = user_data;
+
+    data_cb = std::make_pair(cb, user_data);
 }
 
 void RTSPClient::UnsetStateCallback()
 {
     std::lock_guard<std::mutex> auto_lock(state_cb_lock);
-    state_cb = nullptr;
-    state_cb_user_data = nullptr;
+
+    state_cb = std::make_pair(nullptr, nullptr);
 }
 
 void RTSPClient::UnsetClientCallback()
 {
     std::lock_guard<std::mutex> auto_lock(data_cb_lock);
-    data_cb = nullptr;
-    data_cb_user_data = nullptr;
+
+    data_cb = std::make_pair(nullptr, nullptr);
 }
 
 int RTSPClient::GetState()

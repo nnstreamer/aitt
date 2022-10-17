@@ -26,7 +26,7 @@
 
 class RTSPClient {
   public:
-    explicit RTSPClient(const std::string &url);
+    explicit RTSPClient();
     ~RTSPClient(void);
 
     using StateCallback = std::function<void(void *user_data)>;
@@ -41,7 +41,7 @@ class RTSPClient {
     void Start();
     void Stop();
 
-    void CreatePipeline();
+    void CreatePipeline(const std::string &url);
     void DestroyPipeline(void);
 
   private:
@@ -50,14 +50,10 @@ class RTSPClient {
           gpointer data);
     static gboolean MessageReceived(GstBus *bus, GstMessage *message, gpointer data);
 
-    std::string url;
     GstElement *pipeline;
 
-    StateCallback state_cb;
-    void *state_cb_user_data;
-
-    DataCallback data_cb;
-    void *data_cb_user_data;
+    std::pair<StateCallback, void *> state_cb;
+    std::pair<DataCallback, void *> data_cb;
 
     std::mutex state_cb_lock;
     std::mutex data_cb_lock;

@@ -36,11 +36,12 @@ class Module : public AittStreamModule {
     void SetConfig(const std::string &key, const std::string &value) override;
     void SetConfig(const std::string &key, void *obj) override;
     void Start(void) override;
-
+    void Stop(void) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
 
   private:
+    void UpdateState(AittStreamRole role, AittStreamState state);
     void UpdateDiscoveryMsg();
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
@@ -50,8 +51,14 @@ class Module : public AittStreamModule {
     AittStreamRole role_;
 
     int discovery_cb_;
-    RTSPInfo *info;
-    RTSPClient *client;
-    int current_state;
+    RTSPInfo info;
+    RTSPClient client;
+
+    AittStreamState server_state;
+    AittStreamState client_state;
+
+    std::mutex pipeline_lock;
+    std::pair<StateCallback, void *> state_cb;
+    std::pair<ReceiveCallback, void *> receive_cb;
 };
 }  // namespace AittRTSPNamespace

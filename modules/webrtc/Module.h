@@ -37,7 +37,7 @@ class Module : public AittStreamModule {
     void SetConfig(const std::string &key, const std::string &value) override;
     void SetConfig(const std::string &key, void *obj) override;
     void Start(void) override;
-
+    void Stop(void) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
 

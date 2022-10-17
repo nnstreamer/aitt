@@ -54,33 +54,88 @@ TEST(AittStreamTest, Webrtc_Full_P)
     }
 }
 
-TEST(AittStreamTest, RTSP_Full_P)
-{
-    try {
-        AITT aitt("streamClientId", LOCAL_IP, AittOption(true, false));
+class AITTRTSPTest : public testing::Test {
+  protected:
+    void SetUp() override
+    {
+        aitt = new AITT("streamClientId", LOCAL_IP, AittOption(true, false));
+        aitt->Connect();
+        main_loop = g_main_loop_new(nullptr, FALSE);
 
-        aitt.Connect();
-
-        AittStream *publisher =
-              aitt.CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_PUBLISHER);
+        publisher = aitt->CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_PUBLISHER);
         ASSERT_TRUE(publisher) << "CreateStream() Fail";
 
-        AittStream *subscriber =
-              aitt.CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
+        subscriber =
+              aitt->CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
         ASSERT_TRUE(subscriber) << "CreateStream() Fail";
+    }
+    void TearDown() override
+    {
+        g_main_loop_unref(main_loop);
+        aitt->DestroyStream(publisher);
+        aitt->DestroyStream(subscriber);
+        aitt->Disconnect();
+        delete aitt;
+    }
 
-        publisher->SetConfig("key", "value");
+    AITT *aitt;
+    AittStream *publisher;
+    AittStream *subscriber;
+    GMainLoop *main_loop;
+};
+
+static gint SubscriberStart(gpointer argv)
+{
+    AittStream *subscriber = static_cast<AittStream *>(argv);
+
+    subscriber->Start();
+
+    return false;
+}
+
+TEST_F(AITTRTSPTest, Publisher_First_P)
+{
+    try {
+        publisher->SetConfig("url",
+              "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
+        publisher->SetConfig("id", "admin");
+        publisher->SetConfig("password", "admin");
         publisher->Start();
 
-        subscriber->SetConfig("key", "value");
-        subscriber->SetStateCallback([](AittStream *stream, int state, void *user_data) {},
-              (void *)"user_data");
-        subscriber->SetReceiveCallback([](AittStream *stream, void *obj, void *user_data) {},
-              (void *)"user-data");
+        subscriber->SetReceiveCallback(
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  DBG("ReceiveCallback Called");
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
+
+        g_timeout_add(3000, SubscriberStart, subscriber);
+        g_main_loop_run(main_loop);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTRTSPTest, Subscriber_First_P)
+{
+    try {
+        subscriber->SetReceiveCallback(
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  DBG("ReceiveCallback Called");
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
         subscriber->Start();
 
-        aitt.DestroyStream(publisher);
-        aitt.DestroyStream(subscriber);
+        publisher->SetConfig("url",
+              "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
+        publisher->SetConfig("id", "admin");
+        publisher->SetConfig("password", "admin");
+        publisher->Start();
+
+        g_main_loop_run(main_loop);
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
