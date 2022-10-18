@@ -18,14 +18,14 @@ package com.samsung.android.aitt;
 import com.samsung.android.aittnative.JniInterface;
 
 class TransportFactory {
-    public static TransportHandler createTransport(Aitt.Protocol protocol, JniInterface mJniInterface) {
+    public static TransportHandler createTransport(Aitt.Protocol protocol) {
         TransportHandler transportHandler;
         switch (protocol) {
             case WEBRTC:
-                transportHandler = new WebRTCHandler(mJniInterface);
+                transportHandler = new WebRTCHandler();
                 break;
             case IPC:
-                transportHandler = new IpcHandler(mJniInterface);
+                transportHandler = new IpcHandler();
                 break;
             default:
                 transportHandler = null;

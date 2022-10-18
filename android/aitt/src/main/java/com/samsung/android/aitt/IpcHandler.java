@@ -20,9 +20,8 @@ import android.content.Context;
 import com.samsung.android.aittnative.JniInterface;
 
 class IpcHandler implements TransportHandler {
-    private JniInterface mJniInterface;
-    public IpcHandler(JniInterface jniInterface){
-        mJniInterface = jniInterface;
+    public IpcHandler() {
+        //ToDo : Copy jni interface and use to communicate with JNI
     }
 
     @Override

@@ -30,13 +30,12 @@ class WebRTCHandler implements TransportHandler {
     private byte[] publishData;
     private WebRTC webrtc;
     private WebRTCServer ws;
-    private JniInterface mJniInterface;
     //ToDo - For now using sample app parameters, later fetch frameWidth & frameHeight from app
     private final Integer frameWidth = 640;
     private final Integer frameHeight = 480;
 
-    public WebRTCHandler(JniInterface jniInterface){
-        mJniInterface = jniInterface;
+    public WebRTCHandler() {
+        //ToDo : Copy jni interface and use to communicate with JNI
     }
 
     @Override

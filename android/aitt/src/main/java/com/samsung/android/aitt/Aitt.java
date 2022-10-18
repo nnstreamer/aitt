@@ -307,7 +307,7 @@ public class Aitt {
     private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object transportHandlerObject, String ip, int port, byte[] message) {
         TransportHandler transportHandler;
         if (transportHandlerObject == null) {
-            transportHandler = TransportFactory.createTransport(protocol, mJniInterface);
+            transportHandler = TransportFactory.createTransport(protocol);
             if (transportHandler != null)
                 transportHandler.setAppContext(appContext);
             portTable.portMap.replace(port, new Pair<>(protocol, transportHandler));
@@ -393,7 +393,7 @@ public class Aitt {
 
         for (Protocol pro : protocols) {
             try {
-                TransportHandler transportHandler = TransportFactory.createTransport(pro, mJniInterface);
+                TransportHandler transportHandler = TransportFactory.createTransport(pro);
 
                 if (transportHandler != null) {
                     synchronized (this) {
