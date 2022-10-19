@@ -52,6 +52,7 @@ dependencies {
 
     implementation project(path: ':android:modules:tcp')
     implementation project(path: ':android:modules:webrtc')
+    implementation project(path: ':android:modules:ipc')
     implementation project(path: ':android:aitt-native')
 
     testImplementation 'junit:junit:4.13.2'

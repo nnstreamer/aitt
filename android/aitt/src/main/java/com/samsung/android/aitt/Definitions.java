@@ -23,4 +23,5 @@ class Definitions {
     public static final String JOIN_NETWORK = "connected";
     public static final String RESPONSE_POSTFIX = "_AittRe_";
     public static final String STATUS = "status";
+    public static final int DEFAULT_IPC_PORT = 0;
 }

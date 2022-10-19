@@ -352,6 +352,43 @@ public class AittUnitTest {
     }
 
     @Test
+    public void testPublishIpc_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            assertNotNull("Aitt Instance not null", aitt);
+            aitt.connect(brokerIp, port);
+
+            byte[] payload = message.getBytes();
+            aitt.publish(topic, payload, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE, false);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishIpc " + e);
+        }
+    }
+
+    @Test
+    public void testPublishIpcInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+            String _topic = "";
+            byte[] payload = message.getBytes();
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.publish(_topic, payload, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE, false);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishIpcInvalidTopic" + e);
+        }
+    }
+
+    @Test
     public void testPublishAnyProtocol_P() {
         try {
             shadowJniInterface.setInitReturn(true);
@@ -512,7 +549,6 @@ public class AittUnitTest {
         }
     }
 
-
     @Test
     public void testSubscribeWebRTC_P() {
         try {
@@ -574,6 +610,52 @@ public class AittUnitTest {
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSubscribeWebRTCInvalidCallback " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeIpc_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            assertNotNull("Aitt Instance not null", aitt);
+            aitt.connect(brokerIp, port);
+
+            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
+                @Override
+                public void onMessageReceived(AittMessage message) {
+                    String _topic = message.getTopic();
+                    byte[] payload = message.getPayload();
+                }
+            }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeIpc " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeIpcInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            String _topic = "";
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
+                    @Override
+                    public void onMessageReceived(AittMessage message) {
+                    }
+                }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE);
+            });
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeIpcInvalidTopic " + e);
         }
     }
 
