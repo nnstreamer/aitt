@@ -15,48 +15,41 @@
  */
 #pragma once
 
-#include <gst/gst.h>
-#include <gst/video/video-info.h>
+#include <mm_display_interface.h>
+#include <player.h>
 
 #include <functional>
 #include <mutex>
 #include <string>
 
-#include "RTSPFrame.h"
+#include "aitt_internal.h"
 
 class RTSPClient {
   public:
-    explicit RTSPClient();
+    explicit RTSPClient(void);
     ~RTSPClient(void);
 
-    using StateCallback = std::function<void(void *user_data)>;
-    using DataCallback = std::function<void(RTSPFrame &frame, void *user_data)>;
+    using ReceiveCallback = std::function<void(void *obj, void *user_data)>;
 
-    void SetStateCallback(const StateCallback &cb, void *user_data);
-    void SetDataCallback(const DataCallback &cb, void *user_data);
-    void UnsetStateCallback();
-    void UnsetClientCallback();
-    int GetState();
+    void SetReceiveCallback(const ReceiveCallback &cb, void *user_data);
+    void UnsetReceiveCallback(void);
+    bool IsStart(void);
 
-    void Start();
-    void Stop();
-
-    void CreatePipeline(const std::string &url);
-    void DestroyPipeline(void);
+    void SetDisplay(void *display);
+    void SetUrl(const std::string &url);
+    void Start(void);
+    void Stop(void);
 
   private:
-    static void OnPadAddedCB(GstElement *element, GstPad *pad, gpointer data);
-    static void VideoStreamDecodedCB(GstElement *object, GstBuffer *buffer, GstPad *pad,
-          gpointer data);
-    static gboolean MessageReceived(GstBus *bus, GstMessage *message, gpointer data);
+    static void PlayerPreparedCB(void *data);
+    static void VideoStreamDecodedCB(media_packet_h packet, void *user_data);
 
-    GstElement *pipeline;
+    bool is_start;
+    player_h player_;
+    void *display_;
+    mm_display_interface_h mm_display_;
 
-    std::pair<StateCallback, void *> state_cb;
-    std::pair<DataCallback, void *> data_cb;
+    std::pair<ReceiveCallback, void *> receive_cb;
 
-    std::mutex state_cb_lock;
-    std::mutex data_cb_lock;
-
-    int state;
+    std::mutex receive_cb_lock;
 };

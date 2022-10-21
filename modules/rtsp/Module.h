@@ -57,7 +57,6 @@ class Module : public AittStreamModule {
     AittStreamState server_state;
     AittStreamState client_state;
 
-    std::mutex pipeline_lock;
     std::pair<StateCallback, void *> state_cb;
     std::pair<ReceiveCallback, void *> receive_cb;
 };

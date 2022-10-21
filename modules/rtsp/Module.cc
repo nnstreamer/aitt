@@ -47,6 +47,14 @@ Module::Module(AittDiscovery &discovery, const std::string &topic, AittStreamRol
 {
     RTSP_DBG("RTSP Module constructor : %s", topic_.c_str());
 
+    client.SetReceiveCallback(
+          [&](void *obj, void *user_data) {
+              if (receive_cb.first != nullptr) {
+                  receive_cb.first(this, obj, receive_cb.second);
+              }
+          },
+          nullptr);
+
     discovery_cb_ = discovery_.AddDiscoveryCB(topic,
           std::bind(&Module::DiscoveryMessageCallback, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
@@ -82,6 +90,7 @@ void Module::SetConfig(const std::string &key, void *obj)
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER) {
         if (key == "display") {
             RTSP_DBG("Set Evas object for display");
+            client.SetDisplay(obj);
         }
     }
 }
@@ -95,7 +104,7 @@ void Module::Start(void)
         UpdateDiscoveryMsg();
     } else {
         if (server_state == AittStreamState::AITT_STREAM_STATE_READY) {
-            RTSP_DBG("Playing Pipeline in Start() method");
+            RTSP_DBG("Start in Start() method");
             client.Start();
             UpdateState(role_, AittStreamState::AITT_STREAM_STATE_PLAYING);
         } else {
@@ -114,6 +123,7 @@ void Module::Stop(void)
         UpdateDiscoveryMsg();
     } else {
         if (client_state == AittStreamState::AITT_STREAM_STATE_PLAYING) {
+            RTSP_DBG("Stop in Start() method");
             client.Stop();
         }
 
@@ -167,7 +177,6 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
             next_state = AittStreamState::AITT_STREAM_STATE_READY;
         }
 
-        client.DestroyPipeline();
         UpdateState(role_, next_state);
         return;
     }
@@ -178,8 +187,6 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         return;
     }
 
-    std::lock_guard<std::mutex> auto_lock(pipeline_lock);
-
     UpdateState(AittStreamRole::AITT_STREAM_ROLE_PUBLISHER,
           static_cast<AittStreamState>(map[RTSP_INFO_SERVER_STATE].AsInt64()));
     info.SetUrl(map[RTSP_INFO_URL].AsString().c_str());
@@ -187,31 +194,24 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
     info.SetPassword(map[RTSP_INFO_PASSWORD].AsString().c_str());
 
     RTSP_DBG("server_state : %d, url : %s, id : %s, passwd : %s", server_state,
-          info.GetUrl().c_str(),
-          info.GetID().c_str(), info.GetPassword().c_str());
+          info.GetUrl().c_str(), info.GetID().c_str(), info.GetPassword().c_str());
+
+    client.SetUrl(info.GetCompleteUrl());
 
     if (server_state == AittStreamState::AITT_STREAM_STATE_READY) {
-        client.CreatePipeline(info.GetCompleteUrl());
-
         if (client_state == AittStreamState::AITT_STREAM_STATE_READY) {
-            RTSP_DBG("Playing pipeline in DiscoveryMessage Callback");
-
+            RTSP_DBG("Start in DiscoveryMessage Callback");
             client.Start();
-
             UpdateState(AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER,
                   AittStreamState::AITT_STREAM_STATE_PLAYING);
         }
     } else if (server_state == AittStreamState::AITT_STREAM_STATE_INIT) {
         if (client_state == AittStreamState::AITT_STREAM_STATE_PLAYING) {
-            RTSP_DBG("Stop pipeline in DiscoveryMessage Callback");
-
+            RTSP_DBG("Stop in DiscoveryMessage Callback");
             client.Stop();
-
             UpdateState(AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER,
                   AittStreamState::AITT_STREAM_STATE_READY);
         }
-
-        client.DestroyPipeline();
     }
 }
 

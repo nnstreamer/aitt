@@ -13,212 +13,169 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "RTSPClient.h"
 
-#include "aitt_internal.h"
-
-RTSPClient::RTSPClient() : pipeline(nullptr), state(0)
+RTSPClient::RTSPClient(void) : is_start(false), display_(nullptr)
 {
-}
+    int ret;
 
-RTSPClient::~RTSPClient()
-{
-}
+    player_create(&player_);
 
-void RTSPClient::OnPadAddedCB(GstElement *element, GstPad *pad, gpointer data)
-{
-    GstPad *sinkpad;
-
-    GstPadLinkReturn ret;
-
-    GstElement *decoder = (GstElement *)data;
-
-    /* We can now link this pad with the rtsp-decoder sink pad */
-
-    DBG("Dynamic pad created, linking source/demuxer");
-    DBG("element name: [%s], pad name : [%s]", GST_ELEMENT_NAME(element), GST_PAD_NAME(pad));
-
-    sinkpad = gst_element_get_static_pad(decoder, "sink");
-
-    /* If our converter is already linked, we have nothing to do here */
-    if (gst_pad_is_linked(sinkpad)) {
-        DBG("*** We are already linked ***");
-        gst_object_unref(sinkpad);
-        return;
-    } else {
-        DBG("proceeding to linking ...");
-    }
-
-    ret = gst_pad_link(pad, sinkpad);
-
-    if (GST_PAD_LINK_FAILED(ret)) {
-        ERR("failed to link dynamically");
-    } else {
-        DBG("dynamically link successful");
-    }
-
-    gst_object_unref(sinkpad);
-}
-
-void RTSPClient::VideoStreamDecodedCB(GstElement *object, GstBuffer *buffer, GstPad *pad,
-      gpointer data)
-{
-    if (data == nullptr)
-        return;
-
-    RTSPClient *client = static_cast<RTSPClient *>(data);
-    RTSPFrame frame(buffer, pad);
-
-    /* need queueing and delete old frame */
-    std::lock_guard<std::mutex> auto_lock(client->data_cb_lock);
-    if (client->data_cb.first != nullptr)
-        client->data_cb.first(frame, client->data_cb.second);
-}
-
-gboolean RTSPClient::MessageReceived(GstBus *bus, GstMessage *message, gpointer data)
-{
-    GstMessageType type = message->type;
-
-    switch (type) {
-    case GST_MESSAGE_ERROR:
-        GError *gerror;
-        gchar *debug;
-
-        gst_message_parse_error(message, &gerror, &debug);
-
-        ERR("Error : %s", debug);
-
-        g_error_free(gerror);
-        g_free(debug);
-
-        break;
-    default:
-        break;
-    }
-
-    return TRUE;
-}
-
-void RTSPClient::CreatePipeline(const std::string &url)
-{
-    if (url.empty() == true) {
-        ERR("RTSP Server url is empty");
+    ret = player_set_media_packet_video_frame_decoded_cb(player_, VideoStreamDecodedCB, this);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_set_media_packet_video_frame_decoded_cb failed : %d", ret);
         return;
     }
 
-    if (pipeline != nullptr) {
-        ERR("pipeline already exists");
+    ret = mm_display_interface_init(&mm_display_);
+    if (ret != 0) {
+        ERR("mm_display_interface_init failed : %d", ret);
+        return;
+    }
+}
+
+RTSPClient::~RTSPClient(void)
+{
+    player_destroy(player_);
+}
+
+bool RTSPClient::IsStart(void)
+{
+    return is_start;
+}
+
+void RTSPClient::SetDisplay(void* display)
+{
+    int ret = PLAYER_ERROR_NONE;
+
+    RET_IF(player_ == nullptr);
+    RET_IF(display == nullptr);
+    RET_IF(is_start == true);
+
+    display_ = nullptr;
+
+    ret = player_set_display(player_, PLAYER_DISPLAY_TYPE_NONE, nullptr);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_set_display failed: %d", ret);
         return;
     }
 
-    DBG("Create Pipeline with url : %s", url.c_str());
-
-    GstBus *bus;
-    GstElement *rtspsrc;
-    GstElement *rtph264depay;
-    GstElement *h264parse;
-    GstElement *avdec_h264;
-    GstElement *videoqueue0;
-    GstElement *videoconvert;
-    GstElement *video_sink;
-
-    gst_init(nullptr, nullptr);
-
-    pipeline = gst_pipeline_new("rtsp pipeline");
-    if (!pipeline) {
-        ERR("pipeline is null");
+    ret = mm_display_interface_set_display(mm_display_, MM_DISPLAY_TYPE_EVAS, display, nullptr);
+    if (ret != 0) {
+        ERR("mm_display_interface_set_display failed: %d", ret);
         return;
     }
 
-    rtph264depay = gst_element_factory_make("rtph264depay", "rtph264depay0");
-    h264parse = gst_element_factory_make("h264parse", "h264parse0");
-    rtspsrc = gst_element_factory_make("rtspsrc", "rtspsrc0");
-    avdec_h264 = gst_element_factory_make("decodebin", "avdec_h2640");
-    videoqueue0 = gst_element_factory_make("queue", "videoqueue0");
-    videoconvert = gst_element_factory_make("videoconvert", "videoconvert0");
-    video_sink = gst_element_factory_make("fakesink", "fakesink0");
-
-    g_object_set(G_OBJECT(video_sink), "sync", FALSE, NULL);
-    g_object_set(G_OBJECT(rtspsrc), "location", url.c_str(), NULL);
-    g_object_set(G_OBJECT(rtspsrc), "latency", 0, NULL);
-    g_object_set(G_OBJECT(rtspsrc), "buffer-mode", 3, NULL);
-
-    gst_bin_add_many(GST_BIN(pipeline), rtspsrc, rtph264depay, h264parse, avdec_h264, videoqueue0,
-          videoconvert, video_sink, NULL);
-
-    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
-    gst_bus_add_watch(bus, MessageReceived, pipeline);
-
-    if (!gst_element_link_many(rtph264depay, h264parse, avdec_h264, NULL)) {
-        ERR("Linking part (A)-1 Fail...");
+    ret = mm_display_interface_evas_set_mode(mm_display_, 0);
+    if (ret != 0) {
+        ERR("mm_display_interface_evas_set_mode failed: %d", ret);
+        return;
+    }
+    ret = mm_display_interface_evas_set_rotation(mm_display_, 0);
+    if (ret != 0) {
+        ERR("mm_display_interface_evas_set_rotation failed: %d", ret);
+        return;
+    }
+    ret = mm_display_interface_evas_set_visible(mm_display_, true);
+    if (ret != 0) {
+        ERR("mm_display_interface_evas_set_visible failed: %d", ret);
         return;
     }
 
-    if (!gst_element_link_many(videoqueue0, videoconvert, video_sink, NULL)) {
-        ERR("Linking part (A)-2 Fail...");
+    display_ = display;
+}
+
+void RTSPClient::SetUrl(const std::string& url)
+{
+    int ret = PLAYER_ERROR_NONE;
+
+    RET_IF(player_ == nullptr);
+    RET_IF(url.empty());
+    RET_IF(is_start == true);
+
+    ret = player_set_uri(player_, url.c_str());
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_set_uri failed: %d", ret);
+        return;
+    }
+}
+
+void RTSPClient::VideoStreamDecodedCB(media_packet_h packet, void* user_data)
+{
+    if (!packet || !user_data) {
+        ERR("invalid param [packet:%p, user_data:%p]", packet, user_data);
         return;
     }
 
-    if (!g_signal_connect(rtspsrc, "pad-added", G_CALLBACK(OnPadAddedCB), rtph264depay)) {
-        ERR("Linking part (1) with part (A)-1 Fail...");
+    RTSPClient* player = static_cast<RTSPClient*>(user_data);
+
+    // Todo : Handle the copied media packet in another thread
+    if (player->receive_cb.first != nullptr) {
+        player->receive_cb.first(static_cast<void*>(packet), player->receive_cb.second);
     }
 
-    if (!g_signal_connect(avdec_h264, "pad-added", G_CALLBACK(OnPadAddedCB), videoqueue0)) {
-        ERR("Linking part (2) with part (A)-2 Fail...");
+    if (player->display_ != nullptr) {
+        mm_display_interface_evas_render(player->mm_display_, packet);
+    }
+}
+
+void RTSPClient::PlayerPreparedCB(void* data)
+{
+    int ret = PLAYER_ERROR_NONE;
+
+    player_h player = static_cast<player_h>(data);
+
+    ret = player_start(player);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_prepare_async failed: %d", ret);
+        return;
+    }
+}
+
+void RTSPClient::Start(void)
+{
+    int ret = PLAYER_ERROR_NONE;
+
+    RET_IF(player_ == nullptr);
+    RET_IF(is_start == true);
+    RET_IF(display_ == nullptr);
+
+    ret = player_prepare_async(player_, PlayerPreparedCB, player_);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_prepare_async failed: %d", ret);
+        return;
     }
 
-    g_object_set(G_OBJECT(video_sink), "signal-handoffs", TRUE, NULL);
-    if (!g_signal_connect(video_sink, "handoff", G_CALLBACK(VideoStreamDecodedCB), this)) {
-        ERR("Linking part (2) with part (B)-2 Fail...");
+    is_start = true;
+}
+
+void RTSPClient::Stop(void)
+{
+    int ret = PLAYER_ERROR_NONE;
+
+    RET_IF(player_ == nullptr);
+    RET_IF(is_start == false);
+
+    is_start = false;
+
+    ret = player_stop(player_);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_stop failed: %d", ret);
+        return;
     }
-
-    DBG("Pipeline created");
 }
 
-void RTSPClient::DestroyPipeline(void)
+void RTSPClient::SetReceiveCallback(const ReceiveCallback& cb, void* user_data)
 {
-    DBG("Destroy Pipeline");
+    std::lock_guard<std::mutex> auto_lock(receive_cb_lock);
+
+    receive_cb = std::make_pair(cb, user_data);
 }
 
-void RTSPClient::SetStateCallback(const StateCallback &cb, void *user_data)
+void RTSPClient::UnsetReceiveCallback()
 {
-    std::lock_guard<std::mutex> auto_lock(state_cb_lock);
+    std::lock_guard<std::mutex> auto_lock(receive_cb_lock);
 
-    state_cb = std::make_pair(cb, user_data);
-}
-
-void RTSPClient::SetDataCallback(const DataCallback &cb, void *user_data)
-{
-    std::lock_guard<std::mutex> auto_lock(data_cb_lock);
-
-    data_cb = std::make_pair(cb, user_data);
-}
-
-void RTSPClient::UnsetStateCallback()
-{
-    std::lock_guard<std::mutex> auto_lock(state_cb_lock);
-
-    state_cb = std::make_pair(nullptr, nullptr);
-}
-
-void RTSPClient::UnsetClientCallback()
-{
-    std::lock_guard<std::mutex> auto_lock(data_cb_lock);
-
-    data_cb = std::make_pair(nullptr, nullptr);
-}
-
-int RTSPClient::GetState()
-{
-    return state;
-}
-
-void RTSPClient::Start()
-{
-    gst_element_set_state(pipeline, GST_STATE_PLAYING);
-}
-
-void RTSPClient::Stop()
-{
-    gst_element_set_state(pipeline, GST_STATE_NULL);
+    receive_cb = std::make_pair(nullptr, nullptr);
 }

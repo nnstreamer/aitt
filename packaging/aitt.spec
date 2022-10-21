@@ -26,8 +26,8 @@ BuildRequires: pkgconfig(capi-media-webrtc)
 BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(json-glib-1.0)
 BuildRequires: pkgconfig(openssl1.1)
-BuildRequires: pkgconfig(gstreamer-1.0)
-BuildRequires: pkgconfig(gstreamer-video-1.0)
+BuildRequires: pkgconfig(capi-media-player)
+BuildRequires: pkgconfig(mm-display-interface)
 %if 0%{gcov}
 BuildRequires: lcov
 %endif
