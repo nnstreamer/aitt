@@ -33,6 +33,11 @@ void AittDiscovery::SetMQ(std::unique_ptr<MQ> mq)
     discovery_mq = std::move(mq);
 }
 
+bool AittDiscovery::HasValidMQ(void)
+{
+    return discovery_mq != nullptr;
+}
+
 void AittDiscovery::Start(const std::string &host, int port, const std::string &username,
       const std::string &password)
 {

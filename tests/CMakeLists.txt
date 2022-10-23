@@ -8,21 +8,37 @@ LINK_DIRECTORIES(${UT_NEEDS_LIBRARY_DIRS})
 
 ###########################################################################
 SET(AITT_UT_SRC AITT_test.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc
-    AITT_TCP_test.cc AittStream_test.cc)
+    AITT_TCP_test.cc)
 ADD_EXECUTABLE(${AITT_UT} ${AITT_UT_SRC})
 TARGET_LINK_LIBRARIES(${AITT_UT} Threads::Threads ${UT_NEEDS_LIBRARIES} ${PROJECT_NAME})
 
 INSTALL(TARGETS ${AITT_UT} DESTINATION ${AITT_TEST_BINDIR})
 
+#ADD_TEST(
+#    NAME
+#        ${AITT_UT}
+#    COMMAND
+#        ${CMAKE_COMMAND} -E env
+#        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
+#        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
+#)
+
+###########################################################################
+SET(AITT_STREAM_UT ${PROJECT_NAME}_stream_ut)
+SET(AITT_STREAM_UT_SRC AittStream_test.cc)
+ADD_EXECUTABLE(${AITT_STREAM_UT} ${AITT_STREAM_UT_SRC})
+TARGET_LINK_LIBRARIES(${AITT_STREAM_UT} Threads::Threads ${UT_NEEDS_LIBRARIES} ${PROJECT_NAME})
+
+INSTALL(TARGETS ${AITT_STREAM_UT} DESTINATION ${AITT_TEST_BINDIR})
+
 ADD_TEST(
     NAME
-        ${AITT_UT}
+        ${AITT_STREAM_UT}
     COMMAND
         ${CMAKE_COMMAND} -E env
         LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../modules/rtsp/:../:../common/:$ENV{LD_LIBRARY_PATH}
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_STREAM_UT} --gtest_filter=*_Anytime
 )
-
 ###########################################################################
 FILE(GLOB AITT_MANUAL_SRC *_manualtest.cc)
 ADD_EXECUTABLE(${AITT_UT}_manual ${AITT_MANUAL_SRC})

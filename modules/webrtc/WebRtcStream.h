@@ -16,9 +16,9 @@
 
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <string>
-#include <atomic>
 #include <vector>
 
 // TODO: webrtc.h is very heavy header file.
@@ -26,6 +26,9 @@
 #include <webrtc.h>
 
 #include "WebRtcEventHandler.h"
+#include "WebRtcMessage.h"
+
+namespace AittWebRTCNamespace {
 
 class WebRtcStream {
   public:
@@ -64,12 +67,19 @@ class WebRtcStream {
 
     bool SetLocalDescription(const std::string &description);
     bool SetRemoteDescription(const std::string &description);
+    void SetStreamId(const std::string &id) { id_ = id; };
+    std::string GetStreamId(void) const { return id_; };
+    void SetPeerId(const std::string &id) { peer_id_ = id; };
+    std::string &GetPeerId(void) { return peer_id_; };
 
     bool AddIceCandidateFromMessage(const std::string &ice_message);
     bool AddDiscoveryInformation(const std::vector<uint8_t> &discovery_message);
+    bool SetPeerInformation(void);
+    bool SetPeerSDP(void);
+    bool SetPeerIceCandidates(void);
     const std::vector<std::string> &GetIceCandidates() const { return ice_candidates_; };
 
-    std::string GetRemoteDescription(void) const { return remote_description_; };
+    std::string GetLocalDescription(void) const { return local_description_; };
 
   private:
     static void OnOfferCreated(webrtc_h webrtc, const char *description, void *user_data);
@@ -90,15 +100,19 @@ class WebRtcStream {
     static void OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsigned int id,
           void *user_data);
     static void OnDataChannelOpen(webrtc_data_channel_h channel, void *user_data);
+    bool IsNegotiatingState(void);
 
   private:
     webrtc_h webrtc_handle_;
     webrtc_data_channel_h channel_;
     unsigned int source_id_;
     std::string local_description_;
-    std::string remote_description_;
+    std::string id_;
+    std::string peer_id_;
     std::vector<std::string> ice_candidates_;
     std::function<void(std::string)> on_offer_created_cb_;
     std::function<void(std::string)> on_answer_created_cb_;
     WebRtcEventHandler event_handler_;
+    WebRtcMessage::DiscoveryInfo peer_info_;
 };
+}  // namespace AittWebRTCNamespace

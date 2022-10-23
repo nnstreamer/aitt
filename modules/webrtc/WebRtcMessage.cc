@@ -21,6 +21,8 @@
 
 #include "aitt_internal.h"
 
+namespace AittWebRTCNamespace {
+
 WebRtcMessage::Type WebRtcMessage::getMessageType(const std::string &message)
 {
     WebRtcMessage::Type type = WebRtcMessage::Type::UNKNOWN;
@@ -90,20 +92,25 @@ bool WebRtcMessage::IsValidDiscoveryMessage(const std::vector<uint8_t> &discover
     return topic_exists && is_source_exists && sdp_exists && ice_candidates_exists;
 }
 
-WebRtcMessage::DiscoveryInfo WebRtcMessage::ParseDiscoveryMessage(const std::vector<uint8_t> &discovery_message)
+WebRtcMessage::DiscoveryInfo WebRtcMessage::ParseDiscoveryMessage(
+      const std::vector<uint8_t> &discovery_message)
 {
     WebRtcMessage::DiscoveryInfo info;
-    if (!IsValidDiscoveryMessage(discovery_message))
+    if (!IsValidDiscoveryMessage(discovery_message)) {
+        DBG("Invalid info");
         return info;
+    }
 
     auto discovery_info_map = flexbuffers::GetRoot(discovery_message).AsMap();
-    info.topic = discovery_info_map["topic"].AsString().str();
-    info.is_src = discovery_info_map["is_src"].AsBool();
-    info.sdp = discovery_info_map["sdp"].AsString().str();
+    info.topic_ = discovery_info_map["topic"].AsString().str();
+    info.is_src_ = discovery_info_map["is_src"].AsBool();
+    info.sdp_ = discovery_info_map["sdp"].AsString().str();
     auto ice_candidates_info = discovery_info_map["ice_candidates"].AsVector();
     for (size_t idx = 0; idx < ice_candidates_info.size(); ++idx) {
-        info.ice_candidates.push_back(ice_candidates_info[idx].AsString().str());
+        info.ice_candidates_.push_back(ice_candidates_info[idx].AsString().str());
     }
 
     return info;
 }
+
+}  // namespace AittWebRTCNamespace

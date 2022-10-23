@@ -33,6 +33,7 @@ class AittDiscovery {
     // AittDiscovery() = default;
     explicit AittDiscovery(const std::string &id);
     void SetMQ(std::unique_ptr<MQ> mq);
+    bool HasValidMQ(void);
     void Start(const std::string &host, int port, const std::string &username,
           const std::string &password);
     void Restart();
@@ -41,6 +42,7 @@ class AittDiscovery {
     int AddDiscoveryCB(const std::string &protocol, const DiscoveryCallback &cb);
     void RemoveDiscoveryCB(int callback_id);
     bool CompareTopic(const std::string &left, const std::string &right);
+    std::string GetId(void) const { return id_; };
 
   private:
     struct DiscoveryBlob {

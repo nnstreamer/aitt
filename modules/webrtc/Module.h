@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <AittDiscovery.h>
+#include <AittStreamModule.h>
+#include "StreamManager.h"
+
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-
-#include <AittStreamModule.h>
 
 using AittDiscovery = aitt::AittDiscovery;
 using AittStreamModule = aitt::AittStreamModule;
@@ -40,13 +42,24 @@ class Module : public AittStreamModule {
     void Stop(void) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
+    static bool IsSource(AittStreamRole role);
 
   private:
+    void OnStreamReady(WebRtcStream &stream);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
-      AittDiscovery &discovery_;
-    int discovery_cb_;
+
+    bool is_source_;
     std::string topic_;
-    AittStreamRole role_;
+    AittDiscovery &discovery_;
+    int discovery_cb_;
+
+    //TODO: What if user copies the module?
+    //Think about that case with destructor
+    StreamManager *stream_manager_;
+    StateCallback state_callback_;
+    void *state_cb_user_data_;
+    ReceiveCallback receive_callback_;
+    void *receive_cb_user_data_;
 };
 }  // namespace AittWebRTCNamespace

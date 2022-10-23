@@ -16,6 +16,8 @@
 
 #include "WebRtcState.h"
 
+namespace AittWebRTCNamespace {
+
 WebRtcState::Stream WebRtcState::ToStreamState(webrtc_state_e state)
 {
     switch (state) {
@@ -185,3 +187,5 @@ std::string WebRtcState::IceConnectionToStr(WebRtcState::IceConnection state)
     }
     return std::string("");
 }
+
+}  // namespace AittWebRTCNamespace

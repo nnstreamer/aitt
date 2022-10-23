@@ -20,6 +20,8 @@
 
 #include "WebRtcState.h"
 
+namespace AittWebRTCNamespace {
+
 class WebRtcEventHandler {
   public:
     // TODO Add error and state callbacks
@@ -46,7 +48,8 @@ class WebRtcEventHandler {
     };
     void UnsetOnSignalingStateNotifyCb(void) { on_signaling_state_notify_cb_ = nullptr; };
 
-    void SetOnIceGatheringStateNotifyCb(std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb)
+    void SetOnIceGatheringStateNotifyCb(
+          std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb)
     {
         on_ice_gathering_state_notify_cb_ = on_ice_gathering_state_notify_cb;
     };
@@ -57,7 +60,8 @@ class WebRtcEventHandler {
     };
     void UnsetOnIceGatheringStateNotifyeCb(void) { on_ice_gathering_state_notify_cb_ = nullptr; };
 
-    void SetOnIceConnectionStateNotifyCb(std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb)
+    void SetOnIceConnectionStateNotifyCb(
+          std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb)
     {
         on_ice_connection_state_notify_cb_ = on_ice_connection_state_notify_cb;
     };
@@ -99,3 +103,5 @@ class WebRtcEventHandler {
     std::function<void(void)> on_encoded_frame_cb_;
     std::function<void(unsigned int id)> on_track_added_cb_;
 };
+
+}  // namespace AittWebRTCNamespace

@@ -16,9 +16,11 @@
 
 #pragma once
 
+#include <webrtc.h>
+
 #include <string>
 
-#include <webrtc.h>
+namespace AittWebRTCNamespace {
 
 class WebRtcState {
   public:
@@ -72,3 +74,5 @@ class WebRtcState {
     static IceConnection ToIceConnectionState(webrtc_ice_connection_state_e state);
     static std::string IceConnectionToStr(WebRtcState::IceConnection state);
 };
+
+}  // namespace AittWebRTCNamespace

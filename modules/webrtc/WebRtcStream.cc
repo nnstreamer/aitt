@@ -19,6 +19,8 @@
 #include "WebRtcMessage.h"
 #include "aitt_internal.h"
 
+namespace AittWebRTCNamespace {
+
 WebRtcStream::WebRtcStream() : webrtc_handle_(nullptr), channel_(nullptr), source_id_(0)
 {
 }
@@ -200,9 +202,12 @@ bool WebRtcStream::SetLocalDescription(const std::string &description)
         ERR("WebRTC handle is not created");
         return false;
     }
+
     auto ret = webrtc_set_local_description(webrtc_handle_, description.c_str());
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to set local description");
+    else
+        local_description_ = description;
 
     return ret == WEBRTC_ERROR_NONE;
 }
@@ -212,19 +217,6 @@ bool WebRtcStream::SetRemoteDescription(const std::string &description)
     if (!webrtc_handle_) {
         ERR("WebRTC handle is not created");
         return false;
-    }
-
-    webrtc_state_e state;
-    auto get_state_ret = webrtc_get_state(webrtc_handle_, &state);
-    if (get_state_ret != WEBRTC_ERROR_NONE) {
-        ERR("Failed to get state");
-        return false;
-    }
-
-    if (state != WEBRTC_STATE_NEGOTIATING) {
-        remote_description_ = description;
-        ERR("Invalid state, will be registred at NEGOTIATING state");
-        return true;
     }
 
     auto ret = webrtc_set_remote_description(webrtc_handle_, description.c_str());
@@ -252,15 +244,62 @@ bool WebRtcStream::AddDiscoveryInformation(const std::vector<uint8_t> &discovery
 {
     ERR("%s", __func__);
 
-    auto info = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
-    if (!SetRemoteDescription(info.sdp))
+    peer_info_ = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
+    if (!IsNegotiatingState()) {
         return false;
+    }
 
-    for (const auto &ice_candidate : info.ice_candidates)
-        AddIceCandidateFromMessage(ice_candidate);
-
-    return true;
+    return SetPeerInformation();
 }
+
+bool WebRtcStream::IsNegotiatingState(void)
+{
+    webrtc_state_e state;
+    auto get_state_ret = webrtc_get_state(webrtc_handle_, &state);
+    if (get_state_ret != WEBRTC_ERROR_NONE) {
+        ERR("Failed to get state");
+        return false;
+    }
+
+    return state == WEBRTC_STATE_NEGOTIATING;
+}
+
+bool WebRtcStream::SetPeerInformation(void)
+{
+    bool res = true;
+
+    res = SetPeerSDP() && SetPeerIceCandidates();
+    DBG("Peer information is now %s", res ? "Valid" : "Invalid");
+
+    return res;
+}
+bool WebRtcStream::SetPeerSDP(void)
+{
+    bool res = true;
+    if (peer_info_.sdp_.size() == 0)
+        return res;
+
+    if (SetRemoteDescription(peer_info_.sdp_))
+        peer_info_.sdp_.clear();
+    else
+        res = false;
+
+    return res;
+}
+
+bool WebRtcStream::SetPeerIceCandidates(void)
+{
+    bool res = true;
+    for (auto it = peer_info_.ice_candidates_.begin(); it != peer_info_.ice_candidates_.end();) {
+        if (AddIceCandidateFromMessage(*it))
+            it = peer_info_.ice_candidates_.erase(it);
+        else
+            res = false;
+    }
+
+    return res;
+}
+
 
 void WebRtcStream::AttachSignals(bool is_source, bool need_display)
 {
@@ -337,14 +376,9 @@ void WebRtcStream::OnStateChanged(webrtc_h webrtc, webrtc_state_e previous, webr
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
     RET_IF(webrtc_stream == nullptr);
 
-    if (current == WEBRTC_STATE_NEGOTIATING && webrtc_stream->remote_description_.size() != 0) {
-        ERR("received remote description exists");
-        auto ret = webrtc_set_remote_description(webrtc_stream->webrtc_handle_,
-              webrtc_stream->remote_description_.c_str());
-        if (ret != WEBRTC_ERROR_NONE)
-            ERR("Failed to set remote description");
-        webrtc_stream->remote_description_ = std::string();
-    }
+    if (current == WEBRTC_STATE_NEGOTIATING)
+        webrtc_stream->SetPeerSDP();
+
     webrtc_stream->GetEventHandler().CallOnStateChangedCb(WebRtcState::ToStreamState(current));
 }
 
@@ -364,6 +398,9 @@ void WebRtcStream::OnIceGatheringStateChanged(webrtc_h webrtc, webrtc_ice_gather
     ERR("%s %d", __func__, state);
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
     RET_IF(webrtc_stream == nullptr);
+
+    if (state == WEBRTC_ICE_GATHERING_STATE_COMPLETE)
+        webrtc_stream->SetPeerIceCandidates();
 
     webrtc_stream->GetEventHandler().CallOnIceGatheringStateNotifyCb(
           WebRtcState::ToIceGatheringState(state));
@@ -416,3 +453,5 @@ void WebRtcStream::OnDataChannelOpen(webrtc_data_channel_h channel, void *user_d
 {
     ERR("%s", __func__);
 }
+
+}  // namespace AittWebRTCNamespace
