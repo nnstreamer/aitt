@@ -14,14 +14,14 @@ TARGET_LINK_LIBRARIES(${AITT_UT} Threads::Threads ${UT_NEEDS_LIBRARIES} ${PROJEC
 
 INSTALL(TARGETS ${AITT_UT} DESTINATION ${AITT_TEST_BINDIR})
 
-#ADD_TEST(
-#    NAME
-#        ${AITT_UT}
-#    COMMAND
-#        ${CMAKE_COMMAND} -E env
-#        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
-#        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
-#)
+ADD_TEST(
+    NAME
+        ${AITT_UT}
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+        LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
+)
 
 ###########################################################################
 SET(AITT_STREAM_UT ${PROJECT_NAME}_stream_ut)
