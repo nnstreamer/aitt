@@ -48,13 +48,18 @@ import org.webrtc.VideoTrack;
 import static org.webrtc.SessionDescription.Type.ANSWER;
 import static org.webrtc.SessionDescription.Type.OFFER;
 
+import static java.lang.Math.min;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -64,6 +69,8 @@ public class WebRTC {
     private static final String TAG = "WebRTC";
     public static final String VIDEO_TRACK_ID = "ARDAMSv0";
     private static final String CANDIDATE = "candidate";
+    public static final int MAX_MESSAGE_SIZE = 32768;
+    public static final String EOF_MESSAGE = "EOF";
     private java.net.Socket socket;
     private boolean isInitiator;
     private boolean isChannelReady;
@@ -81,6 +88,8 @@ public class WebRTC {
     private ReceiveDataCallback dataCallback;
     private String receiverIP;
     private Integer receiverPort;
+    private ByteArrayOutputStream baos;
+    private boolean recvLargeChunk = false;
 
     /**
      * WebRTC constructor to create webRTC instance
@@ -163,6 +172,8 @@ public class WebRTC {
      * Method to initialize webRTC APIs while establishing connection
      */
     private void initialize() {
+        baos = new ByteArrayOutputStream();
+
         initializePeerConnectionFactory();
         initializePeerConnections();
         if (!isReceiver) {
@@ -269,7 +280,7 @@ public class WebRTC {
                 for (int x = 0; x < chromaWidth; ++x) {
                     final byte uValue = i420Buffer.getDataU().get(y * i420Buffer.getStrideU() + x);
                     final byte vValue = i420Buffer.getDataV().get(y * i420Buffer.getStrideV() + x);
-                    nv21Data[ySize + y * chromaStride + 2 * x + 0] = vValue;
+                    nv21Data[ySize + y * chromaStride + 2 * x] = vValue;
                     nv21Data[ySize + y * chromaStride + 2 * x + 1] = uValue;
                 }
             }
@@ -406,7 +417,16 @@ public class WebRTC {
                     @Override
                     public void onMessage(DataChannel.Buffer buffer) {
                         Log.d(TAG, "onMessage: got message");
-                        dataCallback.pushData(readIncomingMessage(buffer.data));
+                        if (!recvLargeChunk && buffer.data.capacity() < MAX_MESSAGE_SIZE) {
+                            byte[] array = new byte[buffer.data.capacity()];
+                            buffer.data.rewind();
+                            buffer.data.get(array);
+                            dataCallback.pushData(array);
+                        }
+                        else {
+                            String message = StandardCharsets.UTF_8.decode(buffer.data).toString();
+                            handlelargeMessage(message, buffer);
+                        }
                     }
                 });
             }
@@ -431,6 +451,25 @@ public class WebRTC {
         return factory.createPeerConnection(rtcConfig, pcConstraints, pcObserver);
     }
 
+    private void handlelargeMessage(String message, DataChannel.Buffer buffer) {
+        if (EOF_MESSAGE.equals(message)) {
+            Log.d(TAG, "Byte array size: " + baos.size());
+            dataCallback.pushData(baos.toByteArray());
+            baos.reset();
+            recvLargeChunk = false;
+        } else {
+            recvLargeChunk = true;
+            try {
+                byte[] array = new byte[buffer.data.capacity()];
+                buffer.data.rewind();
+                buffer.data.get(array);
+                baos.write(array);
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to write to byteArrayOutputStream " + e);
+            }
+        }
+    }
+
     /**
      * Method used to send video data
      *
@@ -448,8 +487,25 @@ public class WebRTC {
      * @param message message to be sent in byte format
      */
     public void sendMessageData(byte[] message) {
-        ByteBuffer data = ByteBuffer.wrap(message);
-        localDataChannel.send(new DataChannel.Buffer(data, false));
+        if (message.length < MAX_MESSAGE_SIZE ) {
+            ByteBuffer data = ByteBuffer.wrap(message);
+            localDataChannel.send(new DataChannel.Buffer(data, false));
+            return;
+        }
+
+        ByteBuffer chunkData;
+        int len = message.length;
+        int i = 0;
+        while (i < message.length) {
+            byte[] chunk = Arrays.copyOfRange(message, i, i + min(len, MAX_MESSAGE_SIZE));
+            chunkData = ByteBuffer.wrap(chunk);
+            localDataChannel.send(new DataChannel.Buffer(chunkData, false));
+            i += MAX_MESSAGE_SIZE;
+            len -= MAX_MESSAGE_SIZE;
+        }
+
+        chunkData = ByteBuffer.wrap(EOF_MESSAGE.getBytes(StandardCharsets.UTF_8));
+        localDataChannel.send(new DataChannel.Buffer(chunkData, false));
     }
 
     /**
