@@ -69,7 +69,8 @@ class AITT::Impl {
     using Blob = std::pair<const void *, int>;
     using SubscribeInfo = std::pair<AittProtocol, void *>;
 
-    void ConnectionCB(ConnectionCallback cb, void *user_data, int status);
+    void ConnectionCB(ConnectionCallback cb, void *user_data, int status,
+          MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
     AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
           const std::string &topic, const SubscribeCallback &cb, void *cbdata, AittQoS qos);
     void DetachedCB(SubscribeCallback cb, MSG mq_msg, void *data, const int datalen, void *cbdata,

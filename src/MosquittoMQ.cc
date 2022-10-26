@@ -356,6 +356,8 @@ void *MosquittoMQ::Subscribe(const std::string &topic, const SubscribeCallback &
 
 void *MosquittoMQ::Unsubscribe(void *sub_handle)
 {
+    RETV_IF(nullptr == sub_handle, nullptr);
+
     std::lock_guard<std::recursive_mutex> auto_lock(callback_lock);
     auto it = std::find(subscribers.begin(), subscribers.end(),
           static_cast<SubscribeData *>(sub_handle));

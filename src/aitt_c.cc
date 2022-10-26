@@ -199,6 +199,28 @@ API int aitt_connect(aitt_h handle, const char *host, int port)
     return aitt_connect_full(handle, host, port, NULL, NULL);
 }
 
+API int aitt_set_connect_callback(aitt_h handle, aitt_connect_cb cb, void *user_data)
+{
+    RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
+    RETV_IF(handle->aitt == nullptr, AITT_ERROR_INVALID_PARAMETER);
+
+    try {
+        if (cb) {
+            handle->aitt->SetConnectionCallback(
+                  [handle, cb, user_data](AITT &aitt, int status, void *data) {
+                      cb(handle, status, user_data);
+                  });
+        } else {
+            handle->aitt->SetConnectionCallback(nullptr);
+        }
+    } catch (std::exception &e) {
+        ERR("SetConnectionCallback() Fail(%s)", e.what());
+        return AITT_ERROR_SYSTEM;
+    }
+
+    return AITT_ERROR_NONE;
+}
+
 API int aitt_connect_full(aitt_h handle, const char *host, int port, const char *username,
       const char *password)
 {

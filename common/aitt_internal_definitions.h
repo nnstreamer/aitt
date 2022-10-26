@@ -22,7 +22,7 @@
 
 #define STR_EQ 0
 
-#define AITT_MANAGED_TOPIC_PREFIX "/v1/custom/aitt/"
+#define AITT_MANAGED_TOPIC_PREFIX "/v1/custom/f5c7b34e48c1918f/"
 #define DISCOVERY_TOPIC_BASE std::string(AITT_MANAGED_TOPIC_PREFIX "discovery/")
 #define RESPONSE_POSTFIX "_AittRe_"
 

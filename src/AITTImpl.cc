@@ -50,7 +50,7 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
 
 AITT::Impl::~Impl(void)
 {
-    if (false == mqtt_broker_ip_.empty()) {
+    if (mqtt_broker_ip_.empty() == false) {
         try {
             Disconnect();
         } catch (std::exception &e) {
@@ -83,14 +83,19 @@ void AITT::Impl::SetWillInfo(const std::string &topic, const void *data, const i
 
 void AITT::Impl::SetConnectionCallback(ConnectionCallback cb, void *user_data)
 {
-    if (cb)
-        mq->SetConnectionCallback(
-              std::bind(&Impl::ConnectionCB, this, cb, user_data, std::placeholders::_1));
-    else
+    if (cb) {
+        mq->SetConnectionCallback([&, cb, user_data](int status) {
+            auto idler_cb = std::bind(&Impl::ConnectionCB, this, cb, user_data, status,
+                  std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+            MainLoopHandler::AddIdle(&main_loop, idler_cb, nullptr);
+        });
+    } else {
         mq->SetConnectionCallback(nullptr);
+    }
 }
 
-void AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status)
+void AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status,
+      MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data)
 {
     RET_IF(cb == nullptr);
 
@@ -125,6 +130,8 @@ void AITT::Impl::Disconnect(void)
 void AITT::Impl::UnsubscribeAll()
 {
     std::unique_lock<std::mutex> lock(subscribed_list_mutex_);
+
+    DBG("Subscribed list %zu", subscribed_list.size());
 
     for (auto subscribe_info : subscribed_list) {
         switch (subscribe_info->first) {

@@ -30,35 +30,43 @@ class AITTTest : public testing::Test, public AittTests {
     void SetUp() override { Init(); }
     void TearDown() override { Deinit(); }
 
-    void PubsubTemplate(const char *test_msg, AittProtocol protocol)
+    void PubSub(AITT &aitt, const char *test_msg, AittProtocol protocol, AITTTest *aitt_test)
+    {
+        aitt.Subscribe(
+              testTopic,
+              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                  AITTTest *test = static_cast<AITTTest *>(cbdata);
+                  if (msg)
+                      DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                  else
+                      DBG("Subscribe invoked: zero size msg(%d)", szmsg);
+                  test->StopEventLoop();
+              },
+              aitt_test, protocol);
+
+        // Wait a few seconds until the AITT client gets a server list (discover devices)
+        DBG("Sleep %d ms", SLEEP_MS);
+        usleep(100 * SLEEP_MS);
+
+        DBG("Publish(%s) : %s(%zu)", testTopic.c_str(), test_msg, strlen(test_msg));
+        aitt.Publish(testTopic, test_msg, strlen(test_msg), protocol);
+    }
+
+    void PubSubFull(const char *test_msg, AittProtocol protocol)
     {
         try {
             AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
-            aitt.Connect();
-            aitt.Subscribe(
-                  testTopic,
-                  [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                      AITTTest *test = static_cast<AITTTest *>(cbdata);
-                      test->ToggleReady();
-                      if (msg)
-                          DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
-                      else
-                          DBG("Subscribe invoked: zero size msg(%d)", szmsg);
+            aitt.SetConnectionCallback(
+                  [&, test_msg, protocol](AITT &handle, int status, void *user_data) {
+                      if (status == AITT_CONNECTED)
+                          PubSub(aitt, test_msg, protocol, this);
                   },
-                  static_cast<void *>(this), protocol);
+                  this);
 
-            // Wait a few seconds until the AITT client gets a server list (discover devices)
-            DBG("Sleep %d ms", SLEEP_MS);
-            usleep(SLEEP_MS * 1000);
-
-            DBG("Publish(%s) : %s(%zu)", testTopic.c_str(), test_msg, strlen(test_msg));
-            aitt.Publish(testTopic, test_msg, strlen(test_msg), protocol);
-
-            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+            aitt.Connect();
 
             IterateEventLoop();
-
-            ASSERT_TRUE(ready);
+            aitt.Disconnect();
         } catch (std::exception &e) {
             FAIL() << "Unexpected exception: " << e.what();
         }
@@ -109,7 +117,7 @@ class AITTTest : public testing::Test, public AittTests {
                 aitt1.Connect();
 
                 // Wait a few seconds to the AITT client gets server list (discover devices)
-                usleep(SLEEP_MS * 1000);
+                usleep(100 * SLEEP_MS);
 
                 for (int i = 0; i < 10; i++) {
                     INFO("size = %zu", sizeof(dump_msg));
@@ -171,7 +179,7 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds to the AITT client gets server list (discover devices)
-            usleep(SLEEP_MS * 1000);
+            usleep(100 * SLEEP_MS);
 
             // NOTE:
             // Select target peers and send the data through the specified protocol - TCP
@@ -210,7 +218,7 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds to the AITT client gets server list (discover devices)
-            usleep(SLEEP_MS * 1000);
+            usleep(100 * SLEEP_MS);
 
             // NOTE:
             // Publish a message with the retained flag
@@ -267,6 +275,24 @@ TEST_F(AITTTest, SetConnectionCallback_P_Anytime)
         IterateEventLoop();
         ASSERT_TRUE(ready);
         ASSERT_TRUE(ready2);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, PubSubInConnectionCB_P_Anytime)
+{
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.SetConnectionCallback(
+              [&](AITT &handle, int status, void *user_data) {
+                  if (status == AITT_CONNECTED)
+                      PubSub(aitt, TEST_MSG, AITT_TYPE_MQTT, this);
+              },
+              this);
+        aitt.Connect();
+
+        IterateEventLoop();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
@@ -443,12 +469,12 @@ TEST_F(AITTTest, Unsubscribe_SECURE_TCP_P_Anytime)
 
 TEST_F(AITTTest, PublishSubscribe_MQTT_P_Anytime)
 {
-    PubsubTemplate(TEST_MSG, AITT_TYPE_MQTT);
+    PubSubFull(TEST_MSG, AITT_TYPE_MQTT);
 }
 
 TEST_F(AITTTest, Publish_0_MQTT_P_Anytime)
 {
-    PubsubTemplate("", AITT_TYPE_MQTT);
+    PubSubFull("", AITT_TYPE_MQTT);
 }
 
 TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
@@ -537,22 +563,22 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
 
 TEST_F(AITTTest, PublishSubscribe_TCP_P_Anytime)
 {
-    PubsubTemplate(TEST_MSG, AITT_TYPE_TCP);
+    PubSubFull(TEST_MSG, AITT_TYPE_TCP);
 }
 
 TEST_F(AITTTest, PublishSubscribe_SECURE_TCP_P_Anytime)
 {
-    PubsubTemplate(TEST_MSG, AITT_TYPE_TCP_SECURE);
+    PubSubFull(TEST_MSG, AITT_TYPE_TCP_SECURE);
 }
 
 TEST_F(AITTTest, Publish_0_TCP_P_Anytime)
 {
-    PubsubTemplate("", AITT_TYPE_TCP);
+    PubSubFull("", AITT_TYPE_TCP);
 }
 
 TEST_F(AITTTest, Publish_0_SECURE_TCP_P_Anytime)
 {
-    PubsubTemplate("", AITT_TYPE_TCP_SECURE);
+    PubSubFull("", AITT_TYPE_TCP_SECURE);
 }
 
 TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
@@ -580,7 +606,7 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
 
         // Wait a few seconds to the AITT client gets server list (discover devices)
         DBG("Sleep %d ms", SLEEP_MS);
-        usleep(SLEEP_MS * 1000);
+        usleep(100 * SLEEP_MS);
 
         DBG("Publish message to %s (%s) / %zu", testTopic.c_str(), TEST_MSG, sizeof(TEST_MSG));
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),

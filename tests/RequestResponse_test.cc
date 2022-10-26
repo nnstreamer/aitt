@@ -124,33 +124,40 @@ class AITTRRTest : public testing::Test, public AittTests {
         sub_ok = reply1_ok = reply2_ok = false;
 
         AITT sub_aitt(clientId + "sub", LOCAL_IP, AittOption(true, false));
-        INFO("Constructor Success");
-
+        sub_aitt.SetConnectionCallback([&](AITT &handle, int status, void *user_data) {
+            if (status != AITT_CONNECTED)
+                return;
+            sub_aitt.Subscribe(rr_topic.c_str(),
+                  [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
+                      CheckSubscribe(msg, data, datalen);
+                      sub_aitt.SendReply(msg, reply.c_str(), reply.size());
+                      sub_ok = true;
+                  });
+        });
         sub_aitt.Connect();
-        INFO("Connected");
-
-        sub_aitt.Subscribe(rr_topic.c_str(),
-              [&](aitt::MSG *msg, const void *data, const int datalen, void *cbdata) {
-                  CheckSubscribe(msg, data, datalen);
-                  sub_aitt.SendReply(msg, reply.c_str(), reply.size());
-                  sub_ok = true;
-              });
 
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.SetConnectionCallback(
+              [&](AITT &handle, int status, void *user_data) {
+                  if (status != AITT_CONNECTED)
+                      return;
+
+                  using namespace std::placeholders;
+                  auto replyCB = std::bind(&AITTRRTest::PublishSyncInCallback, GetHandle(), &handle,
+                        &reply1_ok, &reply2_ok, _1, _2, _3, _4);
+
+                  if (sync) {
+                      aitt.PublishWithReplySync(rr_topic.c_str(), message.c_str(), message.size(),
+                            AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, false, replyCB, nullptr,
+                            correlation);
+                  } else {
+                      aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(),
+                            AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, false, replyCB, nullptr,
+                            correlation);
+                  }
+              },
+              this);
         aitt.Connect();
-        usleep(SLEEP_MS * 1000);
-
-        using namespace std::placeholders;
-        auto replyCB = std::bind(&AITTRRTest::PublishSyncInCallback, GetHandle(), &aitt, &reply1_ok,
-              &reply2_ok, _1, _2, _3, _4);
-
-        if (sync) {
-            aitt.PublishWithReplySync(rr_topic.c_str(), message.c_str(), message.size(),
-                  AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, false, replyCB, nullptr, correlation);
-        } else {
-            aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
-                  AITT_QOS_AT_MOST_ONCE, false, replyCB, nullptr, correlation);
-        }
 
         g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
         IterateEventLoop();

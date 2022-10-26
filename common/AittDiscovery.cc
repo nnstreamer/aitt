@@ -44,10 +44,16 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
     RET_IF(callback_handle);
 
     discovery_mq->SetWillInfo(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
-    discovery_mq->Connect(host, port, username, password);
+    discovery_mq->SetConnectionCallback([&](int status) {
+        if (status != AITT_CONNECTED)
+            return;
 
-    callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+", DiscoveryMessageCallback,
-          static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
+        DBG("Discovery Connected");
+        callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+",
+              DiscoveryMessageCallback, static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
+        discovery_mq->SetConnectionCallback(nullptr);
+    });
+    discovery_mq->Connect(host, port, username, password);
 }
 
 void AittDiscovery::Restart()
@@ -60,6 +66,7 @@ void AittDiscovery::Restart()
 
 void AittDiscovery::Stop()
 {
+    discovery_mq->SetConnectionCallback(nullptr);
     discovery_mq->Unsubscribe(callback_handle);
     discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
     discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_AT_MOST_ONCE, true);

@@ -69,6 +69,20 @@ typedef enum AittQoS aitt_qos_e;
 typedef enum AittError aitt_error_e;
 
 /**
+ * @brief Specify the type of function passed to aitt_set_connect_callback().
+ * @details This is called when the mqtt broker is connected.
+ * @param[in] handle Handle of AITT service
+ * @param[in] status A value of @a AittConnectionState
+ * @param[in] user_data The user data to pass to the function
+ *
+ * @pre The callback must be registered using aitt_set_connect_callback()
+ *
+ * @see aitt_connect()
+ * @see aitt_connect_full()
+ */
+typedef void (*aitt_connect_cb)(aitt_h handle, int status, void *user_data);
+
+/**
  * @brief Specify the type of function passed to aitt_subscribe().
  * @details When the aitt get message, it is called, immediately.
  * @param[in] msg_handle aitt message handle. The handle has topic name and so on. @c aitt_msg_h
@@ -196,6 +210,20 @@ int aitt_will_set(aitt_h handle, const char *topic, const void *msg, const int m
  * @retval #AITT_ERROR_SYSTEM System errors
  */
 int aitt_connect(aitt_h handle, const char *host, int port);
+
+/**
+ * @brief Set the connect callback. The callback is called when the mqtt broker is connected.
+ * @privlevel public
+ * @param[in] handle Handle of AITT service
+ * @param[in] cb The callback function to invoke
+ * @param[in] user_data The user data to pass to the function
+ * @return @c 0 on success
+ *         otherwise a negative error value
+ * @retval #AITT_ERROR_NONE  Success
+ * @retval #AITT_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #AITT_ERROR_SYSTEM System errors
+ */
+int aitt_set_connect_callback(aitt_h handle, aitt_connect_cb cb, void *user_data);
 
 /**
  * @brief Connect to mqtt broker as aitt_connect(), but takes username and password.

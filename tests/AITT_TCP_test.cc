@@ -56,7 +56,7 @@ class AITTTCPTest : public testing::Test, public AittTests {
 
             // Wait a few seconds until the AITT client gets a server list (discover devices)
             DBG("Sleep %d ms", SLEEP_MS);
-            usleep(SLEEP_MS * 1000);
+            usleep(100 * SLEEP_MS);
 
             aitt.Publish("test/value1", dump_msg, 12, protocol);
             aitt.Publish("test/value2", dump_msg, 1600, protocol);
@@ -95,7 +95,7 @@ TEST_F(AITTTCPTest, TCP_Wildcards1_Anytime)
 
         // Wait a few seconds until the AITT client gets a server list (discover devices)
         DBG("Sleep %d ms", SLEEP_MS);
-        usleep(SLEEP_MS * 1000);
+        usleep(100 * SLEEP_MS);
 
         aitt.Publish("test/step1/value1", dump_msg, 12, AITT_TYPE_TCP);
         aitt.Publish("test/step2/value1", dump_msg, 1600, AITT_TYPE_TCP);

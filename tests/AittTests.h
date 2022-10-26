@@ -28,7 +28,7 @@
 
 #define TEST_MSG "This is aitt test message"
 #define TEST_MSG2 "This message is going to be delivered through a specified AittProtocol"
-#define SLEEP_MS 100
+#define SLEEP_MS 1000
 
 class AittTests {
   public:
@@ -62,6 +62,8 @@ class AittTests {
 
         return G_SOURCE_CONTINUE;
     }
+
+    void StopEventLoop(void) { g_main_loop_quit(mainLoop); }
 
     void IterateEventLoop(void)
     {

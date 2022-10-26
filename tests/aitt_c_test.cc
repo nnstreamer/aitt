@@ -21,6 +21,29 @@
 #include "AittTests.h"
 #include "aitt_internal.h"
 
+#define TEST_REPLY_MSG "hello reply message"
+#define TEST_CORRELATION "0001"
+
+class AITTCTest : public testing::Test, public AittTests {
+  protected:
+    void SetUp() override { Init(); }
+    void TearDown() override { Deinit(); }
+
+    aitt_h NewAitt()
+    {
+        aitt_option_h option = aitt_option_new();
+        EXPECT_NE(option, nullptr);
+
+        int ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+        EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+        aitt_h handle = aitt_new(clientId.c_str(), option);
+        aitt_option_destroy(option);
+
+        return handle;
+    }
+};
+
 TEST(AITT_C_INTERFACE, new_P_Anytime)
 {
     aitt_option_h option = aitt_option_new();
@@ -170,7 +193,7 @@ TEST(AITT_C_INTERFACE, disconnect_N_Anytime)
     aitt_destroy(handle);
 }
 
-TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
+TEST_F(AITTCTest, pub_sub_P_Anytime)
 {
     int ret;
 
@@ -187,26 +210,24 @@ TEST(AITT_C_INTERFACE, pub_sub_P_Anytime)
     ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
-    GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
           [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
-              GMainLoop *loop = static_cast<GMainLoop *>(user_data);
               std::string received_data((const char *)msg, msg_len);
               EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
               EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_TOPIC);
-              g_main_loop_quit(loop);
+              AITTCTest *test = static_cast<AITTCTest *>(user_data);
+              test->StopEventLoop();
           },
-          loop, &sub_handle);
+          this, &sub_handle);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
     EXPECT_TRUE(sub_handle != nullptr);
 
     ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
-    g_main_loop_run(loop);
-    g_main_loop_unref(loop);
+    IterateEventLoop();
 
     ret = aitt_disconnect(handle);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
@@ -291,60 +312,6 @@ TEST(AITT_C_INTERFACE, sub_N_Anytime)
     aitt_destroy(handle);
 }
 
-#define reply_msg "hello reply message"
-#define test_correlation "0001"
-
-TEST(AITT_C_INTERFACE, pub_with_reply_send_reply_P_Anytime)
-{
-    int ret;
-
-    aitt_option_h option = aitt_option_new();
-    ASSERT_NE(option, nullptr);
-
-    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
-    EXPECT_EQ(ret, AITT_ERROR_NONE);
-
-    aitt_h handle = aitt_new("test11", option);
-    aitt_option_destroy(option);
-    ASSERT_NE(handle, nullptr);
-
-    ret = aitt_connect(handle, LOCAL_IP, 1883);
-    ASSERT_EQ(ret, AITT_ERROR_NONE);
-
-    GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
-    aitt_sub_h sub_handle = nullptr;
-    ret = aitt_subscribe(
-          handle, TEST_C_TOPIC,
-          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
-              aitt_h handle = static_cast<aitt_h>(user_data);
-              std::string received_data((const char *)msg, msg_len);
-              EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
-              EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_TOPIC);
-              aitt_send_reply(handle, msg_handle, reply_msg, sizeof(reply_msg), true);
-          },
-          handle, &sub_handle);
-    ASSERT_EQ(ret, AITT_ERROR_NONE);
-
-    ret = aitt_publish_with_reply(
-          handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT,
-          AITT_QOS_AT_MOST_ONCE, test_correlation,
-          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
-              GMainLoop *loop = static_cast<GMainLoop *>(user_data);
-              std::string received_data((const char *)msg, msg_len);
-              EXPECT_STREQ(received_data.c_str(), reply_msg);
-              g_main_loop_quit(loop);
-          },
-          loop);
-
-    g_main_loop_run(loop);
-    g_main_loop_unref(loop);
-
-    ret = aitt_disconnect(handle);
-    EXPECT_EQ(ret, AITT_ERROR_NONE);
-
-    aitt_destroy(handle);
-}
-
 TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 {
     int ret;
@@ -364,47 +331,89 @@ TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
 
     ret = aitt_publish_with_reply(
           nullptr, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT,
-          AITT_QOS_AT_MOST_ONCE, test_correlation,
+          AITT_QOS_AT_MOST_ONCE, TEST_CORRELATION,
           [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(
           handle, nullptr, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE,
-          test_correlation,
+          TEST_CORRELATION,
           [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(
-          handle, TEST_C_TOPIC, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, test_correlation,
+          handle, TEST_C_TOPIC, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, TEST_CORRELATION,
           [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {}, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     ret = aitt_publish_with_reply(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG),
-          AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, test_correlation, nullptr, nullptr);
+          AITT_TYPE_MQTT, AITT_QOS_AT_MOST_ONCE, TEST_CORRELATION, nullptr, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     aitt_destroy(handle);
 }
 
-TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
+TEST(AITT_C_INTERFACE, will_set_N_Anytime)
 {
     int ret;
 
-    aitt_option_h option = aitt_option_new();
-    ASSERT_NE(option, nullptr);
+    ret = aitt_will_set(nullptr, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+}
 
-    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+TEST_F(AITTCTest, pub_with_reply_send_reply_P_Anytime)
+{
+    int ret;
+
+    aitt_h handle = NewAitt();
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_sub_h sub_handle = nullptr;
+    ret = aitt_subscribe(
+          handle, TEST_C_TOPIC,
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
+              aitt_h handle = static_cast<aitt_h>(user_data);
+              std::string received_data((const char *)msg, msg_len);
+              EXPECT_STREQ(received_data.c_str(), TEST_C_MSG);
+              EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_TOPIC);
+              aitt_send_reply(handle, msg_handle, TEST_REPLY_MSG, sizeof(TEST_REPLY_MSG), true);
+          },
+          handle, &sub_handle);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    ret = aitt_publish_with_reply(
+          handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG), AITT_TYPE_MQTT,
+          AITT_QOS_AT_MOST_ONCE, TEST_CORRELATION,
+          [](aitt_msg_h msg_handle, const void *msg, int msg_len, void *user_data) {
+              std::string received_data((const char *)msg, msg_len);
+              EXPECT_STREQ(received_data.c_str(), TEST_REPLY_MSG);
+              AITTCTest *test = static_cast<AITTCTest *>(user_data);
+              test->StopEventLoop();
+          },
+          this);
+
+    IterateEventLoop();
+
+    ret = aitt_disconnect(handle);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
 
-    aitt_h handle = aitt_new("test13", option);
-    aitt_option_destroy(option);
+    aitt_destroy(handle);
+}
+
+TEST_F(AITTCTest, sub_unsub_P_Anytime)
+{
+    int ret;
+
+    aitt_h handle = NewAitt();
     ASSERT_NE(handle, nullptr);
 
     ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     static unsigned int sub_call_count = 0;
-    GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
     static aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
@@ -428,27 +437,26 @@ TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
 
               ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
               EXPECT_EQ(ret, AITT_ERROR_NONE);
-              return FALSE;
+              return G_SOURCE_REMOVE;
           },
           handle);
 
     g_timeout_add(
           2000,
           [](gpointer data) -> gboolean {
-              GMainLoop *loop = static_cast<GMainLoop *>(data);
               EXPECT_EQ(sub_call_count, 1);
 
               if (sub_call_count == 1) {
-                  g_main_loop_quit(loop);
+                  AITTCTest *test = static_cast<AITTCTest *>(data);
+                  test->StopEventLoop();
                   return FALSE;
               }
 
               return TRUE;
           },
-          loop);
+          this);
 
-    g_main_loop_run(loop);
-    g_main_loop_unref(loop);
+    IterateEventLoop();
 
     ret = aitt_disconnect(handle);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
@@ -456,10 +464,33 @@ TEST(AITT_C_INTERFACE, sub_unsub_P_Anytime)
     aitt_destroy(handle);
 }
 
-TEST(AITT_C_INTERFACE, will_set_N_Anytime)
+TEST_F(AITTCTest, connect_cb_P_Anytime)
 {
     int ret;
 
-    ret = aitt_will_set(nullptr, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
-    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+    aitt_h handle = NewAitt();
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_set_connect_callback(
+          handle,
+          [](aitt_h aitt_handle, int status, void *user_data) {
+              AITTCTest *test = static_cast<AITTCTest *>(user_data);
+              EXPECT_EQ(status, AITT_CONNECTED);
+              test->StopEventLoop();
+          },
+          this);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    IterateEventLoop();
+
+    ret = aitt_set_connect_callback(handle, nullptr, nullptr);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    ret = aitt_disconnect(handle);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_destroy(handle);
 }
