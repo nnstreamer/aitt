@@ -15,8 +15,6 @@
  */
 package com.samsung.android.aitt;
 
-import com.samsung.android.aittnative.JniInterface;
-
 class TransportFactory {
     public static TransportHandler createTransport(Aitt.Protocol protocol) {
         TransportHandler transportHandler;

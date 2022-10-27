@@ -29,9 +29,8 @@ import java.nio.ByteBuffer;
 public class Ipc {
     private static final String TAG = "IPC_ANDROID";
     private static final String regionName = "Test-Region";
+    private static final String PRODUCER_APP_ID = "com.example.androidclient";
     private static final int sizeInBytes = 470000; // 640*480 frame size
-    private Consumer consumer = null;
-    private Thread thread = null;
     private int frameCount = 1;
     private static final int frameIndex = 4;
     private static final int getFrameCountIndex = 460900;
@@ -39,10 +38,10 @@ public class Ipc {
     private final Context appContext;
     private IRemoteSharedMemory remoteMemory;
     private ISharedMemory sharedMemory;
-    private RecieveFrameCallback frameCallback;
+    private ReceiveFrameCallback frameCallback;
     private boolean closeIpcMemory = false;
 
-    public Ipc(Context context, RecieveFrameCallback frameCallback) {
+    public Ipc(Context context, ReceiveFrameCallback frameCallback) {
         this.frameCallback = frameCallback;
         this.appContext = context;
     }
@@ -51,20 +50,19 @@ public class Ipc {
         this.appContext = context;
     }
 
-    public interface RecieveFrameCallback {
+    public interface ReceiveFrameCallback {
         void pushFrame(byte[] frame);
     }
 
     private class Consumer implements Runnable {
+
         @Override
         public void run() {
-            String producerAppId = "com.example.androidclient";
             byte[] dataBytes;
-            int globalFrameCount = -1 ;
-            int consumerFrameCount;
 
             while (true) {
-                remoteMemory = RemoteMemoryAdapter.getDefaultAdapter().getSharedMemory(appContext, producerAppId, regionName);
+                // TODO: Transfer app id from an argument.
+                remoteMemory = RemoteMemoryAdapter.getDefaultAdapter().getSharedMemory(appContext, PRODUCER_APP_ID, regionName);
                 if (remoteMemory == null) {
                     Log.d(TAG, "Failed to access shared memory");
                 } else {
@@ -76,11 +74,12 @@ public class Ipc {
 
             byte[] sample = new byte[4];
 
+            int globalFrameCount = -1;
             while (!closeIpcMemory) {
                 try {
                     remoteMemory.readBytes(dataBytes, 0, 0, dataBytes.length);
                     System.arraycopy(dataBytes, getFrameCountIndex, sample, 0, frameIndex);
-                    consumerFrameCount = ByteBuffer.wrap(sample).getInt();
+                    int consumerFrameCount = ByteBuffer.wrap(sample).getInt();
 
                     if (globalFrameCount != consumerFrameCount) {
                         Log.d(TAG, "New frame received : " + globalFrameCount + "&" + consumerFrameCount);
@@ -106,7 +105,7 @@ public class Ipc {
                 Log.d(TAG, "Memory allocated : " + sharedMemory.length());
             }
         } catch (IOException ex) {
-            Log.e(TAG,"Exception thrown while shared memory creation");
+            Log.e(TAG, "Exception thrown while shared memory creation");
         }
     }
 
@@ -126,7 +125,7 @@ public class Ipc {
     public void close() {
         try {
             closeIpcMemory = true;
-            Log.d(TAG, "Closing IPC memory : " + closeIpcMemory);
+            Log.d(TAG, "Closing IPC memory : true");
             if (sharedMemory != null) {
                 sharedMemory.close();
             }
@@ -139,8 +138,9 @@ public class Ipc {
     }
 
     public void initConsumer() {
-        consumer = new Consumer();
-        thread = new Thread(consumer);
+        Consumer consumer = new Consumer();
+        Thread thread = new Thread(consumer);
         thread.start();
     }
+
 }

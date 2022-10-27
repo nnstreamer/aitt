@@ -17,13 +17,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
-import com.samsung.android.aitt.AittMessage;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -69,9 +69,7 @@ public class TCPInstrumentedTest {
             String _topic = "";
             byte[] payload = TEST_MESSAGE.getBytes();
 
-            Assert.assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
-            });
+            Assert.assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -86,9 +84,7 @@ public class TCPInstrumentedTest {
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
             aitt.connect(BROKER_IP, PORT);
 
-            aitt.subscribe(TEST_TOPIC, message -> {
-                Log.i(TAG, "A subscription callback is called.");
-            }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
+            aitt.subscribe(TEST_TOPIC, message -> Log.i(TAG, "A subscription callback is called."), Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -126,10 +122,8 @@ public class TCPInstrumentedTest {
             aitt.connect(BROKER_IP, PORT);
 
             String _topic = "";
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, message -> {
-                }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -145,9 +139,7 @@ public class TCPInstrumentedTest {
             aitt.connect(BROKER_IP, PORT);
 
             String _topic = "topic";
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -185,7 +177,7 @@ public class TCPInstrumentedTest {
             aitt.subscribe(TEST_TOPIC, message -> {
                 String _topic = message.getTopic();
                 byte[] _payload = message.getPayload();
-                Log.i(TAG, "Topic = " + _topic + ", Payload = " + _payload);
+                Log.i(TAG, "Topic = " + _topic + ", Payload = " + Arrays.toString(_payload));
                 Assert.assertEquals(_topic, TEST_TOPIC);
                 Assert.assertArrayEquals(_payload, payload);
                 String results = new String(_payload);

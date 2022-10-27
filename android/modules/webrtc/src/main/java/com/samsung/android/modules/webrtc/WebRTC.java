@@ -66,23 +66,23 @@ import java.util.concurrent.TimeUnit;
  * WebRTC class to implement webRTC functionalities
  */
 public class WebRTC {
-    private static final String TAG = "WebRTC";
     public static final String VIDEO_TRACK_ID = "ARDAMSv0";
-    private static final String CANDIDATE = "candidate";
-    public static final int MAX_MESSAGE_SIZE = 32768;
     public static final String EOF_MESSAGE = "EOF";
+    public static final int MAX_MESSAGE_SIZE = 32768;
+    private static final String TAG = "WebRTC";
+    private static final String CANDIDATE = "candidate";
+    private final Context appContext;
+    private final boolean isReceiver;
     private java.net.Socket socket;
     private boolean isInitiator;
     private boolean isChannelReady;
     private boolean isStarted;
-    private boolean isReceiver;
     private PeerConnection peerConnection;
     private PeerConnectionFactory factory;
     private VideoTrack videoTrackFromSource;
     private ObjectOutputStream outStream;
     private ObjectInputStream inputStream;
     private SDPThread sdpThread;
-    private Context appContext;
     private DataChannel localDataChannel;
     private FrameVideoCapturer videoCapturer;
     private ReceiveDataCallback dataCallback;
@@ -233,7 +233,7 @@ public class WebRTC {
      */
     private static class ProxyVideoSink implements VideoSink {
 
-        private ReceiveDataCallback dataCallback;
+        private final ReceiveDataCallback dataCallback;
 
         /**
          * ProxyVideoSink constructor to create its instance
@@ -264,11 +264,10 @@ public class WebRTC {
         public byte[] createNV21Data(VideoFrame.I420Buffer i420Buffer) {
             final int width = i420Buffer.getWidth();
             final int height = i420Buffer.getHeight();
-            final int chromaStride = width;
             final int chromaWidth = (width + 1) / 2;
             final int chromaHeight = (height + 1) / 2;
             final int ySize = width * height;
-            final ByteBuffer nv21Buffer = ByteBuffer.allocateDirect(ySize + chromaStride * chromaHeight);
+            final ByteBuffer nv21Buffer = ByteBuffer.allocateDirect(ySize + width * chromaHeight);
             final byte[] nv21Data = nv21Buffer.array();
             for (int y = 0; y < height; ++y) {
                 for (int x = 0; x < width; ++x) {
@@ -280,8 +279,8 @@ public class WebRTC {
                 for (int x = 0; x < chromaWidth; ++x) {
                     final byte uValue = i420Buffer.getDataU().get(y * i420Buffer.getStrideU() + x);
                     final byte vValue = i420Buffer.getDataV().get(y * i420Buffer.getStrideV() + x);
-                    nv21Data[ySize + y * chromaStride + 2 * x] = vValue;
-                    nv21Data[ySize + y * chromaStride + 2 * x + 1] = uValue;
+                    nv21Data[ySize + y * width + 2 * x] = vValue;
+                    nv21Data[ySize + y * width + 2 * x + 1] = uValue;
                 }
             }
             return nv21Data;
@@ -594,15 +593,15 @@ public class WebRTC {
             this.capturerObserver = capturerObserver;
         }
 
-        public void startCapture(int width, int height, int framerate) {
+        public void startCapture(int width, int height, int frameRate) {
             //Required for future reference
         }
 
-        public void stopCapture() throws InterruptedException {
+        public void stopCapture() {
             //Required for future reference
         }
 
-        public void changeCaptureFormat(int width, int height, int framerate) {
+        public void changeCaptureFormat(int width, int height, int frameRate) {
             //Required for future reference
         }
 

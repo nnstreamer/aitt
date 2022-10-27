@@ -29,12 +29,12 @@ import java.util.List;
  */
 public class WebRTCServer {
     private static final String TAG = "WebRTCServer";
+    private final Context appContext;
+    private final WebRTC.ReceiveDataCallback dataCallback;
+    private final List<WebRTC> connectionList = new ArrayList<>();
     private ServerSocket serverSocket = null;
-    private Context appContext;
-    private WebRTC.ReceiveDataCallback dataCallback;
-    private List<WebRTC> connectionList = new ArrayList<>();
     private ServerThread serverThread = null;
-    private Thread thread = null;
+    private Thread thread;
 
     /**
      * WebRTCServer constructor to create its instance

@@ -52,11 +52,9 @@ class IpcHandler implements TransportHandler {
 
     @Override
     public void subscribe(String topic, HandlerDataCallback handlerDataCallback) {
-        publishData = wrapPublishData(topic, Definitions.DEFAULT_IPC_PORT);
+        publishData = wrapPublishData(topic);
         try {
-            Ipc.RecieveFrameCallback cb = frame -> {
-                handlerDataCallback.pushHandlerData(frame);
-            };
+            Ipc.ReceiveFrameCallback cb = handlerDataCallback::pushHandlerData;
             ipc = new Ipc(context, cb);
             ipc.initConsumer();
 
@@ -69,10 +67,9 @@ class IpcHandler implements TransportHandler {
      * Method to wrap topic, device IP address, webRTC server instance port number for publishing
      *
      * @param topic      Topic to which the application has subscribed to
-     * @param serverPort Port number of the WebRTC server instance
      * @return Byte data wrapped, contains topic, device IP, webRTC server port number
      */
-    private byte[] wrapPublishData(String topic, int serverPort) {
+    private byte[] wrapPublishData(String topic) {
         FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
         {
             int smap = fbb.startMap();
@@ -81,7 +78,7 @@ class IpcHandler implements TransportHandler {
             {
                 int smap1 = fbb.startMap();
                 fbb.putInt("protocol", Aitt.Protocol.IPC.getValue());
-                fbb.putInt("port", serverPort);
+                fbb.putInt("port", Definitions.DEFAULT_IPC_PORT);
                 fbb.endMap(topic, smap1);
             }
             fbb.endMap(null, smap);

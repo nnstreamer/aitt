@@ -36,23 +36,21 @@ import java.util.Map;
  * 2. Subscribe to a topic with protocol and other params
  * 3. Publish to a topic using protocol and other params
  * 4. Unsubscribe to a topic
- * 5. Invoke JNI api's which interact with aitt c++
+ * 5. Invoke JNI APIs which interact with aitt c++
  * 6. API to set MQTT Connection Callback
  */
 public class Aitt {
     private static final String TAG = "AITT_ANDROID";
     private static final String INVALID_TOPIC = "Invalid topic";
-
+    private final Map<String, HostTable> publishTable = new HashMap<>();
+    private final Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
+    private final JniInterface mJniInterface;
+    private final String ip;
+    private final Context appContext;
+    private final long instance;
     private Map<String, ArrayList<SubscribeCallback>> subscribeCallbacks = new HashMap<>();
-    private Map<String, HostTable> publishTable = new HashMap<>();
-    private Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
     private Map<String, Long> aittSubId = new HashMap<>();
     private ConnectionCallback connectionCallback = null;
-    private JniInterface mJniInterface;
-
-    private long instance = 0;
-    private String ip;
-    private Context appContext;
 
     /**
      * QoS levels to define the guarantee of delivery for a message
@@ -67,7 +65,7 @@ public class Aitt {
      * List of protocols supported by AITT framework
      */
     public enum Protocol {
-        MQTT(0x1 << 0),           // Publish message through the MQTT
+        MQTT(0x1),           // Publish message through the MQTT
         TCP(0x1 << 1),            // Publish message to peers using the TCP
         TCP_SECURE(0x1 << 2),     // Publish message to peers using the Secure TCP
         WEBRTC(0x1 << 3),         // Publish message to peers using the WEBRTC
@@ -169,12 +167,7 @@ public class Aitt {
             throw new IllegalArgumentException("Invalid callback");
         }
         connectionCallback = callback;
-        mJniInterface.setConnectionCallback(new JniInterface.JniConnectionCallback() {
-            @Override
-            public void jniConnectionCB(int status) {
-                connectionStatusCallback(status);
-            }
-        });
+        mJniInterface.setConnectionCallback(this::connectionStatusCallback);
     }
 
     /**
@@ -198,12 +191,7 @@ public class Aitt {
         }
         mJniInterface.connect(brokerIp, port);
         //Subscribe to java discovery topic
-        mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, new JniInterface.JniCallback() {
-            @Override
-            public void jniDataPush(String _topic, byte[] payload) {
-                messageCallback(_topic, payload);
-            }
-        }, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
+        mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, this::messageCallback, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
     }
 
     /**
@@ -270,7 +258,7 @@ public class Aitt {
             mJniInterface.publish(topic, message, message.length, jniProtocols, qos.ordinal(), retain);
         }
 
-        for (Protocol pro : protocols) {
+        for (Protocol protocol : protocols) {
             try {
                 synchronized (this) {
                     if (!publishTable.containsKey(topic)) {
@@ -278,12 +266,25 @@ public class Aitt {
                         return;
                     }
                     HostTable hostTable = publishTable.get(topic);
+                    if (hostTable == null) {
+                        Log.d(TAG, "Host table for topic [" + topic + "] is null.");
+                        continue;
+                    }
                     for (String hostIp : hostTable.hostMap.keySet()) {
                         PortTable portTable = hostTable.hostMap.get(hostIp);
+                        if (portTable == null) {
+                            Log.e(TAG, "Port table for host [" + hostIp + "] is null.");
+                            continue;
+                        }
                         for (Integer port : portTable.portMap.keySet()) {
-                            Object transportHandler = portTable.portMap.get(port).second;
-                            if (portTable.portMap.get(port).first == pro)
-                                publishHandler(pro, portTable, topic, transportHandler, hostIp, port, message);
+                            Pair<Protocol, Object> protocolPair = portTable.portMap.get(port);
+                            if (protocolPair == null) {
+                                Log.e(TAG, "Pair for port: " + port + "is null.");
+                                continue;
+                            }
+                            Object transportHandler = protocolPair.second;
+                            if (protocolPair.first == protocol)
+                                publishHandler(protocol, portTable, topic, transportHandler, hostIp, port, message);
                         }
                     }
                 }
@@ -302,7 +303,7 @@ public class Aitt {
      * @param transportHandlerObject transportHandler object used to publish message
      * @param ip                     IP address of the destination
      * @param port                   Port number of the destination
-     * @param message                Data to be tranferred over WebRTC
+     * @param message                Data to be transferred over WebRTC
      */
     private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object transportHandlerObject, String ip, int port, byte[] message) {
         TransportHandler transportHandler;
@@ -380,12 +381,7 @@ public class Aitt {
         }
 
         if (jniProtocols > 0) {
-            Long pObject = mJniInterface.subscribe(topic, new JniInterface.JniCallback() {
-                @Override
-                public void jniDataPush(String _topic, byte[] payload) {
-                    messageCallback(_topic, payload);
-                }
-            },jniProtocols, qos.ordinal());
+            Long pObject = mJniInterface.subscribe(topic, this::messageCallback, jniProtocols, qos.ordinal());
             synchronized (this) {
                 aittSubId.put(topic, pObject);
             }
@@ -397,7 +393,7 @@ public class Aitt {
 
                 if (transportHandler != null) {
                     synchronized (this) {
-                        subscribeMap.put(topic, new Pair(pro, transportHandler));
+                        subscribeMap.put(topic, new Pair<>(pro, transportHandler));
                     }
 
                     transportHandler.setAppContext(appContext);
@@ -474,8 +470,9 @@ public class Aitt {
         boolean isRemoved = false;
         try {
             synchronized (this) {
-                if (subscribeMap.containsKey(topic) && subscribeMap.get(topic).first == Protocol.WEBRTC) {
-                    TransportHandler transportHandler = (TransportHandler) subscribeMap.get(topic).second;
+                Pair<Protocol, Object> protocolPair = subscribeMap.get(topic);
+                if (protocolPair != null && subscribeMap.containsKey(topic) && protocolPair.first == Protocol.WEBRTC) {
+                    TransportHandler transportHandler = (TransportHandler) protocolPair.second;
                     transportHandler.unsubscribe();
                     subscribeMap.remove(topic);
                     isRemoved = true;
@@ -551,10 +548,10 @@ public class Aitt {
         }
     }
 
-    /**
-     * This API is called when MQTT subscribe callback is invoked at aitt C++.
-     * It has discovery information in a "payload"
-     * @param payload
+    /*
+      This API is called when MQTT subscribe callback is invoked at aitt C++.
+      It has discovery information in a "payload"
+      @param payload
      *  Flexbuffer discovery message expected
      *           {
      *             "status": "connected",
@@ -630,7 +627,7 @@ public class Aitt {
         synchronized (this) {
             if (!publishTable.containsKey(topic)) {
                 PortTable portTable = new PortTable();
-                portTable.portMap.put(port, new Pair(protocol, null));
+                portTable.portMap.put(port, new Pair<>(protocol, null));
                 HostTable hostTable = new HostTable();
                 hostTable.hostMap.put(host, portTable);
                 publishTable.put(topic, hostTable);
@@ -638,20 +635,28 @@ public class Aitt {
             }
 
             HostTable hostTable = publishTable.get(topic);
+            if (hostTable == null) {
+                Log.d(TAG, "Host table for topic[" + topic + "] is null,");
+                return;
+            }
             if (!hostTable.hostMap.containsKey(host)) {
                 PortTable portTable = new PortTable();
-                portTable.portMap.put(port, new Pair(protocol, null));
+                portTable.portMap.put(port, new Pair<>(protocol, null));
                 hostTable.hostMap.put(host, portTable);
                 return;
             }
 
             PortTable portTable = hostTable.hostMap.get(host);
+            if (portTable == null) {
+                Log.d(TAG, "Port table for host[" + host + "] is null.");
+                return;
+            }
             if (portTable.portMap.containsKey(port)) {
-                portTable.portMap.replace(port, new Pair(protocol, null));
+                portTable.portMap.replace(port, new Pair<>(protocol, null));
                 return;
             }
 
-            portTable.portMap.put(port, new Pair(protocol, null));
+            portTable.portMap.put(port, new Pair<>(protocol, null));
         }
     }
 

@@ -18,7 +18,6 @@ package com.samsung.android.aitt;
 import android.content.Context;
 
 import com.google.flatbuffers.FlexBuffersBuilder;
-import com.samsung.android.aittnative.JniInterface;
 import com.samsung.android.modules.webrtc.WebRTC;
 import com.samsung.android.modules.webrtc.WebRTCServer;
 
@@ -50,9 +49,7 @@ class WebRTCHandler implements TransportHandler {
 
     @Override
     public void subscribe(String topic, HandlerDataCallback handlerDataCallback) {
-        WebRTC.ReceiveDataCallback cb = data -> {
-            handlerDataCallback.pushHandlerData(data);
-        };
+        WebRTC.ReceiveDataCallback cb = handlerDataCallback::pushHandlerData;
         ws = new WebRTCServer(appContext, cb);
         int serverPort = ws.start();
         if (serverPort < 0) {

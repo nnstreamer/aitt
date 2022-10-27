@@ -30,8 +30,8 @@ public class JniInterface {
     private JniConnectionCallback jniConnectionCallback;
     private long instance = 0;
 
-    /**
-     * Load aitt-android library
+    /*
+      Load aitt-android library
      */
     static {
         try {
