@@ -44,7 +44,6 @@ class AITTRTSPTest : public testing::Test {
     {
         aitt = new AITT("streamClientId", LOCAL_IP, AittOption(true, false));
         aitt->Connect();
-        main_loop = g_main_loop_new(nullptr, FALSE);
 
         publisher = aitt->CreateStream(AITT_STREAM_TYPE_RTSP, "topic", AITT_STREAM_ROLE_PUBLISHER);
         ASSERT_TRUE(publisher) << "CreateStream() Fail";
@@ -55,7 +54,6 @@ class AITTRTSPTest : public testing::Test {
     }
     void TearDown() override
     {
-        g_main_loop_unref(main_loop);
         aitt->DestroyStream(publisher);
         aitt->DestroyStream(subscriber);
         aitt->Disconnect();
@@ -65,17 +63,8 @@ class AITTRTSPTest : public testing::Test {
     AITT *aitt;
     AittStream *publisher;
     AittStream *subscriber;
-    GMainLoop *main_loop;
+    MainLoopHandler main_loop;
 };
-
-static gint SubscriberStart(gpointer argv)
-{
-    AittStream *subscriber = static_cast<AittStream *>(argv);
-
-    subscriber->Start();
-
-    return false;
-}
 
 TEST_F(AITTRTSPTest, Publisher_First_P)
 {
@@ -89,13 +78,16 @@ TEST_F(AITTRTSPTest, Publisher_First_P)
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   DBG("ReceiveCallback Called");
-                  if (g_main_loop_is_running(main_loop))
-                      g_main_loop_quit(main_loop);
+                  main_loop.Quit();
               },
               nullptr);
 
-        g_timeout_add(3000, SubscriberStart, subscriber);
-        g_main_loop_run(main_loop);
+        main_loop.AddTimeout(
+              3000,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) { subscriber->Start(); },
+              nullptr);
+        main_loop.Run();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
@@ -107,8 +99,7 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   DBG("ReceiveCallback Called");
-                  if (g_main_loop_is_running(main_loop))
-                      g_main_loop_quit(main_loop);
+                  main_loop.Quit();
               },
               nullptr);
         subscriber->Start();
@@ -119,7 +110,7 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
         publisher->SetConfig("password", "admin");
         publisher->Start();
 
-        g_main_loop_run(main_loop);
+        main_loop.Run();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }

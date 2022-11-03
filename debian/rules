@@ -22,6 +22,7 @@ export COMMIT_ID=$(shell git rev-parse --short HEAD)
 
 export TEST ?= 1
 export COVERAGE ?= 0
+export GLIB ?= 1
 
 %:
 	dh $@ --parallel --buildsystem=cmake
@@ -38,7 +39,8 @@ override_dh_auto_configure:
 	    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
 	    -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF \
 	    -DBUILD_TESTING:BOOL=${TEST} \
-	    -DCOVERAGE_TEST:BOOL=${COVERAGE}; \
+	    -DCOVERAGE_TEST:BOOL=${COVERAGE} \
+	    -DUSE_GLIB:BOOL=${GLIB}; \
 	cd -
 
 .PHONY: override_dh_auto_build

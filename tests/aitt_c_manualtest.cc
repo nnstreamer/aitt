@@ -15,10 +15,10 @@
  */
 #include "aitt_c.h"
 
-#include <glib.h>
 #include <gtest/gtest.h>
 
 #include "AittTests.h"
+#include "MainLoopHandler.h"
 
 #define TEST_C_WILL_TOPIC "test/topic_will"
 
@@ -32,7 +32,7 @@ TEST(AITT_C_MANUAL, will_set_P)
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     static bool sub_called = false;
-    GMainLoop *loop = g_main_loop_new(nullptr, FALSE);
+    MainLoopHandler handler;
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_WILL_TOPIC,
@@ -42,7 +42,7 @@ TEST(AITT_C_MANUAL, will_set_P)
               EXPECT_STREQ(aitt_msg_get_topic(msg_handle), TEST_C_WILL_TOPIC);
               sub_called = true;
           },
-          loop, &sub_handle);
+          nullptr, &sub_handle);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
     EXPECT_TRUE(sub_handle != nullptr);
 
@@ -64,21 +64,17 @@ TEST(AITT_C_MANUAL, will_set_P)
     } else {
         sleep(1);
         kill(pid, SIGKILL);
-
-        g_timeout_add(
+        handler.AddTimeout(
               10,
-              [](gpointer data) -> gboolean {
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
                   if (sub_called) {
-                      GMainLoop *loop = static_cast<GMainLoop *>(data);
-                      g_main_loop_quit(loop);
-                      return FALSE;
+                      handler.Quit();
                   }
-                  return TRUE;
               },
-              loop);
+              nullptr);
 
-        g_main_loop_run(loop);
-        g_main_loop_unref(loop);
+        handler.Run();
 
         ret = aitt_disconnect(handle);
         EXPECT_EQ(ret, AITT_ERROR_NONE);

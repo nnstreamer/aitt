@@ -15,7 +15,6 @@
  */
 #include "aitt_c.h"
 
-#include <glib.h>
 #include <gtest/gtest.h>
 
 #include "AittTests.h"
@@ -209,7 +208,6 @@ TEST_F(AITTCTest, pub_sub_P_Anytime)
 
     ret = aitt_connect(handle, LOCAL_IP, 1883);
     ASSERT_EQ(ret, AITT_ERROR_NONE);
-
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_TOPIC,
@@ -427,34 +425,27 @@ TEST_F(AITTCTest, sub_unsub_P_Anytime)
     ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
-    g_timeout_add(
+    mainLoop.AddTimeout(
           1000,
-          [](gpointer data) -> gboolean {
-              aitt_h handle = static_cast<aitt_h>(data);
+          [&](MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *data) {
               int ret = aitt_unsubscribe(handle, sub_handle);
               EXPECT_EQ(ret, AITT_ERROR_NONE);
               sub_handle = nullptr;
 
               ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
               EXPECT_EQ(ret, AITT_ERROR_NONE);
-              return G_SOURCE_REMOVE;
           },
-          handle);
+          nullptr);
 
-    g_timeout_add(
+    mainLoop.AddTimeout(
           2000,
-          [](gpointer data) -> gboolean {
+          [&](MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *data) {
               EXPECT_EQ(sub_call_count, 1);
-
               if (sub_call_count == 1) {
-                  AITTCTest *test = static_cast<AITTCTest *>(data);
-                  test->StopEventLoop();
-                  return FALSE;
+                  StopEventLoop();
               }
-
-              return TRUE;
           },
-          this);
+          nullptr);
 
     IterateEventLoop();
 

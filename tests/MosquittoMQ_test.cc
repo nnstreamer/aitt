@@ -50,21 +50,27 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
                         [](aitt::MSG *handle, const std::string &topic, const void *msg,
                               const int szmsg, void *cbdata) {},
                         user_data);
-                  g_timeout_add(
-                        100,
-                        [](gpointer cbdata) -> gboolean {
-                            MQTest *test = static_cast<MQTest *>(cbdata);
+                  mainLoop.AddTimeout(
+                        10,
+                        [&](MainLoopHandler::MainLoopResult result, int fd,
+                              MainLoopHandler::MainLoopData *data) {
+                            MQTest *test = static_cast<MQTest *>(user_data);
                             test->ToggleReady();
-                            return G_SOURCE_REMOVE;
                         },
-                        user_data);
+                        nullptr);
               },
               static_cast<void *>(this));
 
         DBG("Publish message to %s (%s)", "MQ_TEST_TOPIC1", TEST_MSG);
         mq.Publish("MQ_TEST_TOPIC1", TEST_MSG, sizeof(TEST_MSG));
 
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+        mainLoop.AddTimeout(
+              100,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
+                  ReadyCheck(static_cast<AittTests *>(this));
+              },
+              nullptr);
 
         IterateEventLoop();
 

@@ -15,7 +15,6 @@
  */
 #include "AITT.h"
 
-#include <glib.h>
 #include <gtest/gtest.h>
 
 #include "AittTests.h"
@@ -54,8 +53,13 @@ TEST_F(AITTManualTest, WillSet_P)
         } else {
             sleep(1);
             kill(pid, SIGKILL);
-
-            g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+            mainLoop.AddTimeout(
+                  10,
+                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                        MainLoopHandler::MainLoopData *data) {
+                      ReadyCheck(static_cast<AittTests *>(this));
+                  },
+                  nullptr);
             IterateEventLoop();
 
             ASSERT_TRUE(ready);

@@ -11,6 +11,7 @@ Source1001: %{name}.manifest
 %{!?stdoutlog: %global stdoutlog 0}
 %{!?test: %global test 1}
 %{!?gcov: %global gcov 0}
+%{!?glib: %global glib 1}
 
 BuildRequires: cmake
 BuildRequires: pkgconfig(dlog)
@@ -76,7 +77,8 @@ cp %{SOURCE1001} .
     -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
     -DCMAKE_VERBOSE_MAKEFILE=OFF \
     -DBUILD_TESTING:BOOL=%{test} \
-    -DCOVERAGE_TEST:BOOL=%{gcov}
+    -DCOVERAGE_TEST:BOOL=%{gcov} \
+    -DUSE_GLIB=%{glib}
 
 %__make %{?_smp_mflags}
 

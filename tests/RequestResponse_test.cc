@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <glib.h>
 #include <gtest/gtest.h>
 
 #include <iostream>
@@ -109,7 +108,13 @@ class AITTRRTest : public testing::Test, public AittTests {
             }
         }
 
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+        mainLoop.AddTimeout(
+              100,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
+                  ReadyCheck(static_cast<AittTests *>(this));
+              },
+              nullptr);
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -159,7 +164,13 @@ class AITTRRTest : public testing::Test, public AittTests {
               this);
         aitt.Connect();
 
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+        mainLoop.AddTimeout(
+              150,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
+                  ReadyCheck(static_cast<AittTests *>(this));
+              },
+              nullptr);
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -200,7 +211,13 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
                     std::placeholders::_4),
               nullptr, correlation);
 
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+        mainLoop.AddTimeout(
+              100,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
+                  ReadyCheck(static_cast<AittTests *>(this));
+              },
+              nullptr);
         IterateEventLoop();
 
         EXPECT_TRUE(sub_ok);
@@ -260,7 +277,13 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
               },
               nullptr, correlation);
 
-        g_timeout_add(10, AittTests::ReadyCheck, static_cast<AittTests *>(this));
+        mainLoop.AddTimeout(
+              100,
+              [&](MainLoopHandler::MainLoopResult result, int fd,
+                    MainLoopHandler::MainLoopData *data) {
+                  ReadyCheck(static_cast<AittTests *>(this));
+              },
+              nullptr);
         IterateEventLoop();
 
         EXPECT_TRUE(sub_ok);

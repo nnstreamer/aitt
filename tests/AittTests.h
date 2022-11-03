@@ -15,10 +15,10 @@
  */
 #pragma once
 
-#include <glib.h>
 #include <sys/time.h>
 
 #include "AITT.h"
+#include "MainLoopHandler.h"
 #include "aitt_internal.h"
 
 #define LOCAL_IP "127.0.0.1"
@@ -29,6 +29,8 @@
 #define TEST_MSG "This is aitt test message"
 #define TEST_MSG2 "This message is going to be delivered through a specified AittProtocol"
 #define SLEEP_MS 1000
+
+using aitt::MainLoopHandler;
 
 class AittTests {
   public:
@@ -44,30 +46,26 @@ class AittTests {
         clientId = buffer;
         snprintf(buffer, sizeof(buffer), "TestTopic.%lX%lX", tv.tv_sec, tv.tv_usec);
         testTopic = buffer;
-        mainLoop = g_main_loop_new(nullptr, FALSE);
     }
 
-    void Deinit() { g_main_loop_unref(mainLoop); }
+    void Deinit() {}
 
     void ToggleReady() { ready = true; }
     void ToggleReady2() { ready2 = true; }
-    static gboolean ReadyCheck(gpointer data)
+    void ReadyCheck(void *data)
     {
         AittTests *test = static_cast<AittTests *>(data);
 
         if (test->ready) {
-            g_main_loop_quit(test->mainLoop);
-            return G_SOURCE_REMOVE;
+            test->StopEventLoop();
         }
-
-        return G_SOURCE_CONTINUE;
     }
 
-    void StopEventLoop(void) { g_main_loop_quit(mainLoop); }
+    void StopEventLoop(void) { mainLoop.Quit(); }
 
     void IterateEventLoop(void)
     {
-        g_main_loop_run(mainLoop);
+        mainLoop.Run();
         DBG("Go forward");
     }
 
@@ -75,7 +73,7 @@ class AittTests {
     bool ready;
     bool ready2;
 
-    GMainLoop *mainLoop;
+    MainLoopHandler mainLoop;
     std::string clientId;
     std::string testTopic;
 };
