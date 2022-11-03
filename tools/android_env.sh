@@ -23,15 +23,6 @@ if [ ! $ANDROID_NDK_ROOT ]; then
 	fi
 fi
 
-if [ ! -e "${HOME}/Android/gstreamer-1.0" ]; then
-	mkdir -p ${HOME}/Android/gstreamer-1.0
-	curl -sL https://gstreamer.freedesktop.org/data/pkg/android/1.20.0/gstreamer-1.0-android-universal-1.20.0.tar.xz | tar -C ${HOME}/Android/gstreamer-1.0 -xJ
-fi
-
-if [ ! $GSTREAMER_ROOT_ANDROID ]; then
-	echo "export GSTREAMER_ROOT_ANDROID=\$HOME/Android/gstreamer-1.0" >> ~/.profile
-fi
-
 if [ ! -e "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
 	curl -s "https://get.sdkman.io" | bash
 fi
