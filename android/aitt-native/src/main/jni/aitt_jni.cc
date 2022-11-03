@@ -17,8 +17,8 @@
 #include "aitt_jni.h"
 
 /**
- * This class is used as a native interface between the aitt java and aitt C++ layer. It has exposed following API's to
- * communicate with aitt C++
+ * This class is used as a native interface between the aitt java and aitt C++ layer. It has exposed
+ * following APIs to communicate with aitt C++
  * 1. Native interface API to Connect to MQTT broker
  * 2. Native interface API to Subscribe to a topic with protocol and other params
  * 3. Native interface API to Publish to a topic using protocol and other params
@@ -27,7 +27,8 @@
  * 6. Native interface API to set MQTT Connection Callback
  */
 
-/* This cbContext is stored during subscribe, so that these cbContext can be used while invoking a java layer API's*/
+/* This cbContext is stored during subscribe, so that these cbContext can be used while invoking a
+ * java layer APIs */
 AittNativeInterface::CallbackContext AittNativeInterface::cbContext = {
         .jvm = nullptr,
         .messageCallbackMethodID = nullptr,
@@ -39,7 +40,8 @@ AittNativeInterface::AittNativeInterface(std::string &mqId, std::string &ip, boo
 }
 
 /* Destructor called automatically when  AittNativeInterface goes out of scope */
-AittNativeInterface::~AittNativeInterface(void) {
+AittNativeInterface::~AittNativeInterface()
+{
     if (cbObject != nullptr) {
         JNIEnv *env = nullptr;
         bool attached = false;
@@ -64,16 +66,15 @@ AittNativeInterface::~AittNativeInterface(void) {
     }
 }
 
-
-bool AittNativeInterface::checkParams(JNIEnv *env, jobject jniInterfaceObject) {
-    if (env == nullptr || jniInterfaceObject == nullptr) {
-        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or Jobject is null");
+bool AittNativeInterface::checkParams(JNIEnv *env, jobject jni_interface_object)
+{
+    if (env == nullptr || jni_interface_object == nullptr) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env or jobject is null");
         return false;
     } else {
         return true;
     }
 }
-
 
 /**
  * Convert the JNI string to C++ string
@@ -84,12 +85,12 @@ bool AittNativeInterface::checkParams(JNIEnv *env, jobject jniInterfaceObject) {
 std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str) {
     if (env == nullptr) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Env is null");
-        return nullptr;
+        return {};
     }
-    const char *cstr = env->GetStringUTFChars(str, 0);
+    const char *cstr = env->GetStringUTFChars(str, nullptr);
     if (cstr == nullptr) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to get string UTF chars");
-        return nullptr;
+        return {};
     }
     std::string _str(cstr);
     env->ReleaseStringUTFChars(str, cstr);
@@ -99,18 +100,19 @@ std::string AittNativeInterface::GetStringUTF(JNIEnv *env, jstring str) {
 /**
  * JNI API to connect to MQTT broker
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
  * @param host mqtt broker IP
  * @param port mqtt broker port
  */
-void AittNativeInterface::connect(JNIEnv *env,
-                                  jobject jniInterfaceObject, jlong handle, jstring host, jint port) {
-    if (!checkParams(env, jniInterfaceObject)) {
+void AittNativeInterface::connect(JNIEnv *env, jobject jni_interface_object, jlong handle,
+      jstring host, jint port)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string brokerIp = GetStringUTF(env, host);
     if (brokerIp.empty()) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Broker Ip is empty");
@@ -130,38 +132,38 @@ void AittNativeInterface::connect(JNIEnv *env,
 /**
  * JNI API to publish data to a given topic
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
  * @param topic subscribe topic
  * @param data data to be published
- * @param datalen data length of a publishing data
+ * @param data_len data length of a publishing data
  * @param protocol publishing protocol
  * @param qos publishing qos
  * @param retain Currently used in MQTT to inform broker to retain data or not
  */
-void AittNativeInterface::publish(JNIEnv *env,
-                                  jobject jniInterfaceObject, jlong handle, jstring topic, jbyteArray data, jlong datalen,
-                                  jint protocol, jint qos, jboolean retain) {
-    if (!checkParams(env, jniInterfaceObject)) {
+void AittNativeInterface::publish(JNIEnv *env, jobject jni_interface_object, jlong handle,
+      jstring topic, jbyteArray data, jlong data_len, jint protocol, jint qos, jboolean retain)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
     if (customTopic.empty()) {
         return;
     }
 
-    int num_bytes = (int) datalen;
-    const char *cdata = (char *) env->GetByteArrayElements(data, 0);
+    int num_bytes = (int)data_len;
+    const char *cdata = (char *)env->GetByteArrayElements(data, nullptr);
     if (cdata == nullptr) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to get byte array elements");
         return;
     }
     const void *_data = reinterpret_cast<const void *>(cdata);
 
-    AittProtocol _protocol = static_cast<AittProtocol>(protocol);
-    AittQoS _qos = static_cast<AittQoS>(qos);
+    auto _protocol = static_cast<AittProtocol>(protocol);
+    auto _qos = static_cast<AittQoS>(qos);
     bool _retain = (bool) retain;
 
     try {
@@ -176,16 +178,16 @@ void AittNativeInterface::publish(JNIEnv *env,
 /**
  * JNI API to disconnect from MQTT broker
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
  */
-void AittNativeInterface::disconnect(JNIEnv *env,
-                                     jobject jniInterfaceObject, jlong handle) {
-    if (!checkParams(env, jniInterfaceObject)) {
+void AittNativeInterface::disconnect(JNIEnv *env, jobject jni_interface_object, jlong handle)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
     try {
         instance->aitt.Disconnect();
     } catch (std::exception &e) {
@@ -193,7 +195,6 @@ void AittNativeInterface::disconnect(JNIEnv *env,
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
     }
 }
-
 
 bool AittNativeInterface::jniStatusCheck(JNIEnv *&env, int JNIStatus) {
     if (JNIStatus == JNI_EDETACHED) {
@@ -211,69 +212,70 @@ bool AittNativeInterface::jniStatusCheck(JNIEnv *&env, int JNIStatus) {
 /**
  * JNI API to subscribe to a given topic
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
  * @param topic subscribe topic
  * @param protocol subscribe protocol
  * @param qos subscribe qos
  */
-jlong AittNativeInterface::subscribe(JNIEnv *env,
-                                     jobject jniInterfaceObject, jlong handle, jstring topic, jint protocol, jint qos) {
-    if (!checkParams(env, jniInterfaceObject)) {
+jlong AittNativeInterface::subscribe(JNIEnv *env, jobject jni_interface_object, jlong handle,
+      jstring topic, jint protocol, jint qos)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return 0L;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
     std::string customTopic = GetStringUTF(env, topic);
     if (customTopic.empty()) {
         return 0L;
     }
 
-    AittProtocol _protocol = static_cast<AittProtocol>(protocol);
-    AittQoS _qos = static_cast<AittQoS>(qos);
+    auto _protocol = static_cast<AittProtocol>(protocol);
+    auto _qos = static_cast<AittQoS>(qos);
 
     AittSubscribeID _id = nullptr;
     try {
         _id = instance->aitt.Subscribe(
-                customTopic,
-                [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(cbdata);
-                    JNIEnv *env;
-                    int JNIStatus =
-                            cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+              customTopic,
+              [&](aitt::MSG *handle, const void *msg, const int msg_size, void *cbdata) -> void {
+                  auto *instance = reinterpret_cast<AittNativeInterface *>(cbdata);
+                  JNIEnv *env;
+                  int JNIStatus =
+                        cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
 
-                    if (!jniStatusCheck(env, JNIStatus)) {
-                        return;
-                    }
+                  if (!jniStatusCheck(env, JNIStatus)) {
+                      return;
+                  }
 
-                    if (env != nullptr && instance->cbObject != nullptr) {
-                        jstring _topic = env->NewStringUTF(handle->GetTopic().c_str());
-                        if (env->ExceptionCheck() == true) {
-                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
-                            cbContext.jvm->DetachCurrentThread();
-                            return;
-                        }
+                  if (env != nullptr && instance->cbObject != nullptr) {
+                      jstring _topic = env->NewStringUTF(handle->GetTopic().c_str());
+                      if (env->ExceptionCheck() == true) {
+                          JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
+                          cbContext.jvm->DetachCurrentThread();
+                          return;
+                      }
 
-                        jbyteArray array = env->NewByteArray(szmsg);
-                        auto _msg = reinterpret_cast<unsigned char *>(const_cast<void *>(msg));
-                        env->SetByteArrayRegion(array, 0, szmsg, reinterpret_cast<jbyte *>(_msg));
-                        if (env->ExceptionCheck() == true) {
-                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to set byte array");
-                            cbContext.jvm->DetachCurrentThread();
-                            return;
-                        }
+                      jbyteArray array = env->NewByteArray(msg_size);
+                      auto _msg = reinterpret_cast<unsigned char *>(const_cast<void *>(msg));
+                      env->SetByteArrayRegion(array, 0, msg_size, reinterpret_cast<jbyte *>(_msg));
+                      if (env->ExceptionCheck() == true) {
+                          JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to set byte array");
+                          cbContext.jvm->DetachCurrentThread();
+                          return;
+                      }
 
-                        env->CallVoidMethod(instance->cbObject, cbContext.messageCallbackMethodID,
-                                            _topic, array);
-                        if (env->ExceptionCheck() == true) {
-                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
-                            cbContext.jvm->DetachCurrentThread();
-                            return;
-                        }
-                    }
-                    cbContext.jvm->DetachCurrentThread();
-                },
-                reinterpret_cast<void *>(instance), _protocol, _qos);
+                      env->CallVoidMethod(instance->cbObject, cbContext.messageCallbackMethodID,
+                            _topic, array);
+                      if (env->ExceptionCheck() == true) {
+                          JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
+                          cbContext.jvm->DetachCurrentThread();
+                          return;
+                      }
+                  }
+                  cbContext.jvm->DetachCurrentThread();
+              },
+              reinterpret_cast<void *>(instance), _protocol, _qos);
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to subscribe");
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
@@ -284,17 +286,18 @@ jlong AittNativeInterface::subscribe(JNIEnv *env,
 /**
  * JNI API to unsubscribe
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
- * @param aitt subscribe id thats received in subscribe()
+ * @param aitt subscribe id received in subscribe()
  */
-void AittNativeInterface::unsubscribe(JNIEnv *env,
-                                      jobject jniInterfaceObject, jlong handle, jlong aittSubId) {
-    if (!checkParams(env, jniInterfaceObject)) {
+void AittNativeInterface::unsubscribe(JNIEnv *env, jobject jni_interface_object, jlong handle,
+      jlong aittSubId)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
     void *subId = reinterpret_cast<void *>(aittSubId);
     try {
         instance->aitt.Unsubscribe(static_cast<AittSubscribeID>(subId));
@@ -307,41 +310,42 @@ void AittNativeInterface::unsubscribe(JNIEnv *env,
 /**
  * JNI API to set the connection callback with aitt C++
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
  */
-void AittNativeInterface::setConnectionCallback(JNIEnv *env,
-                                                jobject jniInterfaceObject, jlong handle) {
-    if (!checkParams(env, jniInterfaceObject)) {
+void AittNativeInterface::setConnectionCallback(JNIEnv *env, jobject jni_interface_object,
+      jlong handle)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return;
     }
 
-    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
 
     try {
         instance->aitt.SetConnectionCallback(
-                [&](AITT &handle, int status, void *user_data) -> void {
-                    AittNativeInterface *instance = reinterpret_cast<AittNativeInterface *>(user_data);
-                    JNIEnv *env;
-                    int JNIStatus =
-                            cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+              [&](AITT &handle, int status, void *user_data) -> void {
+                  auto *instance = reinterpret_cast<AittNativeInterface *>(user_data);
+                  JNIEnv *env;
+                  int JNIStatus =
+                        cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
 
-                    if (!jniStatusCheck(env, JNIStatus)) {
-                        return;
-                    }
+                  if (!jniStatusCheck(env, JNIStatus)) {
+                      return;
+                  }
 
-                    if (env != nullptr && instance->cbObject != nullptr) {
-                        env->CallVoidMethod(instance->cbObject, cbContext.connectionCallbackMethodID,
-                                            (jint) status);
-                        if (env->ExceptionCheck() == true) {
-                            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
-                            cbContext.jvm->DetachCurrentThread();
-                            return;
-                        }
-                    }
-                    cbContext.jvm->DetachCurrentThread();
-                },
-                reinterpret_cast<void *>(instance));
+                  if (env != nullptr && instance->cbObject != nullptr) {
+                      env->CallVoidMethod(instance->cbObject, cbContext.connectionCallbackMethodID,
+                            (jint)status);
+                      if (env->ExceptionCheck() == true) {
+                          JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
+                          cbContext.jvm->DetachCurrentThread();
+                          return;
+                      }
+                  }
+                  cbContext.jvm->DetachCurrentThread();
+              },
+              reinterpret_cast<void *>(instance));
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to set connection callback");
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
@@ -351,16 +355,16 @@ void AittNativeInterface::setConnectionCallback(JNIEnv *env,
 /**
  * Creates a AittNativeInterface object which inturn creates a aitt C++ instance
  * @param env JNI interface pointer
- * @param jniInterfaceObject JNI interface object
+ * @param jni_interface_object JNI interface object
  * @param id unique mqtt id
  * @param ip self IP address of device
  * @param clearSession to clear current session if client disconnects
  * @return returns the aitt interface object in long
  */
-jlong AittNativeInterface::init(JNIEnv *env,
-                                jobject jniInterfaceObject, jstring id, jstring ip, jboolean clearSession) {
-
-    if (!checkParams(env, jniInterfaceObject)) {
+jlong AittNativeInterface::init(JNIEnv *env, jobject jni_interface_object, jstring id, jstring ip,
+      jboolean clearSession)
+{
+    if (!checkParams(env, jni_interface_object)) {
         return JNI_ERR;
     }
 
@@ -388,11 +392,10 @@ jlong AittNativeInterface::init(JNIEnv *env,
     if (env->GetJavaVM(&cbContext.jvm) != JNI_OK) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, "Unable to get Java VM");
         delete instance;
-        instance = nullptr;
         return 0L;
     }
     try {
-        instance->cbObject = env->NewGlobalRef(jniInterfaceObject);
+        instance->cbObject = env->NewGlobalRef(jni_interface_object);
 
         jclass callbackClass = env->FindClass("com/samsung/android/aittnative/JniInterface");
         cbContext.messageCallbackMethodID =
@@ -403,7 +406,6 @@ jlong AittNativeInterface::init(JNIEnv *env,
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
         delete instance;
-        instance = nullptr;
         return 0L;
     }
 
@@ -411,7 +413,7 @@ jlong AittNativeInterface::init(JNIEnv *env,
 }
 
 /**
- * The VM calls this method automatically, when the native library is loaded
+ * The VM calls this method automatically, when the native library is loaded.
  * @param vm JVM instance
  * @param reserved reserved for future
  * @return JNI instance being used

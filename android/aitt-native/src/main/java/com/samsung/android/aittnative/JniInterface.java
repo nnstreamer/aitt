@@ -140,7 +140,7 @@ public class JniInterface {
      * @param topic Topic to which data is received
      * @param payload Data that is sent from JNI to JNI interface layer
      */
-    private void messageCallback(String topic, byte[] payload) {
+    void messageCallback(String topic, byte[] payload) {
         try {
             synchronized (this) {
                 ArrayList<JniCallback> cbList = subscribeJNICallbacks.get(topic);
@@ -160,7 +160,7 @@ public class JniInterface {
      * connectionStatusCallback API to receive connection status from JNI to JNI interface layer
      * @param status status of the device connection with mqtt broker
      */
-    private void connectionStatusCallback(int status) {
+    void connectionStatusCallback(int status) {
         if (jniConnectionCallback != null) {
             jniConnectionCallback.jniConnectionCB(status);
         }
@@ -193,7 +193,7 @@ public class JniInterface {
         }
     }
 
-    /* native API's set */
+    /* native API set */
     /* Native API to initialize JNI */
     private native long initJNI(String id, String ip, boolean clearSession);
 
