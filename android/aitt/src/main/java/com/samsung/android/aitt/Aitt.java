@@ -15,6 +15,10 @@
  */
 package com.samsung.android.aitt;
 
+import static com.samsung.android.aitt.ModuleFactory.createModuleHandler;
+
+import com.samsung.android.aitt.handler.*;
+
 import android.content.Context;
 import android.util.Log;
 import android.util.Pair;
@@ -22,6 +26,7 @@ import android.util.Pair;
 import androidx.annotation.Nullable;
 
 import com.google.flatbuffers.FlexBuffers;
+import com.samsung.android.aitt.stream.AittStream;
 import com.samsung.android.aittnative.JniInterface;
 
 import java.nio.ByteBuffer;
@@ -64,12 +69,14 @@ public class Aitt {
     /**
      * List of protocols supported by AITT framework
      */
+    // TODO: Separate Stream protocols (WebRTC, RTSP).
     public enum Protocol {
         MQTT(0x1),           // Publish message through the MQTT
         TCP(0x1 << 1),            // Publish message to peers using the TCP
         TCP_SECURE(0x1 << 2),     // Publish message to peers using the Secure TCP
         WEBRTC(0x1 << 3),         // Publish message to peers using the WEBRTC
-        IPC(0x1 << 4);            // Publish message to peers using the IPC
+        IPC(0x1 << 4),            // Publish message to peers using the IPC
+        RTSP(0x1 << 5);                 // Publish message to peers using the RTSP
 
         private final int value;
 
@@ -306,9 +313,10 @@ public class Aitt {
      * @param message                Data to be transferred over WebRTC
      */
     private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object transportHandlerObject, String ip, int port, byte[] message) {
+        // TODO: Validate protocol type.
         TransportHandler transportHandler;
         if (transportHandlerObject == null) {
-            transportHandler = TransportFactory.createTransport(protocol);
+            transportHandler = (TransportHandler) createModuleHandler(protocol);
             if (transportHandler != null)
                 transportHandler.setAppContext(appContext);
             portTable.portMap.replace(port, new Pair<>(protocol, transportHandler));
@@ -389,7 +397,7 @@ public class Aitt {
 
         for (Protocol pro : protocols) {
             try {
-                TransportHandler transportHandler = TransportFactory.createTransport(pro);
+                TransportHandler transportHandler = (TransportHandler) createModuleHandler(pro);
 
                 if (transportHandler != null) {
                     synchronized (this) {
@@ -696,6 +704,18 @@ public class Aitt {
                 aittSubId = null;
             }
         }
+    }
+
+    public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) {
+        // TODO: update this function.
+        ModuleHandler moduleHandler = createModuleHandler(protocol);
+        if (moduleHandler != null && protocol == Protocol.RTSP)
+            return ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole);
+        return null;
+    }
+
+    public void destroyStream(AittStream aittStream) {
+        // TODO: implement this function.
     }
 
 }

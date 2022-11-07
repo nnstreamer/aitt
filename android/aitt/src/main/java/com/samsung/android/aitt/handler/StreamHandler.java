@@ -13,16 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.samsung.android.aitt;
+package com.samsung.android.aitt.handler;
 
-public class Definitions {
+import android.content.Context;
 
-    public static final String WILL_LEAVE_NETWORK = "disconnected";
-    public static final String AITT_LOCALHOST = "127.0.0.1";
-    public static final int AITT_PORT = 1883;
-    public static final String JAVA_SPECIFIC_DISCOVERY_TOPIC = "/java/aitt/discovery/";
-    public static final String JOIN_NETWORK = "connected";
-    public static final String RESPONSE_POSTFIX = "_AittRe_";
-    public static final String STATUS = "status";
-    public static final int DEFAULT_IPC_PORT = 0;
+import com.samsung.android.aitt.Aitt;
+import com.samsung.android.aitt.stream.AittStream;
+
+public class StreamHandler implements ModuleHandler {
+
+    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role) {
+        // TODO: Change this function properly after refactoring WebRTC modules.
+        return null;
+    }
+
+    @Override
+    public void setAppContext(Context appContext) {
+        // TODO: implement this function.
+    }
 }

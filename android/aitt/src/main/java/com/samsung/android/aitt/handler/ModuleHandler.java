@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.samsung.android.aitt;
+package com.samsung.android.aitt.handler;
 
-class TransportFactory {
-    public static TransportHandler createTransport(Aitt.Protocol protocol) {
-        TransportHandler transportHandler;
-        switch (protocol) {
-            case WEBRTC:
-                transportHandler = new WebRTCHandler();
-                break;
-            case IPC:
-                transportHandler = new IpcHandler();
-                break;
-            default:
-                transportHandler = null;
-        }
-        return transportHandler;
-    }
+import android.content.Context;
+
+public interface ModuleHandler {
+    /**
+     * Method to set application context to transport handler
+     *
+     * @param appContext application context
+     */
+    void setAppContext(Context appContext);
 }

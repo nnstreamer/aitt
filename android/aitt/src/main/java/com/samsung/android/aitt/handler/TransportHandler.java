@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.samsung.android.aitt;
-
-import android.content.Context;
+package com.samsung.android.aitt.handler;
 
 /**
  * An interface to create a transportHandler and provide APIs for protocol specific implementation
  */
-interface TransportHandler {
+public interface TransportHandler extends ModuleHandler {
     /**
      * Method to implement protocol specific subscribe functionalities
      *
@@ -48,13 +46,6 @@ interface TransportHandler {
      * Method to implement protocol specific disconnect functionalities
      */
     void disconnect();
-
-    /**
-     * Method to set application context to transport handler
-     *
-     * @param appContext application context
-     */
-    void setAppContext(Context appContext);
 
     /**
      * Method to set IP address of self device to transport handler
