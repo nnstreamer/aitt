@@ -45,12 +45,15 @@ class Module : public AittStreamModule {
     static bool IsSource(AittStreamRole role);
 
   private:
+  //TODO: Update Ice Candidates when stream add candidates.
+    void OnIceCandidateAdded(WebRtcStream &stream);
     void OnStreamReady(WebRtcStream &stream);
+    void OnStreamStarted(void);
+    void OnStreamStopped(void);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
 
     bool is_source_;
-    std::string topic_;
     AittDiscovery &discovery_;
     int discovery_cb_;
 

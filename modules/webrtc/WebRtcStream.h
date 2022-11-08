@@ -73,7 +73,8 @@ class WebRtcStream {
     std::string &GetPeerId(void) { return peer_id_; };
 
     bool AddIceCandidateFromMessage(const std::string &ice_message);
-    bool AddDiscoveryInformation(const std::vector<uint8_t> &discovery_message);
+    bool AddPeerInformation(const std::string &sdp, const std::vector<std::string> &ice_candidates);
+    void UpdatePeerInformation(const std::vector<std::string> &ice_candidates);
     bool SetPeerInformation(void);
     bool SetPeerSDP(void);
     bool SetPeerIceCandidates(void);
@@ -101,18 +102,22 @@ class WebRtcStream {
           void *user_data);
     static void OnDataChannelOpen(webrtc_data_channel_h channel, void *user_data);
     bool IsNegotiatingState(void);
+    bool IsPlayingState(void);
+    bool IsRedundantCandidate(const std::string &candidate);
 
   private:
     webrtc_h webrtc_handle_;
     webrtc_data_channel_h channel_;
     unsigned int source_id_;
     std::string local_description_;
+    std::string remote_description_;
     std::string id_;
     std::string peer_id_;
     std::vector<std::string> ice_candidates_;
+    std::vector<std::string> peer_ice_candidates_;
+    std::vector<std::string> stored_peer_ice_candidates_;
     std::function<void(std::string)> on_offer_created_cb_;
     std::function<void(std::string)> on_answer_created_cb_;
     WebRtcEventHandler event_handler_;
-    WebRtcMessage::DiscoveryInfo peer_info_;
 };
 }  // namespace AittWebRTCNamespace

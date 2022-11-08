@@ -48,6 +48,18 @@ class WebRtcEventHandler {
     };
     void UnsetOnSignalingStateNotifyCb(void) { on_signaling_state_notify_cb_ = nullptr; };
 
+    void SetOnIceCandidateCb(
+          std::function<void(std::string)> on_ice_candidate_cb)
+    {
+        on_ice_candidate_cb_ = on_ice_candidate_cb;
+    };
+    void CallOnIceCandidateCb(std::string candidate) const
+    {
+        if (on_ice_candidate_cb_)
+            on_ice_candidate_cb_(candidate);
+    };
+    void UnsetOnIceCandidateCb(void) { on_ice_candidate_cb_ = nullptr; };
+
     void SetOnIceGatheringStateNotifyCb(
           std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb)
     {
@@ -98,6 +110,7 @@ class WebRtcEventHandler {
     std::function<void(void)> on_negotiation_needed_cb_;
     std::function<void(WebRtcState::Stream)> on_state_changed_cb_;
     std::function<void(WebRtcState::Signaling)> on_signaling_state_notify_cb_;
+    std::function<void(std::string)> on_ice_candidate_cb_;
     std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb_;
     std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb_;
     std::function<void(void)> on_encoded_frame_cb_;

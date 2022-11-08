@@ -21,24 +21,34 @@
 #include <functional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace AittWebRTCNamespace {
 
 class StreamManager {
   public:
+    using IceCandidateAddedCallback = std::function<void(WebRtcStream &stream)>;
     using StreamReadyCallback = std::function<void(WebRtcStream &stream)>;
+    using StreamStartCallback = std::function<void(void)>;
+    using StreamStopCallback = std::function<void(void)>;
     explicit StreamManager(const std::string &topic, const std::string &aitt_id,
           const std::string &thread_id)
           : topic_(topic), aitt_id_(aitt_id), thread_id_(thread_id){};
     virtual ~StreamManager() = default;
     std::string GetTopic(void) const { return topic_; };
     std::string GetClientId(void) const { return aitt_id_; };
-    virtual void HandleRemovedClient(const std::string &id) = 0;
-    virtual void HandleDiscoveredStream(const std::string &id,
+    virtual void HandleRemovedClient(const std::string &discovery_id) = 0;
+    virtual void HandleMsg(const std::string &discovery_id,
           const std::vector<uint8_t> &message) = 0;
+
     virtual void Start(void) = 0;
     virtual void Stop(void) = 0;
+    virtual void SetIceCandidateAddedCallback(IceCandidateAddedCallback cb) = 0;
     virtual void SetStreamReadyCallback(StreamReadyCallback cb) = 0;
+    virtual void SetStreamStartCallback(StreamStartCallback cb) = 0;
+    virtual void SetStreamStopCallback(StreamStopCallback cb) = 0;
+    virtual std::vector<uint8_t> GetDiscoveryMessage(void) = 0;
+    virtual std::string GetWatchingTopic(void) = 0;
 
   protected:
     std::string topic_;

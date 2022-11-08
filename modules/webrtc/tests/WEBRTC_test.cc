@@ -15,6 +15,7 @@
  */
 
 #include <AittDiscovery.h>
+#include <flatbuffers/flexbuffers.h>
 #include <glib.h>
 #include <gtest/gtest.h>
 
@@ -30,6 +31,8 @@
 #define LOCAL_IP "127.0.0.1"
 #define DEFAULT_BROKER_PORT 1883
 #define WEBRTC_TOPIC_PREFIX "WEBRTC_"
+#define WEBRTC_SRC_TOPIC "/src"
+#define WEBRTC_SINK_TOPIC "/sink"
 #define TEST_TOPIC "TEST_TOPIC"
 #define TEST_SRC_CLIENT_ID "TEST_SRC_CLIENT_ID"
 #define TEST_SINK_CLIENT_ID "TEST_SINK_CLIENT_ID"
@@ -62,7 +65,7 @@ TEST_F(WebRtcMessageTest, test_OnDevice)
 {
     // TODO
 }
-class WebRtcSrcStreamTest : public testing::Test {
+class WebRtcStreamTest : public testing::Test {
   protected:
     void SetUp() override { mainLoop_ = g_main_loop_new(nullptr, FALSE); }
     void TearDown() override { g_main_loop_unref(mainLoop_); }
@@ -71,8 +74,9 @@ class WebRtcSrcStreamTest : public testing::Test {
         g_main_loop_run(mainLoop_);
         DBG("Go forward");
     }
+
     static void OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream,
-          WebRtcSrcStreamTest *test)
+          WebRtcStreamTest *test)
     {
         DBG("OnStreamStateChanged");
         if (state == WebRtcState::Stream::NEGOTIATING) {
@@ -81,7 +85,7 @@ class WebRtcSrcStreamTest : public testing::Test {
             stream.CreateOfferAsync(on_offer_created);
         }
     }
-    static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSrcStreamTest *test)
+    static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcStreamTest *test)
     {
         DBG("%s", __func__);
 
@@ -89,14 +93,8 @@ class WebRtcSrcStreamTest : public testing::Test {
         stream.SetLocalDescription(sdp);
     }
 
-    static void OnSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream,
-          WebRtcSrcStreamTest *test)
-    {
-        DBG("Singaling State: %s", WebRtcState::SignalingToStr(state).c_str());
-    }
-
     static void OnIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
-          WebRtcSrcStreamTest *test)
+          WebRtcStreamTest *test)
     {
         DBG("IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
         g_main_loop_quit(test->mainLoop_);
@@ -105,13 +103,13 @@ class WebRtcSrcStreamTest : public testing::Test {
     std::string local_description_;
 };
 
-TEST_F(WebRtcSrcStreamTest, test_Create_WebRtcSrcStream_OnDevice)
+TEST_F(WebRtcStreamTest, test_Create_WebRtcStream_OnDevice)
 {
-    WebRtcStream stream{};
-    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
+    WebRtcStream src_stream{};
+    EXPECT_EQ(true, src_stream.Create(true, false)) << "Failed to create source stream";
 }
 
-TEST_F(WebRtcSrcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
+TEST_F(WebRtcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
 {
     WebRtcStream stream{};
     EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
@@ -119,30 +117,6 @@ TEST_F(WebRtcSrcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
     auto on_stream_state_changed_cb =
           std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this);
     stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
-
-    auto on_signaling_state_changed_cb =
-          std::bind(OnSignalingStateNotify, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnSignalingStateNotifyCb(on_signaling_state_changed_cb);
-
-    auto on_ice_gathering_state_changed_cb =
-          std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(on_ice_gathering_state_changed_cb);
-    stream.Start();
-    IterateEventLoop();
-}
-
-TEST_F(WebRtcSrcStreamTest, test_Validate_WebRtcSrcStream_Discovery_Message_OnDevice)
-{
-    WebRtcStream stream{};
-    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
-    EXPECT_EQ(true, stream.AttachCameraSource()) << "Failed to attach camera source";
-    auto on_stream_state_changed_cb =
-          std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
-
-    auto on_signaling_state_changed_cb =
-          std::bind(OnSignalingStateNotify, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnSignalingStateNotifyCb(on_signaling_state_changed_cb);
 
     auto on_ice_gathering_state_changed_cb =
           std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this);
@@ -153,24 +127,6 @@ TEST_F(WebRtcSrcStreamTest, test_Validate_WebRtcSrcStream_Discovery_Message_OnDe
     auto ice_candidates = stream.GetIceCandidates();
     for (const auto &ice_candidate : ice_candidates) {
         EXPECT_EQ(WebRtcMessage::Type::ICE, WebRtcMessage::getMessageType(ice_candidate));
-    }
-
-    auto discovery_message = WebRtcMessage::GenerateDiscoveryMessage(TEST_TOPIC, true,
-          local_description_, stream.GetIceCandidates());
-
-    auto discovery_info = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
-
-    EXPECT_EQ(0, discovery_info.topic_.compare(TEST_TOPIC));
-    EXPECT_EQ(true, discovery_info.is_src_);
-    EXPECT_EQ(0, discovery_info.sdp_.compare(local_description_));
-    for (const auto ice_candidate : ice_candidates) {
-        bool is_ice_candidate_exists{false};
-
-        for (const auto &discovered_ice_candidate : discovery_info.ice_candidates_) {
-            if (discovered_ice_candidate.compare(ice_candidate) == 0)
-                is_ice_candidate_exists = true;
-        }
-        EXPECT_EQ(true, is_ice_candidate_exists);
     }
 }
 
@@ -214,8 +170,8 @@ class WebRtcSourceOffererTest : public testing::Test {
     {
         DBG("Source IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
         if (state == WebRtcState::IceGathering::COMPLETE) {
-            test->sink_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
-                  "TEST_TOPIC", true, test->src_description_, stream.GetIceCandidates()));
+            test->sink_stream_.AddPeerInformation(test->src_description_,
+                  stream.GetIceCandidates());
         }
     }
 
@@ -250,8 +206,8 @@ class WebRtcSourceOffererTest : public testing::Test {
     {
         DBG("Sink IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
         if (WebRtcState::IceGathering::COMPLETE == state) {
-            test->src_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
-                  "TEST_TOPIC", true, test->sink_description_, stream.GetIceCandidates()));
+            test->src_stream_.AddPeerInformation(test->sink_description_,
+                  stream.GetIceCandidates());
         }
     }
 
@@ -347,8 +303,8 @@ class WebRtcSinkOffererTest : public testing::Test {
     {
         DBG("Sink IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
         if (state == WebRtcState::IceGathering::COMPLETE) {
-            test->src_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
-                  "TEST_TOPIC", true, test->sink_description_, stream.GetIceCandidates()));
+            test->src_stream_.AddPeerInformation(test->sink_description_,
+                  stream.GetIceCandidates());
         }
     }
 
@@ -382,8 +338,8 @@ class WebRtcSinkOffererTest : public testing::Test {
     {
         DBG("Src IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
         if (WebRtcState::IceGathering::COMPLETE == state) {
-            test->sink_stream_.AddDiscoveryInformation(WebRtcMessage::GenerateDiscoveryMessage(
-                  "TEST_TOPIC", true, test->src_description_, stream.GetIceCandidates()));
+            test->sink_stream_.AddPeerInformation(test->src_description_,
+                  stream.GetIceCandidates());
         }
     }
 
@@ -456,13 +412,123 @@ TEST_F(StreamManagerTest, test_Create_StreamManager_Anytime)
           new SrcStreamManager(TEST_TOPIC, TEST_SRC_CLIENT_ID, s_stream.str()));
 }
 
+class SrcStreamManagerTest : public testing::Test {
+  protected:
+    SrcStreamManagerTest()
+          : discovery_cb_(-1),
+            test_topic_(std::string(WEBRTC_TOPIC_PREFIX) + std::string(TEST_TOPIC)),
+            discovery_engine_(TEST_SRC_CLIENT_ID),
+            mainLoop_(nullptr){};
+    void SetUp() override
+    {
+        mainLoop_ = g_main_loop_new(nullptr, FALSE);
+        discovery_engine_.SetMQ(std::unique_ptr<aitt::MQ>(
+              new aitt::MosquittoMQ(std::string(TEST_SRC_CLIENT_ID) + 'd', false)));
+        discovery_engine_.Start(LOCAL_IP, DEFAULT_BROKER_PORT, std::string(), std::string());
+    }
+
+    void TearDown() override
+    {
+        discovery_engine_.SetMQ(nullptr);
+        g_main_loop_unref(mainLoop_);
+    }
+    void IterateEventLoop(void)
+    {
+        g_main_loop_run(mainLoop_);
+        DBG("Go forward");
+    }
+
+    static void OnDiscoveredSrc(const std::string &clientId, const std::string &status,
+          const void *msg, const int szmsg, SrcStreamManagerTest *test,
+          SrcStreamManager *src_manager)
+    {
+        DBG("OnDiscoveredSrc");
+
+        auto discovered_msg = std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
+              static_cast<const uint8_t *>(msg) + szmsg);
+        if (!flexbuffers::GetRoot(discovered_msg).IsString()) {
+            DBG("Invalid message type");
+            return;
+        }
+
+        auto src_cmd = flexbuffers::GetRoot(discovered_msg).ToString();
+        if (src_cmd.compare("START") == 0) {
+            DBG("Start Received");
+            src_manager->Stop();
+        } else if (src_cmd.compare("STOP") == 0) {
+            DBG("Stop Received");
+            if (g_main_loop_is_running(test->mainLoop_))
+                g_main_loop_quit(test->mainLoop_);
+        } else {
+            DBG("Invalid message");
+            return;
+        }
+    }
+
+    static void OnStreamStarted(SrcStreamManagerTest *test, SrcStreamManager *src_manager)
+    {
+        std::vector<uint8_t> msg;
+
+        flexbuffers::Builder fbb;
+        fbb.String("START");
+        fbb.Finish();
+
+        msg = fbb.GetBuffer();
+        test->discovery_engine_.UpdateDiscoveryMsg(src_manager->GetTopic(), msg.data(), msg.size());
+    }
+
+    static void OnStreamStopped(SrcStreamManagerTest *test, SrcStreamManager *src_manager)
+    {
+        std::vector<uint8_t> msg;
+
+        flexbuffers::Builder fbb;
+        fbb.String("STOP");
+        fbb.Finish();
+
+        msg = fbb.GetBuffer();
+        test->discovery_engine_.UpdateDiscoveryMsg(src_manager->GetTopic(), msg.data(), msg.size());
+    }
+
+    int discovery_cb_;
+    std::string test_topic_;
+    aitt::AittDiscovery discovery_engine_;
+    GMainLoop *mainLoop_;
+};
+
+TEST_F(SrcStreamManagerTest, test_SrcStreamManager_Start_OnDevice)
+{
+    std::stringstream s_stream;
+    s_stream << std::this_thread::get_id();
+    std::unique_ptr<StreamManager> src_manager(
+          new SrcStreamManager(test_topic_, TEST_SRC_CLIENT_ID, s_stream.str()));
+
+    auto on_discovered = std::bind(OnDiscoveredSrc, std::placeholders::_1, std::placeholders::_2,
+          std::placeholders::_3, std::placeholders::_4, this,
+          static_cast<SrcStreamManager *>(src_manager.get()));
+
+    // Src should subscribe WEBRTC_SINK_TOPIC but this is for test
+    discovery_cb_ = discovery_engine_.AddDiscoveryCB(src_manager->GetTopic(), on_discovered);
+
+    auto on_stream_started =
+          std::bind(OnStreamStarted, this, static_cast<SrcStreamManager *>(src_manager.get()));
+    src_manager->SetStreamStartCallback(on_stream_started);
+
+    auto on_stream_stopped =
+          std::bind(OnStreamStopped, this, static_cast<SrcStreamManager *>(src_manager.get()));
+    src_manager->SetStreamStopCallback(on_stream_stopped);
+
+    src_manager->Start();
+    IterateEventLoop();
+    discovery_engine_.RemoveDiscoveryCB(discovery_cb_);
+}
+
 class SinkStreamManagerTest : public testing::Test {
   protected:
     SinkStreamManagerTest()
           : discovery_cb_(-1),
             test_topic_(std::string(WEBRTC_TOPIC_PREFIX) + std::string(TEST_TOPIC)),
             discovery_engine_(TEST_SINK_CLIENT_ID),
-            mainLoop_(nullptr) {};
+            mainLoop_(nullptr){};
     void SetUp() override
     {
         mainLoop_ = g_main_loop_new(nullptr, FALSE);
@@ -482,20 +548,31 @@ class SinkStreamManagerTest : public testing::Test {
         DBG("Go forward");
     }
 
-    static void OnDiscovered(const std::string &clientId, const std::string &status,
+    static void OnDiscoveredSink(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg, SinkStreamManagerTest *test)
     {
-        DBG("OnDiscovered");
-        if (g_main_loop_is_running(test->mainLoop_))
+        DBG("OnDiscoveredSink");
+        if (WebRtcMessage::IsValidStreamInfo(std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
+                  static_cast<const uint8_t *>(msg) + szmsg))
+              && g_main_loop_is_running(test->mainLoop_))
             g_main_loop_quit(test->mainLoop_);
     }
 
-    static void OnStreamReady(WebRtcStream &stream, SinkStreamManagerTest *test)
+    static void OnIceCandidateAdded(WebRtcStream &stream, SinkStreamManager *sink_mgr,
+          SinkStreamManagerTest *test)
+    {
+        DBG("OnIceCandidateAdded");
+        auto discovery_message = sink_mgr->GetDiscoveryMessage();
+        test->discovery_engine_.UpdateDiscoveryMsg(sink_mgr->GetTopic(), discovery_message.data(),
+              discovery_message.size());
+    }
+
+    static void OnStreamReady(WebRtcStream &stream, SinkStreamManager *sink_mgr,
+          SinkStreamManagerTest *test)
     {
         DBG("OnStreamReady");
-        auto discovery_message = WebRtcMessage::GenerateDiscoveryMessage(test->test_topic_, false,
-              stream.GetLocalDescription(), stream.GetIceCandidates());
-        test->discovery_engine_.UpdateDiscoveryMsg(test->test_topic_, discovery_message.data(),
+        auto discovery_message = sink_mgr->GetDiscoveryMessage();
+        test->discovery_engine_.UpdateDiscoveryMsg(sink_mgr->GetTopic(), discovery_message.data(),
               discovery_message.size());
     }
 
@@ -512,12 +589,18 @@ TEST_F(SinkStreamManagerTest, test_SinkStreamManager_Start_OnDevice)
     std::unique_ptr<StreamManager> sink_manager(
           new SinkStreamManager(test_topic_, TEST_SINK_CLIENT_ID, s_stream.str()));
 
-    auto on_discovered = std::bind(OnDiscovered, std::placeholders::_1, std::placeholders::_2,
+    auto on_discovered = std::bind(OnDiscoveredSink, std::placeholders::_1, std::placeholders::_2,
           std::placeholders::_3, std::placeholders::_4, this);
 
-    discovery_cb_ = discovery_engine_.AddDiscoveryCB(test_topic_, on_discovered);
+    // Sink should subscribe WEBRTC_SRC_TOPIC but this is for test
+    discovery_cb_ = discovery_engine_.AddDiscoveryCB(sink_manager->GetTopic(), on_discovered);
 
-    auto on_stream_ready = std::bind(OnStreamReady, std::placeholders::_1, this);
+    auto on_ice_candidate_added = std::bind(OnIceCandidateAdded, std::placeholders::_1,
+          static_cast<SinkStreamManager *>(sink_manager.get()), this);
+    sink_manager->SetIceCandidateAddedCallback(on_ice_candidate_added);
+
+    auto on_stream_ready = std::bind(OnStreamReady, std::placeholders::_1,
+          static_cast<SinkStreamManager *>(sink_manager.get()), this);
     sink_manager->SetStreamReadyCallback(on_stream_ready);
 
     sink_manager->Start();
@@ -558,19 +641,38 @@ class SinkSrcStreamManagerTest : public testing::Test {
               new aitt::MosquittoMQ(std::string(TEST_SINK_CLIENT_ID) + 'd', false)));
         sink_discovery_engine_.Start(LOCAL_IP, DEFAULT_BROKER_PORT, std::string(), std::string());
 
-        auto discovered_at_sink = std::bind(DiscoveredAtSink, std::placeholders::_1,
-              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, this);
-        sink_discovery_cb_ = sink_discovery_engine_.AddDiscoveryCB(test_topic_, discovered_at_sink);
-        sink_discovery_engine_.Restart();
-
         src_discovery_engine_.SetMQ(std::unique_ptr<aitt::MQ>(
               new aitt::MosquittoMQ(std::string(TEST_SRC_CLIENT_ID) + 'd', false)));
         src_discovery_engine_.Start(LOCAL_IP, DEFAULT_BROKER_PORT, std::string(), std::string());
+    }
 
-        auto discovered_at_src = std::bind(DiscoveredAtSrc, std::placeholders::_1,
-              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, this);
-        src_discovery_cb_ = src_discovery_engine_.AddDiscoveryCB(test_topic_, discovered_at_src);
-        src_discovery_engine_.Restart();
+    static void DiscoveredAtSink(const std::string &clientId, const std::string &status,
+          const void *msg, const int szmsg, SinkSrcStreamManagerTest *test)
+    {
+        DBG("DiscoveredAtSink");
+
+        auto sink_manager = static_cast<SinkStreamManager *>(test->sink_manager_.get());
+        if (!status.compare(aitt::AittDiscovery::WILL_LEAVE_NETWORK)) {
+            sink_manager->HandleRemovedClient(clientId);
+            return;
+        }
+
+        sink_manager->HandleMsg(clientId, std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
+                                                static_cast<const uint8_t *>(msg) + szmsg));
+    }
+
+    static void DiscoveredAtSrc(const std::string &clientId, const std::string &status,
+          const void *msg, const int szmsg, SinkSrcStreamManagerTest *test)
+    {
+        DBG("DiscoveredAtSrc");
+
+        auto src_manager = static_cast<SrcStreamManager *>(test->src_manager_.get());
+        if (!status.compare(aitt::AittDiscovery::WILL_LEAVE_NETWORK)) {
+            src_manager->HandleRemovedClient(clientId);
+            return;
+        }
+        src_manager->HandleMsg(clientId, std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
+                                               static_cast<const uint8_t *>(msg) + szmsg));
     }
 
     void TearDown() override
@@ -588,9 +690,6 @@ class SinkSrcStreamManagerTest : public testing::Test {
             src_discovery_engine_.Stop();
             src_discovery_engine_.SetMQ(nullptr);
         }
-
-        sink_manager_->Stop();
-        src_manager_->Stop();
 
         g_main_loop_unref(mainLoop_);
     }
@@ -618,6 +717,18 @@ class SinkSrcStreamManagerTest : public testing::Test {
 
     void StartSinkStream()
     {
+        auto discovered_at_sink = std::bind(DiscoveredAtSink, std::placeholders::_1,
+              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, this);
+        sink_discovery_cb_ = sink_discovery_engine_.AddDiscoveryCB(
+              sink_manager_->GetWatchingTopic(), discovered_at_sink);
+        sink_discovery_engine_.Restart();
+
+        auto on_stream_stopped = std::bind(OnSinkStreamStopped, this);
+        sink_manager_->SetStreamStopCallback(on_stream_stopped);
+
+        auto on_ice_candidate = std::bind(OnSinkIceCandidate, std::placeholders::_1, this);
+        sink_manager_->SetIceCandidateAddedCallback(on_ice_candidate);
+
         auto on_sink_stream_ready = std::bind(OnSinkStreamReady, std::placeholders::_1, this);
         sink_manager_->SetStreamReadyCallback(on_sink_stream_ready);
 
@@ -628,89 +739,115 @@ class SinkSrcStreamManagerTest : public testing::Test {
         sink_manager_->Start();
     }
 
-    void StartSrcStream()
+    static void OnSinkStreamStopped(SinkSrcStreamManagerTest *test)
     {
-        auto on_src_stream_ready = std::bind(OnSrcStreamReady, std::placeholders::_1, this);
-        src_manager_->SetStreamReadyCallback(on_src_stream_ready);
+        std::vector<uint8_t> msg;
 
-        src_manager_->Start();
+        flexbuffers::Builder fbb;
+        fbb.String("STOP");
+        fbb.Finish();
+
+        msg = fbb.GetBuffer();
+        test->sink_discovery_engine_.UpdateDiscoveryMsg(test->sink_manager_->GetTopic(), msg.data(),
+              msg.size());
     }
 
-    static void DiscoveredAtSink(const std::string &clientId, const std::string &status,
-          const void *msg, const int szmsg, SinkSrcStreamManagerTest *test)
+    static void OnSinkIceCandidate(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
     {
-        // TODO: Rearrange below
-        DBG("DiscoveredAtSink");
-        if (!clientId.compare(test->sink_manager_->GetClientId())) {
-            DBG("but has same ID");
-            return;
-        }
-
-        auto sink_manager = static_cast<SinkStreamManager *>(test->sink_manager_.get());
-        if (!status.compare(aitt::AittDiscovery::WILL_LEAVE_NETWORK)) {
-            sink_manager->HandleRemovedClient(clientId);
-            return;
-        }
-
-        sink_manager->HandleDiscoveredStream(clientId,
-              std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
-                    static_cast<const uint8_t *>(msg) + szmsg));
-    }
-
-    static void DiscoveredAtSrc(const std::string &clientId, const std::string &status,
-          const void *msg, const int szmsg, SinkSrcStreamManagerTest *test)
-    {
-        // TODO: Rearrange below
-        DBG("DiscoveredAtSrc");
-        if (!clientId.compare(test->src_manager_->GetClientId())) {
-            DBG("but has same ID");
-            return;
-        }
-
-        auto src_manager = static_cast<SrcStreamManager *>(test->src_manager_.get());
-
-        if (!status.compare(aitt::AittDiscovery::WILL_LEAVE_NETWORK)) {
-            src_manager->HandleRemovedClient(clientId);
-            return;
-        }
-
-        src_manager->HandleDiscoveredStream(clientId,
-              std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
-                    static_cast<const uint8_t *>(msg) + szmsg));
+        DBG("OnSinkIceCandidate");
+        auto discovery_message = test->sink_manager_->GetDiscoveryMessage();
+        test->sink_discovery_engine_.UpdateDiscoveryMsg(test->sink_manager_->GetTopic(),
+              discovery_message.data(), discovery_message.size());
     }
 
     static void OnSinkStreamReady(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
     {
         DBG("OnSinkStreamReady");
 
-        auto discovery_message = WebRtcMessage::GenerateDiscoveryMessage(test->test_topic_, false,
-              stream.GetLocalDescription(), stream.GetIceCandidates());
-        test->sink_discovery_engine_.UpdateDiscoveryMsg(test->test_topic_, discovery_message.data(),
-              discovery_message.size());
-    }
-
-    static void OnSrcStreamReady(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
-    {
-        DBG("OnSrcStreamReady");
-
-        auto discovery_message = WebRtcMessage::GenerateDiscoveryMessage(test->test_topic_, true,
-              stream.GetLocalDescription(), stream.GetIceCandidates());
-        test->src_discovery_engine_.UpdateDiscoveryMsg(test->test_topic_, discovery_message.data(),
-              discovery_message.size());
+        auto discovery_message = test->sink_manager_->GetDiscoveryMessage();
+        test->sink_discovery_engine_.UpdateDiscoveryMsg(test->sink_manager_->GetTopic(),
+              discovery_message.data(), discovery_message.size());
     }
 
     static void OnEncodedFrame(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
     {
+        static_cast<SinkStreamManager *>(test->sink_manager_.get())->SetOnEncodedFrameCallback(nullptr);
+
         if (test->stop_sink_first_)
             test->AddIdleStopSinkStream();
         else
             test->AddIdleStopSrcStream();
     }
 
+    void StartSrcStream()
+    {
+        auto discovered_at_src = std::bind(DiscoveredAtSrc, std::placeholders::_1,
+              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, this);
+        src_discovery_cb_ = src_discovery_engine_.AddDiscoveryCB(src_manager_->GetWatchingTopic(),
+              discovered_at_src);
+        src_discovery_engine_.Restart();
+
+        auto on_stream_started = std::bind(OnStreamStarted, this);
+        src_manager_->SetStreamStartCallback(on_stream_started);
+        auto on_stream_stopped = std::bind(OnSrcStreamStopped, this);
+        src_manager_->SetStreamStopCallback(on_stream_stopped);
+        auto on_ice_candidate = std::bind(OnSrcIceCandidate, std::placeholders::_1, this);
+        src_manager_->SetIceCandidateAddedCallback(on_ice_candidate);
+
+        auto on_src_stream_ready = std::bind(OnSrcStreamReady, std::placeholders::_1, this);
+        src_manager_->SetStreamReadyCallback(on_src_stream_ready);
+
+        src_manager_->Start();
+    }
+
+    static void OnStreamStarted(SinkSrcStreamManagerTest *test)
+    {
+        DBG("Send Start");
+        std::vector<uint8_t> msg;
+
+        flexbuffers::Builder fbb;
+        fbb.String("START");
+        fbb.Finish();
+
+        msg = fbb.GetBuffer();
+        test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(), msg.data(),
+              msg.size());
+    }
+
+    static void OnSrcStreamStopped(SinkSrcStreamManagerTest *test)
+    {
+        std::vector<uint8_t> msg;
+
+        flexbuffers::Builder fbb;
+        fbb.String("STOP");
+        fbb.Finish();
+
+        msg = fbb.GetBuffer();
+        test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(), msg.data(),
+              msg.size());
+    }
+
+    static void OnSrcIceCandidate(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
+    {
+        DBG("OnIceCandidateAdded");
+        auto discovery_message = test->src_manager_->GetDiscoveryMessage();
+        test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(),
+              discovery_message.data(), discovery_message.size());
+    }
+
+    static void OnSrcStreamReady(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
+    {
+        DBG("OnSrcStreamReady");
+
+        auto discovery_message = test->src_manager_->GetDiscoveryMessage();
+        test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(),
+              discovery_message.data(), discovery_message.size());
+    }
+
     void StartSinkFirst(void)
     {
         start_sink_id_ = g_timeout_add_seconds(1, GSourceStartSink, this);
-        start_src_id_ = g_timeout_add_seconds(4, GSourceStartSrc, this);
+        start_src_id_ = g_timeout_add_seconds(2, GSourceStartSrc, this);
     }
 
     void StartSrcFirst(void)
@@ -753,11 +890,6 @@ class SinkSrcStreamManagerTest : public testing::Test {
             return FALSE;
 
         static_cast<SinkStreamManager *>(test->sink_manager_.get())->Stop();
-        if (test->sink_discovery_engine_.HasValidMQ()) {
-            test->sink_discovery_engine_.RemoveDiscoveryCB(test->sink_discovery_cb_);
-            test->sink_discovery_engine_.Stop();
-            test->sink_discovery_engine_.SetMQ(nullptr);
-        }
 
         return FALSE;
     }
@@ -775,11 +907,6 @@ class SinkSrcStreamManagerTest : public testing::Test {
             return FALSE;
 
         static_cast<SrcStreamManager *>(test->src_manager_.get())->Stop();
-        if (test->src_discovery_engine_.HasValidMQ()) {
-            test->src_discovery_engine_.RemoveDiscoveryCB(test->src_discovery_cb_);
-            test->src_discovery_engine_.Stop();
-            test->src_discovery_engine_.SetMQ(nullptr);
-        }
 
         return FALSE;
     }
@@ -834,90 +961,6 @@ TEST_F(SinkSrcStreamManagerTest, test_Src_Src_OnDevice)
 {
     stop_sink_first_ = false;
     StartSrcFirst();
-    AddStopEventLoop();
-    IterateEventLoop();
-}
-
-class ModuleTest : public testing::Test {
-  protected:
-    ModuleTest()
-          : test_topic_(std::string(WEBRTC_TOPIC_PREFIX) + std::string(TEST_TOPIC)),
-            sink_discovery_engine_(std::string(TEST_SINK_CLIENT_ID)),
-            src_discovery_engine_(std::string(TEST_SRC_CLIENT_ID)),
-            sink_module_(nullptr),
-            src_module_(nullptr),
-            mainLoop_(nullptr){};
-
-    void SetUp() override
-    {
-        // create g_main_loop & connect broker
-        mainLoop_ = g_main_loop_new(nullptr, FALSE);
-
-        sink_discovery_engine_.SetMQ(std::unique_ptr<aitt::MQ>(
-              new aitt::MosquittoMQ(std::string(TEST_SINK_CLIENT_ID) + 'd', false)));
-        sink_discovery_engine_.Start(LOCAL_IP, DEFAULT_BROKER_PORT, std::string(), std::string());
-        sink_discovery_engine_.Restart();
-        sink_module_ = std::unique_ptr<Module>(new Module(sink_discovery_engine_, test_topic_,
-              AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER));
-
-        src_discovery_engine_.SetMQ(std::unique_ptr<aitt::MQ>(
-              new aitt::MosquittoMQ(std::string(TEST_SRC_CLIENT_ID) + 'd', false)));
-        src_discovery_engine_.Start(LOCAL_IP, DEFAULT_BROKER_PORT, std::string(), std::string());
-        src_discovery_engine_.Restart();
-        src_module_ = std::unique_ptr<Module>(new Module(src_discovery_engine_, test_topic_,
-              AittStreamRole::AITT_STREAM_ROLE_PUBLISHER));
-    }
-
-    void TearDown() override
-    {
-        // disconnect broker & destroy g_main_loop
-
-        if (sink_discovery_engine_.HasValidMQ()) {
-            sink_discovery_engine_.Stop();
-            sink_discovery_engine_.SetMQ(nullptr);
-        }
-
-        if (src_discovery_engine_.HasValidMQ()) {
-            src_discovery_engine_.Stop();
-            src_discovery_engine_.SetMQ(nullptr);
-        }
-
-        g_main_loop_unref(mainLoop_);
-    }
-
-    void IterateEventLoop(void)
-    {
-        DBG("Go forward");
-        g_main_loop_run(mainLoop_);
-    }
-
-    void AddStopEventLoop(void) { g_timeout_add_seconds(15, GSourceStopEventLoop, this); }
-
-    static gboolean GSourceStopEventLoop(gpointer data)
-    {
-        DBG("GSourceStopEventLoop");
-        auto test = static_cast<ModuleTest *>(data);
-        if (!test)
-            return FALSE;
-
-        if (g_main_loop_is_running(test->mainLoop_))
-            g_main_loop_quit(test->mainLoop_);
-
-        return FALSE;
-    }
-
-    std::string test_topic_;
-    aitt::AittDiscovery sink_discovery_engine_;
-    aitt::AittDiscovery src_discovery_engine_;
-    std::unique_ptr<Module> sink_module_;
-    std::unique_ptr<Module> src_module_;
-    GMainLoop *mainLoop_;
-};
-
-TEST_F(ModuleTest, test_OnDevice)
-{
-    sink_module_->Start();
-    src_module_->Start();
     AddStopEventLoop();
     IterateEventLoop();
 }

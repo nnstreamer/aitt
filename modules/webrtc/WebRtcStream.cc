@@ -79,6 +79,8 @@ void WebRtcStream::Destroy(void)
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to destroy webrtc handle");
     webrtc_handle_ = nullptr;
+
+    // TODO what should be initialized?
 }
 
 bool WebRtcStream::Start(void)
@@ -106,6 +108,7 @@ bool WebRtcStream::Stop(void)
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to stop webrtc handle");
 
+    // TODO what should be initialized?
     return ret == WEBRTC_ERROR_NONE;
 }
 
@@ -240,16 +243,36 @@ bool WebRtcStream::AddIceCandidateFromMessage(const std::string &ice_message)
     return ret == WEBRTC_ERROR_NONE;
 }
 
-bool WebRtcStream::AddDiscoveryInformation(const std::vector<uint8_t> &discovery_message)
+bool WebRtcStream::AddPeerInformation(const std::string &sdp,
+      const std::vector<std::string> &ice_candidates)
 {
-    ERR("%s", __func__);
-
-    peer_info_ = WebRtcMessage::ParseDiscoveryMessage(discovery_message);
+    remote_description_ = sdp;
+    peer_ice_candidates_ = ice_candidates;
     if (!IsNegotiatingState()) {
+        DBG("Not negotiable");
         return false;
     }
-
     return SetPeerInformation();
+}
+
+void WebRtcStream::UpdatePeerInformation(const std::vector<std::string> &ice_candidates)
+{
+    if (IsPlayingState()) {
+        remote_description_.clear();
+        peer_ice_candidates_.clear();
+        stored_peer_ice_candidates_.clear();
+        DBG("Now Playing");
+        return;
+    }
+
+    peer_ice_candidates_ = ice_candidates;
+    if (!IsNegotiatingState()) {
+        DBG("Not negotiable");
+        return;
+    }
+
+    SetPeerInformation();
+    return;
 }
 
 bool WebRtcStream::IsNegotiatingState(void)
@@ -264,6 +287,18 @@ bool WebRtcStream::IsNegotiatingState(void)
     return state == WEBRTC_STATE_NEGOTIATING;
 }
 
+bool WebRtcStream::IsPlayingState(void)
+{
+    webrtc_state_e state;
+    auto get_state_ret = webrtc_get_state(webrtc_handle_, &state);
+    if (get_state_ret != WEBRTC_ERROR_NONE) {
+        ERR("Failed to get state");
+        return false;
+    }
+
+    return state == WEBRTC_STATE_PLAYING;
+}
+
 bool WebRtcStream::SetPeerInformation(void)
 {
     bool res = true;
@@ -275,12 +310,15 @@ bool WebRtcStream::SetPeerInformation(void)
 }
 bool WebRtcStream::SetPeerSDP(void)
 {
+    ERR("%s", __func__);
     bool res = true;
-    if (peer_info_.sdp_.size() == 0)
+    if (remote_description_.size() == 0) {
+        DBG("Peer SDP empty");
         return res;
+    }
 
-    if (SetRemoteDescription(peer_info_.sdp_))
-        peer_info_.sdp_.clear();
+    if (SetRemoteDescription(remote_description_))
+        remote_description_.clear();
     else
         res = false;
 
@@ -289,10 +327,14 @@ bool WebRtcStream::SetPeerSDP(void)
 
 bool WebRtcStream::SetPeerIceCandidates(void)
 {
-    bool res = true;
-    for (auto it = peer_info_.ice_candidates_.begin(); it != peer_info_.ice_candidates_.end();) {
-        if (AddIceCandidateFromMessage(*it))
-            it = peer_info_.ice_candidates_.erase(it);
+    ERR("%s", __func__);
+    bool res{true};
+    for (auto itr = peer_ice_candidates_.begin(); itr != peer_ice_candidates_.end(); ++itr) {
+        if (IsRedundantCandidate(*itr))
+            continue;
+
+        if (AddIceCandidateFromMessage(*itr))
+            stored_peer_ice_candidates_.push_back(*itr);
         else
             res = false;
     }
@@ -300,6 +342,14 @@ bool WebRtcStream::SetPeerIceCandidates(void)
     return res;
 }
 
+bool WebRtcStream::IsRedundantCandidate(const std::string &candidate)
+{
+    for (const auto &stored_ice_candidate : stored_peer_ice_candidates_) {
+        if (stored_ice_candidate.compare(candidate) == 0)
+            return true;
+    }
+    return false;
+}
 
 void WebRtcStream::AttachSignals(bool is_source, bool need_display)
 {
@@ -422,6 +472,7 @@ void WebRtcStream::OnIceCandiate(webrtc_h webrtc, const char *candidate, void *u
     ERR("%s", __func__);
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
     webrtc_stream->ice_candidates_.push_back(candidate);
+    webrtc_stream->GetEventHandler().CallOnIceCandidateCb(candidate);
 }
 
 void WebRtcStream::OnEncodedFrame(webrtc_h webrtc, webrtc_media_type_e type, unsigned int track_id,

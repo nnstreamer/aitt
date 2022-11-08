@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <flatbuffers/flexbuffers.h>
+
 #include <string>
 #include <vector>
 
@@ -31,21 +33,19 @@ class WebRtcMessage {
     class DiscoveryInfo {
       public:
         DiscoveryInfo() = default;
-        DiscoveryInfo(const std::string &topic, bool is_src, const std::string &sdp,
+        DiscoveryInfo(const std::string &id, const std::string &peer_id, const std::string &sdp,
               const std::vector<std::string> &ice_candidates)
-              : topic_(topic), is_src_(is_src), sdp_(sdp), ice_candidates_(ice_candidates)
+              : id_(id), peer_id_(peer_id), sdp_(sdp), ice_candidates_(ice_candidates)
         {
         }
-        std::string topic_;
-        bool is_src_;
+        std::string id_;
+        std::string peer_id_;
         std::string sdp_;
         std::vector<std::string> ice_candidates_;
     };
     static WebRtcMessage::Type getMessageType(const std::string &message);
-    static std::vector<uint8_t> GenerateDiscoveryMessage(const std::string &topic, bool is_src,
-          const std::string &sdp, const std::vector<std::string> &ice_candidates);
-    static bool IsValidDiscoveryMessage(const std::vector<uint8_t> &discovery_message);
-    static DiscoveryInfo ParseDiscoveryMessage(const std::vector<uint8_t> &discovery_message);
+    static bool IsValidStreamInfo(const std::vector<uint8_t> &message);
+    static bool IsValidStream(const flexbuffers::Map &info);
     static constexpr int DISCOVERY_MESSAGE_KEY_SIZE = 4;
 };
 

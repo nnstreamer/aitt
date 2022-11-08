@@ -58,7 +58,7 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
 
 void AittDiscovery::Restart()
 {
-    RET_IF(callback_handle);
+    RET_IF(callback_handle == nullptr);
     discovery_mq->Unsubscribe(callback_handle);
     callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+", DiscoveryMessageCallback,
           static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
