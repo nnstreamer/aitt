@@ -11,6 +11,7 @@ INCLUDE_DIRECTORIES(${AITT_WEBRTC_NEEDS_INCLUDE_DIRS})
 LINK_DIRECTORIES(${AITT_WEBRTC_NEEDS_LIBRARY_DIRS})
 
 ADD_LIBRARY(WEBRTC_OBJ OBJECT
+    StreamManager.cc
     SrcStreamManager.cc
     SinkStreamManager.cc
     WebRtcMessage.cc

@@ -24,47 +24,31 @@ namespace AittWebRTCNamespace {
 
 class SinkStreamManager : public StreamManager {
   public:
-    using EncodedFrameCallabck = std::function<void(WebRtcStream &stream)>;
+    using EncodedFrameCallabck = std::function<void(void)>;
     explicit SinkStreamManager(const std::string &topic, const std::string &aitt_id,
           const std::string &thread_id);
     virtual ~SinkStreamManager();
-    void Start(void) override;
-    void Stop(void) override;
-    void SetIceCandidateAddedCallback(IceCandidateAddedCallback cb) override;
-    void SetStreamReadyCallback(StreamReadyCallback cb) override;
-    void SetStreamStartCallback(StreamStartCallback cb) override;
-    void SetStreamStopCallback(StreamStopCallback cb) override;
     std::vector<uint8_t> GetDiscoveryMessage(void) override;
-    std::string GetWatchingTopic(void) override;
     // TODO: WebRTC CAPI doesn't allow destroy webrtc handle at callback.
     // We need to avoid that situation
     void SetOnEncodedFrameCallback(EncodedFrameCallabck cb);
-    void HandleRemovedClient(const std::string &discovery_id) override;
-    void HandleMsg(const std::string &discovery_id, const std::vector<uint8_t> &message) override;
 
   private:
     void SetWebRtcStreamCallbacks(WebRtcStream &stream) override;
     void OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream);
     void OnOfferCreated(std::string sdp, WebRtcStream &stream);
-    void OnIceCandidate(const std::string &candidate, WebRtcStream &stream);
-    void OnIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream);
-    void OnEncodedFrame(WebRtcStream &stream);
-    void HandleStreamState(const std::string &discovery_id, const std::vector<uint8_t> &message);
+    void OnIceCandidate(void);
+    void OnEncodedFrame(void);
+    void HandleStreamState(const std::string &discovery_id,
+          const std::vector<uint8_t> &message) override;
     void HandleStartStream(const std::string &discovery_id);
-    void HandleStreamInfo(const std::string &discovery_id, const std::vector<uint8_t> &message);
+    void HandleStreamInfo(const std::string &discovery_id,
+          const std::vector<uint8_t> &message) override;
     void AddStream(const std::string &discovery_id);
     void UpdateStreamInfo(const std::string &discovery_id, const std::string &id,
           const std::string &peer_id, const std::string &sdp,
           const std::vector<std::string> &ice_candidates);
 
-    std::string watching_topic_;
-    // TODO: What if user copies the module?
-    // Think about that case with destructor
-    std::map<std::string /* Peer Aitt Discovery ID */, WebRtcStream *> src_stream_;
-    IceCandidateAddedCallback ice_candidate_added_cb_;
-    StreamReadyCallback stream_ready_cb_;
-    StreamStartCallback stream_start_cb_;
-    StreamStopCallback stream_stop_cb_;
     EncodedFrameCallabck encoded_frame_cb_;
 };
 }  // namespace AittWebRTCNamespace

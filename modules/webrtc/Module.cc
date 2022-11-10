@@ -29,7 +29,10 @@
 namespace AittWebRTCNamespace {
 
 Module::Module(AittDiscovery &discovery, const std::string &topic, AittStreamRole role)
-      : is_source_(IsSource(role)), discovery_(discovery), state_cb_user_data_(nullptr), receive_cb_user_data_(nullptr)
+      : is_source_(role == AittStreamRole::AITT_STREAM_ROLE_PUBLISHER),
+        discovery_(discovery),
+        state_cb_user_data_(nullptr),
+        receive_cb_user_data_(nullptr)
 {
     std::stringstream s_stream;
     s_stream << std::this_thread::get_id();
@@ -59,21 +62,11 @@ void Module::SetConfig(const std::string &key, void *obj)
 {
 }
 
-
 void Module::Start(void)
 {
-    auto on_ice_candidate_added =
-          std::bind(&Module::OnIceCandidateAdded, this, std::placeholders::_1);
-    stream_manager_->SetIceCandidateAddedCallback(on_ice_candidate_added);
-
-    auto on_stream_ready = std::bind(&Module::OnStreamReady, this, std::placeholders::_1);
-    stream_manager_->SetStreamReadyCallback(on_stream_ready);
-
-    auto on_stream_started = std::bind(&Module::OnStreamStarted, this);
-    stream_manager_->SetStreamStartCallback(on_stream_started);
-
-    auto on_stream_stopped = std::bind(&Module::OnStreamStopped, this);
-    stream_manager_->SetStreamStopCallback(on_stream_stopped);
+    stream_manager_->SetIceCandidateAddedCallback(std::bind(&Module::OnIceCandidateAdded, this));
+    stream_manager_->SetStreamStartCallback(std::bind(&Module::OnStreamStarted, this));
+    stream_manager_->SetStreamStopCallback(std::bind(&Module::OnStreamStopped, this));
 
     stream_manager_->Start();
 }
@@ -82,17 +75,9 @@ void Module::Stop(void)
 {
 }
 
-void Module::OnIceCandidateAdded(WebRtcStream &stream)
+void Module::OnIceCandidateAdded(void)
 {
     DBG("OnIceCandidateAdded");
-    auto msg = stream_manager_->GetDiscoveryMessage();
-    discovery_.UpdateDiscoveryMsg(stream_manager_->GetTopic(), msg.data(), msg.size());
-}
-
-void Module::OnStreamReady(WebRtcStream &stream)
-{
-    DBG("OnStreamReady");
-
     auto msg = stream_manager_->GetDiscoveryMessage();
     discovery_.UpdateDiscoveryMsg(stream_manager_->GetTopic(), msg.data(), msg.size());
 }
@@ -132,10 +117,6 @@ void Module::SetReceiveCallback(ReceiveCallback cb, void *user_data)
     receive_callback_ = cb;
     receive_cb_user_data_ = user_data;
 }
-bool Module::IsSource(AittStreamRole role)
-{
-    return role == AittStreamRole::AITT_STREAM_ROLE_PUBLISHER;
-}
 
 void Module::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
       const void *msg, const int szmsg)
@@ -145,9 +126,8 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         return;
     }
 
-    stream_manager_->HandleMsg(clientId,
-          std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
-                static_cast<const uint8_t *>(msg) + szmsg));
+    stream_manager_->HandleMsg(clientId, std::vector<uint8_t>(static_cast<const uint8_t *>(msg),
+                                               static_cast<const uint8_t *>(msg) + szmsg));
 }
 
 }  // namespace AittWebRTCNamespace

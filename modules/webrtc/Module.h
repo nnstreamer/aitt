@@ -18,12 +18,13 @@
 
 #include <AittDiscovery.h>
 #include <AittStreamModule.h>
-#include "StreamManager.h"
 
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+
+#include "StreamManager.h"
 
 using AittDiscovery = aitt::AittDiscovery;
 using AittStreamModule = aitt::AittStreamModule;
@@ -42,12 +43,10 @@ class Module : public AittStreamModule {
     void Stop(void) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
-    static bool IsSource(AittStreamRole role);
 
   private:
-  //TODO: Update Ice Candidates when stream add candidates.
-    void OnIceCandidateAdded(WebRtcStream &stream);
-    void OnStreamReady(WebRtcStream &stream);
+    // TODO: Update Ice Candidates when stream add candidates.
+    void OnIceCandidateAdded(void);
     void OnStreamStarted(void);
     void OnStreamStopped(void);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
@@ -57,8 +56,8 @@ class Module : public AittStreamModule {
     AittDiscovery &discovery_;
     int discovery_cb_;
 
-    //TODO: What if user copies the module?
-    //Think about that case with destructor
+    // TODO: What if user copies the module?
+    // Think about that case with destructor
     StreamManager *stream_manager_;
     StateCallback state_callback_;
     void *state_cb_user_data_;

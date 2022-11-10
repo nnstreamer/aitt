@@ -24,60 +24,15 @@
 namespace AittWebRTCNamespace {
 SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string &aitt_id,
       const std::string &thread_id)
-      : StreamManager(topic + "/SINK", aitt_id, thread_id), watching_topic_(topic + "/SRC")
+      : StreamManager(topic + "/SINK", topic + "/SRC", aitt_id, thread_id)
 {
 }
 
 SinkStreamManager::~SinkStreamManager()
 {
-    for (auto itr = src_stream_.begin(); itr != src_stream_.end(); ++itr)
+    for (auto itr = streams_.begin(); itr != streams_.end(); ++itr)
         itr->second->Destroy();
-    src_stream_.clear();
-}
-
-void SinkStreamManager::Start()
-{
-    DBG("%s %s", __func__, GetTopic().c_str());
-    if (stream_start_cb_)
-        stream_start_cb_();
-}
-
-void SinkStreamManager::Stop()
-{
-    DBG("%s %s", __func__, GetTopic().c_str());
-    // TODO: You should take care about stream resource
-    for (auto itr = src_stream_.begin(); itr != src_stream_.end(); ++itr)
-        itr->second->Destroy();
-    src_stream_.clear();
-
-    if (stream_stop_cb_)
-        stream_stop_cb_();
-}
-
-void SinkStreamManager::OnEncodedFrame(WebRtcStream &stream)
-{
-    if (encoded_frame_cb_)
-        encoded_frame_cb_(stream);
-}
-
-void SinkStreamManager::SetIceCandidateAddedCallback(IceCandidateAddedCallback cb)
-{
-    ice_candidate_added_cb_ = cb;
-}
-
-void SinkStreamManager::SetStreamReadyCallback(StreamReadyCallback cb)
-{
-    stream_ready_cb_ = cb;
-}
-
-void SinkStreamManager::SetStreamStartCallback(StreamStartCallback cb)
-{
-    stream_start_cb_ = cb;
-}
-
-void SinkStreamManager::SetStreamStopCallback(StreamStopCallback cb)
-{
-    stream_stop_cb_ = cb;
+    streams_.clear();
 }
 
 void SinkStreamManager::SetOnEncodedFrameCallback(EncodedFrameCallabck cb)
@@ -87,31 +42,21 @@ void SinkStreamManager::SetOnEncodedFrameCallback(EncodedFrameCallabck cb)
 
 void SinkStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
 {
-    auto on_stream_state_changed_cb = std::bind(&SinkStreamManager::OnStreamStateChanged, this,
-          std::placeholders::_1, std::ref(stream));
-    stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
+    stream.GetEventHandler().SetOnStateChangedCb(std::bind(&SinkStreamManager::OnStreamStateChanged,
+          this, std::placeholders::_1, std::ref(stream)));
 
-    auto on_ice_candidate_added_cb = std::bind(&SinkStreamManager::OnIceCandidate, this,
-          std::placeholders::_1, std::ref(stream));
-    stream.GetEventHandler().SetOnIceCandidateCb(on_ice_candidate_added_cb);
+    stream.GetEventHandler().SetOnIceCandidateCb(
+          std::bind(&SinkStreamManager::OnIceCandidate, this));
 
-    auto on_ice_gathering_state_changed_cb =
-          std::bind(&SinkStreamManager::OnIceGatheringStateNotify, this, std::placeholders::_1,
-                std::ref(stream));
-    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(on_ice_gathering_state_changed_cb);
-
-    auto on_encoded_frame_cb =
-          std::bind(&SinkStreamManager::OnEncodedFrame, this, std::ref(stream));
-    stream.GetEventHandler().SetOnEncodedFrameCb(on_encoded_frame_cb);
+    stream.GetEventHandler().SetOnEncodedFrameCb(std::bind(&SinkStreamManager::OnEncodedFrame, this));
 }
 
 void SinkStreamManager::OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream)
 {
     DBG("OnSinkStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
     if (state == WebRtcState::Stream::NEGOTIATING) {
-        auto on_offer_created = std::bind(&SinkStreamManager::OnOfferCreated, this,
-              std::placeholders::_1, std::ref(stream));
-        stream.CreateOfferAsync(on_offer_created);
+        stream.CreateOfferAsync(std::bind(&SinkStreamManager::OnOfferCreated, this,
+              std::placeholders::_1, std::ref(stream)));
     }
 }
 
@@ -122,50 +67,22 @@ void SinkStreamManager::OnOfferCreated(std::string sdp, WebRtcStream &stream)
     stream.SetLocalDescription(sdp);
 }
 
-void SinkStreamManager::OnIceCandidate(const std::string &candidate, WebRtcStream &stream)
+void SinkStreamManager::OnIceCandidate(void)
 {
     if (ice_candidate_added_cb_)
-        ice_candidate_added_cb_(stream);
+        ice_candidate_added_cb_();
 }
 
-void SinkStreamManager::OnIceGatheringStateNotify(WebRtcState::IceGathering state,
-      WebRtcStream &stream)
+void SinkStreamManager::OnEncodedFrame(void)
 {
-    DBG("Sink IceGathering State: %s", WebRtcState::IceGatheringToStr(state).c_str());
-    if (state == WebRtcState::IceGathering::COMPLETE) {
-        if (stream_ready_cb_)
-            stream_ready_cb_(stream);
-    }
-}
-
-void SinkStreamManager::HandleRemovedClient(const std::string &discovery_id)
-{
-    auto src_stream_itr = src_stream_.find(discovery_id);
-    if (src_stream_itr == src_stream_.end()) {
-        DBG("There's no source stream %s", discovery_id.c_str());
-        return;
-    }
-
-    // TODO: You should take care about stream resource
-    src_stream_itr->second->Destroy();
-    src_stream_.erase(src_stream_itr);
-
-    return;
-}
-
-void SinkStreamManager::HandleMsg(const std::string &discovery_id,
-      const std::vector<uint8_t> &message)
-{
-    if (flexbuffers::GetRoot(message).IsString())
-        HandleStreamState(discovery_id, message);
-
-    else if (flexbuffers::GetRoot(message).IsVector())
-        HandleStreamInfo(discovery_id, message);
+    if (encoded_frame_cb_)
+        encoded_frame_cb_();
 }
 
 void SinkStreamManager::HandleStreamState(const std::string &discovery_id,
       const std::vector<uint8_t> &message)
 {
+    DBG("%s", __func__);
     auto src_state = flexbuffers::GetRoot(message).ToString();
 
     if (src_state.compare("START") == 0)
@@ -178,8 +95,9 @@ void SinkStreamManager::HandleStreamState(const std::string &discovery_id,
 
 void SinkStreamManager::HandleStartStream(const std::string &discovery_id)
 {
-    auto src_stream = src_stream_.find(discovery_id);
-    if (src_stream != src_stream_.end()) {
+    DBG("%s", __func__);
+    auto src_stream = streams_.find(discovery_id);
+    if (src_stream != streams_.end()) {
         DBG("There's stream already");
         return;
     }
@@ -199,7 +117,7 @@ void SinkStreamManager::AddStream(const std::string &discovery_id)
     s_stream << static_cast<void *>(stream);
 
     stream->SetStreamId(std::string(thread_id_ + s_stream.str()));
-    src_stream_[discovery_id] = stream;
+    streams_[discovery_id] = stream;
 }
 
 void SinkStreamManager::HandleStreamInfo(const std::string &discovery_id,
@@ -229,8 +147,8 @@ void SinkStreamManager::UpdateStreamInfo(const std::string &discovery_id, const 
       const std::string &peer_id, const std::string &sdp,
       const std::vector<std::string> &ice_candidates)
 {
-    auto src_stream = src_stream_.find(discovery_id);
-    if (src_stream == src_stream_.end()) {
+    auto src_stream = streams_.find(discovery_id);
+    if (src_stream == streams_.end()) {
         DBG("No matching stream");
         return;
     }
@@ -246,7 +164,6 @@ void SinkStreamManager::UpdateStreamInfo(const std::string &discovery_id, const 
         src_stream->second->AddPeerInformation(sdp, ice_candidates);
     } else
         src_stream->second->UpdatePeerInformation(ice_candidates);
-
 }
 
 std::vector<uint8_t> SinkStreamManager::GetDiscoveryMessage(void)
@@ -255,7 +172,7 @@ std::vector<uint8_t> SinkStreamManager::GetDiscoveryMessage(void)
 
     flexbuffers::Builder fbb;
     fbb.Vector([&] {
-        for (auto itr = src_stream_.begin(); itr != src_stream_.end(); ++itr) {
+        for (auto itr = streams_.begin(); itr != streams_.end(); ++itr) {
             fbb.Map([&] {
                 fbb.String("id", itr->second->GetStreamId());
                 fbb.String("peer_id", itr->second->GetPeerId());
@@ -272,11 +189,6 @@ std::vector<uint8_t> SinkStreamManager::GetDiscoveryMessage(void)
 
     message = fbb.GetBuffer();
     return message;
-}
-
-std::string SinkStreamManager::GetWatchingTopic(void)
-{
-    return watching_topic_;
 }
 
 }  // namespace AittWebRTCNamespace

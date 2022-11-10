@@ -229,6 +229,26 @@ bool WebRtcStream::SetRemoteDescription(const std::string &description)
     return ret == WEBRTC_ERROR_NONE;
 }
 
+void WebRtcStream::SetStreamId(const std::string &id)
+{
+    id_ = id;
+}
+
+std::string WebRtcStream::GetStreamId(void) const
+{
+    return id_;
+}
+
+void WebRtcStream::SetPeerId(const std::string &id)
+{
+    peer_id_ = id;
+}
+
+std::string &WebRtcStream::GetPeerId(void)
+{
+    return peer_id_;
+}
+
 bool WebRtcStream::AddIceCandidateFromMessage(const std::string &ice_message)
 {
     ERR("%s", __func__);
@@ -410,6 +430,11 @@ void WebRtcStream::DetachSignals(void)
     webrtc_unset_encoded_video_frame_cb(webrtc_handle_);
     webrtc_unset_track_added_cb(webrtc_handle_);
     webrtc_data_channel_unset_open_cb(channel_);
+}
+
+WebRtcEventHandler &WebRtcStream::GetEventHandler(void)
+{
+    return event_handler_;
 }
 
 void WebRtcStream::OnError(webrtc_h webrtc, webrtc_error_e error, webrtc_state_e state,

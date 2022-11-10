@@ -44,33 +44,17 @@ class WebRtcStream {
     void DetachSignals(void);
     // Cautions : Event handler is not a pointer. So, change event_handle after Set Event handler
     // doesn't affect event handler which is included in WebRtcStream
-    void SetEventHandler(WebRtcEventHandler event_handler) { event_handler_ = event_handler; };
-    WebRtcEventHandler &GetEventHandler(void) { return event_handler_; };
+    WebRtcEventHandler &GetEventHandler(void);
 
     bool CreateOfferAsync(std::function<void(std::string)> on_created_cb);
-    void CallOnOfferCreatedCb(std::string offer)
-    {
-        if (on_offer_created_cb_)
-            on_offer_created_cb_(offer);
-    }
     bool CreateAnswerAsync(std::function<void(std::string)> on_created_cb);
-    void CallOnAnswerCreatedCb(std::string answer)
-    {
-        if (on_answer_created_cb_)
-            on_answer_created_cb_(answer);
-    }
-    void SetPreparedLocalDescription(const std::string &description)
-    {
-        local_description_ = description;
-    };
-    std::string GetPreparedLocalDescription(void) const { return local_description_; };
 
     bool SetLocalDescription(const std::string &description);
     bool SetRemoteDescription(const std::string &description);
-    void SetStreamId(const std::string &id) { id_ = id; };
-    std::string GetStreamId(void) const { return id_; };
-    void SetPeerId(const std::string &id) { peer_id_ = id; };
-    std::string &GetPeerId(void) { return peer_id_; };
+    void SetStreamId(const std::string &id);
+    std::string GetStreamId(void) const;
+    void SetPeerId(const std::string &id);
+    std::string &GetPeerId(void);
 
     bool AddIceCandidateFromMessage(const std::string &ice_message);
     bool AddPeerInformation(const std::string &sdp, const std::vector<std::string> &ice_candidates);

@@ -1,0 +1,96 @@
+/*
+ * Copyright (c) 2022 Samsung Electronics Co., Ltd All Rights Reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "StreamManager.h"
+
+#include "aitt_internal.h"
+
+namespace AittWebRTCNamespace {
+
+StreamManager::StreamManager(const std::string &topic, const std::string &watching_topic,
+      const std::string &aitt_id, const std::string &thread_id)
+      : topic_(topic), watching_topic_(watching_topic), aitt_id_(aitt_id), thread_id_(thread_id)
+{
+}
+
+void StreamManager::Start(void)
+{
+    DBG("%s %s", __func__, GetTopic().c_str());
+    if (stream_start_cb_)
+        stream_start_cb_();
+}
+
+void StreamManager::Stop(void)
+{
+    DBG("%s %s", __func__, GetTopic().c_str());
+    // TODO: You should take care about stream resource
+    for (auto itr = streams_.begin(); itr != streams_.end(); ++itr)
+        itr->second->Destroy();
+    streams_.clear();
+
+    if (stream_stop_cb_)
+        stream_stop_cb_();
+}
+
+void StreamManager::HandleRemovedClient(const std::string &discovery_id)
+{
+    auto stream_itr = streams_.find(discovery_id);
+    if (stream_itr == streams_.end()) {
+        DBG("There's no stream %s", discovery_id.c_str());
+        return;
+    }
+
+    // TODO: You should take care about stream resource
+    stream_itr->second->Destroy();
+    streams_.erase(stream_itr);
+
+    return;
+}
+
+void StreamManager::HandleMsg(const std::string &discovery_id, const std::vector<uint8_t> &message)
+{
+    if (flexbuffers::GetRoot(message).IsString())
+        HandleStreamState(discovery_id, message);
+    else if (flexbuffers::GetRoot(message).IsVector())
+        HandleStreamInfo(discovery_id, message);
+}
+
+std::string StreamManager::GetTopic(void) const
+{
+    return topic_;
+}
+
+std::string StreamManager::GetWatchingTopic(void) const
+{
+    return watching_topic_;
+}
+
+void StreamManager::SetIceCandidateAddedCallback(IceCandidateAddedCallback cb)
+{
+    ice_candidate_added_cb_ = cb;
+}
+
+void StreamManager::SetStreamStartCallback(StreamStartCallback cb)
+{
+    stream_start_cb_ = cb;
+}
+
+void StreamManager::SetStreamStopCallback(StreamStopCallback cb)
+{
+    stream_stop_cb_ = cb;
+}
+
+}  // namespace AittWebRTCNamespace

@@ -80,9 +80,8 @@ class WebRtcStreamTest : public testing::Test {
     {
         DBG("OnStreamStateChanged");
         if (state == WebRtcState::Stream::NEGOTIATING) {
-            auto on_offer_created =
-                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
-            stream.CreateOfferAsync(on_offer_created);
+            stream.CreateOfferAsync(
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test));
         }
     }
     static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcStreamTest *test)
@@ -114,13 +113,11 @@ TEST_F(WebRtcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
     WebRtcStream stream{};
     EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
     EXPECT_EQ(true, stream.AttachCameraSource()) << "Failed to attach camera source";
-    auto on_stream_state_changed_cb =
-          std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnStateChangedCb(on_stream_state_changed_cb);
+    stream.GetEventHandler().SetOnStateChangedCb(
+          std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this));
 
-    auto on_ice_gathering_state_changed_cb =
-          std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this);
-    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(on_ice_gathering_state_changed_cb);
+    stream.GetEventHandler().SetOnIceGatheringStateNotifyCb(
+          std::bind(OnIceGatheringStateNotify, std::placeholders::_1, std::ref(stream), this));
     stream.Start();
     IterateEventLoop();
     EXPECT_EQ(WebRtcMessage::Type::SDP, WebRtcMessage::getMessageType(local_description_));
@@ -144,11 +141,9 @@ class WebRtcSourceOffererTest : public testing::Test {
           WebRtcSourceOffererTest *test)
     {
         DBG("OnSrcStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
-        if (state == WebRtcState::Stream::NEGOTIATING) {
-            auto on_offer_created =
-                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
-            stream.CreateOfferAsync(on_offer_created);
-        }
+        if (state == WebRtcState::Stream::NEGOTIATING)
+            stream.CreateOfferAsync(
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test));
     }
 
     static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSourceOffererTest *test)
@@ -194,11 +189,9 @@ class WebRtcSourceOffererTest : public testing::Test {
           WebRtcSourceOffererTest *test)
     {
         DBG("OnSinkSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
-        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER) {
-            auto on_answer_created =
-                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test);
-            stream.CreateAnswerAsync(on_answer_created);
-        }
+        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER)
+            stream.CreateAnswerAsync(
+                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test));
     }
 
     static void OnSinkIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
@@ -229,36 +222,27 @@ TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
 {
     EXPECT_EQ(true, src_stream_.Create(true, false)) << "Failed to create source stream";
     EXPECT_EQ(true, src_stream_.AttachCameraSource()) << "Failed to attach camera source";
-    auto on_src_stream_state_changed_cb =
-          std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this);
-    src_stream_.GetEventHandler().SetOnStateChangedCb(on_src_stream_state_changed_cb);
+    src_stream_.GetEventHandler().SetOnStateChangedCb(
+          std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this));
 
-    auto on_src_signaling_state_changed_cb =
-          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this);
-    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_src_signaling_state_changed_cb);
+    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(
+          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
 
-    auto on_src_ice_gathering_state_changed_cb = std::bind(OnSrcIceGatheringStateNotify,
-          std::placeholders::_1, std::ref(src_stream_), this);
-    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
-          on_src_ice_gathering_state_changed_cb);
+    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(std::bind(
+          OnSrcIceGatheringStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
     src_stream_.Start();
 
     EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
-    auto on_sink_stream_state_changed_cb =
-          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnStateChangedCb(on_sink_stream_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnStateChangedCb(
+          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_signaling_state_changed_cb = std::bind(OnSinkSignalingStateNotify,
-          std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_sink_signaling_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(std::bind(OnSinkSignalingStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_ice_gathering_state_changed_cb = std::bind(OnSinkIceGatheringStateNotify,
-          std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
-          on_sink_ice_gathering_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(std::bind(
+          OnSinkIceGatheringStateNotify, std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_encoded_frame_cb = std::bind(OnSinkStreamEncodedFrame, this);
-    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(on_sink_encoded_frame_cb);
+    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(std::bind(OnSinkStreamEncodedFrame, this));
     sink_stream_.Start();
     IterateEventLoop();
 }
@@ -277,11 +261,9 @@ class WebRtcSinkOffererTest : public testing::Test {
           WebRtcSinkOffererTest *test)
     {
         DBG("OnSinkStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
-        if (state == WebRtcState::Stream::NEGOTIATING) {
-            auto on_offer_created =
-                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test);
-            stream.CreateOfferAsync(on_offer_created);
-        }
+        if (state == WebRtcState::Stream::NEGOTIATING)
+            stream.CreateOfferAsync(
+                  std::bind(OnOfferCreated, std::placeholders::_1, std::ref(stream), test));
     }
 
     static void OnOfferCreated(std::string sdp, WebRtcStream &stream, WebRtcSinkOffererTest *test)
@@ -326,11 +308,9 @@ class WebRtcSinkOffererTest : public testing::Test {
           WebRtcSinkOffererTest *test)
     {
         DBG("OnSrcSignalingStateNotify: %s", WebRtcState::SignalingToStr(state).c_str());
-        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER) {
-            auto on_answer_created =
-                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test);
-            stream.CreateAnswerAsync(on_answer_created);
-        }
+        if (state == WebRtcState::Signaling::HAVE_REMOTE_OFFER)
+            stream.CreateAnswerAsync(
+                  std::bind(OnAnswerCreated, std::placeholders::_1, std::ref(stream), test));
     }
 
     static void OnSrcIceGatheringStateNotify(WebRtcState::IceGathering state, WebRtcStream &stream,
@@ -365,32 +345,24 @@ TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
           std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this);
     src_stream_.GetEventHandler().SetOnStateChangedCb(on_src_stream_state_changed_cb);
 
-    auto on_src_signaling_state_changed_cb =
-          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this);
-    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_src_signaling_state_changed_cb);
+    src_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(
+          std::bind(OnSrcSignalingStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
 
-    auto on_src_ice_gathering_state_changed_cb = std::bind(OnSrcIceGatheringStateNotify,
-          std::placeholders::_1, std::ref(src_stream_), this);
-    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
-          on_src_ice_gathering_state_changed_cb);
+    src_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(std::bind(
+          OnSrcIceGatheringStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
     src_stream_.Start();
 
     EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
-    auto on_sink_stream_state_changed_cb =
-          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnStateChangedCb(on_sink_stream_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnStateChangedCb(
+          std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_signaling_state_changed_cb = std::bind(OnSinkSignalingStateNotify,
-          std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(on_sink_signaling_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnSignalingStateNotifyCb(std::bind(OnSinkSignalingStateNotify,
+          std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_ice_gathering_state_changed_cb = std::bind(OnSinkIceGatheringStateNotify,
-          std::placeholders::_1, std::ref(sink_stream_), this);
-    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(
-          on_sink_ice_gathering_state_changed_cb);
+    sink_stream_.GetEventHandler().SetOnIceGatheringStateNotifyCb(std::bind(
+          OnSinkIceGatheringStateNotify, std::placeholders::_1, std::ref(sink_stream_), this));
 
-    auto on_sink_encoded_frame_cb = std::bind(OnSinkStreamEncodedFrame, this);
-    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(on_sink_encoded_frame_cb);
+    sink_stream_.GetEventHandler().SetOnEncodedFrameCb(std::bind(OnSinkStreamEncodedFrame, this));
     sink_stream_.Start();
     IterateEventLoop();
 }
@@ -509,13 +481,10 @@ TEST_F(SrcStreamManagerTest, test_SrcStreamManager_Start_OnDevice)
     // Src should subscribe WEBRTC_SINK_TOPIC but this is for test
     discovery_cb_ = discovery_engine_.AddDiscoveryCB(src_manager->GetTopic(), on_discovered);
 
-    auto on_stream_started =
-          std::bind(OnStreamStarted, this, static_cast<SrcStreamManager *>(src_manager.get()));
-    src_manager->SetStreamStartCallback(on_stream_started);
-
-    auto on_stream_stopped =
-          std::bind(OnStreamStopped, this, static_cast<SrcStreamManager *>(src_manager.get()));
-    src_manager->SetStreamStopCallback(on_stream_stopped);
+    src_manager->SetStreamStartCallback(
+          std::bind(OnStreamStarted, this, static_cast<SrcStreamManager *>(src_manager.get())));
+    src_manager->SetStreamStopCallback(
+          std::bind(OnStreamStopped, this, static_cast<SrcStreamManager *>(src_manager.get())));
 
     src_manager->Start();
     IterateEventLoop();
@@ -558,19 +527,9 @@ class SinkStreamManagerTest : public testing::Test {
             g_main_loop_quit(test->mainLoop_);
     }
 
-    static void OnIceCandidateAdded(WebRtcStream &stream, SinkStreamManager *sink_mgr,
-          SinkStreamManagerTest *test)
+    static void OnIceCandidateAdded(SinkStreamManager *sink_mgr, SinkStreamManagerTest *test)
     {
         DBG("OnIceCandidateAdded");
-        auto discovery_message = sink_mgr->GetDiscoveryMessage();
-        test->discovery_engine_.UpdateDiscoveryMsg(sink_mgr->GetTopic(), discovery_message.data(),
-              discovery_message.size());
-    }
-
-    static void OnStreamReady(WebRtcStream &stream, SinkStreamManager *sink_mgr,
-          SinkStreamManagerTest *test)
-    {
-        DBG("OnStreamReady");
         auto discovery_message = sink_mgr->GetDiscoveryMessage();
         test->discovery_engine_.UpdateDiscoveryMsg(sink_mgr->GetTopic(), discovery_message.data(),
               discovery_message.size());
@@ -595,13 +554,8 @@ TEST_F(SinkStreamManagerTest, test_SinkStreamManager_Start_OnDevice)
     // Sink should subscribe WEBRTC_SRC_TOPIC but this is for test
     discovery_cb_ = discovery_engine_.AddDiscoveryCB(sink_manager->GetTopic(), on_discovered);
 
-    auto on_ice_candidate_added = std::bind(OnIceCandidateAdded, std::placeholders::_1,
-          static_cast<SinkStreamManager *>(sink_manager.get()), this);
-    sink_manager->SetIceCandidateAddedCallback(on_ice_candidate_added);
-
-    auto on_stream_ready = std::bind(OnStreamReady, std::placeholders::_1,
-          static_cast<SinkStreamManager *>(sink_manager.get()), this);
-    sink_manager->SetStreamReadyCallback(on_stream_ready);
+    sink_manager->SetIceCandidateAddedCallback(std::bind(OnIceCandidateAdded,
+          static_cast<SinkStreamManager *>(sink_manager.get()), this));
 
     sink_manager->Start();
     IterateEventLoop();
@@ -723,18 +677,12 @@ class SinkSrcStreamManagerTest : public testing::Test {
               sink_manager_->GetWatchingTopic(), discovered_at_sink);
         sink_discovery_engine_.Restart();
 
-        auto on_stream_stopped = std::bind(OnSinkStreamStopped, this);
-        sink_manager_->SetStreamStopCallback(on_stream_stopped);
+        sink_manager_->SetStreamStopCallback(std::bind(OnSinkStreamStopped, this));
+        sink_manager_->SetIceCandidateAddedCallback(
+              std::bind(OnSinkIceCandidate, this));
 
-        auto on_ice_candidate = std::bind(OnSinkIceCandidate, std::placeholders::_1, this);
-        sink_manager_->SetIceCandidateAddedCallback(on_ice_candidate);
-
-        auto on_sink_stream_ready = std::bind(OnSinkStreamReady, std::placeholders::_1, this);
-        sink_manager_->SetStreamReadyCallback(on_sink_stream_ready);
-
-        auto on_encoded_frame = std::bind(OnEncodedFrame, std::placeholders::_1, this);
         static_cast<SinkStreamManager *>(sink_manager_.get())
-              ->SetOnEncodedFrameCallback(on_encoded_frame);
+              ->SetOnEncodedFrameCallback(std::bind(OnEncodedFrame, this));
 
         sink_manager_->Start();
     }
@@ -752,7 +700,7 @@ class SinkSrcStreamManagerTest : public testing::Test {
               msg.size());
     }
 
-    static void OnSinkIceCandidate(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
+    static void OnSinkIceCandidate(SinkSrcStreamManagerTest *test)
     {
         DBG("OnSinkIceCandidate");
         auto discovery_message = test->sink_manager_->GetDiscoveryMessage();
@@ -760,18 +708,10 @@ class SinkSrcStreamManagerTest : public testing::Test {
               discovery_message.data(), discovery_message.size());
     }
 
-    static void OnSinkStreamReady(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
+    static void OnEncodedFrame(SinkSrcStreamManagerTest *test)
     {
-        DBG("OnSinkStreamReady");
-
-        auto discovery_message = test->sink_manager_->GetDiscoveryMessage();
-        test->sink_discovery_engine_.UpdateDiscoveryMsg(test->sink_manager_->GetTopic(),
-              discovery_message.data(), discovery_message.size());
-    }
-
-    static void OnEncodedFrame(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
-    {
-        static_cast<SinkStreamManager *>(test->sink_manager_.get())->SetOnEncodedFrameCallback(nullptr);
+        static_cast<SinkStreamManager *>(test->sink_manager_.get())
+              ->SetOnEncodedFrameCallback(nullptr);
 
         if (test->stop_sink_first_)
             test->AddIdleStopSinkStream();
@@ -787,15 +727,10 @@ class SinkSrcStreamManagerTest : public testing::Test {
               discovered_at_src);
         src_discovery_engine_.Restart();
 
-        auto on_stream_started = std::bind(OnStreamStarted, this);
-        src_manager_->SetStreamStartCallback(on_stream_started);
-        auto on_stream_stopped = std::bind(OnSrcStreamStopped, this);
-        src_manager_->SetStreamStopCallback(on_stream_stopped);
-        auto on_ice_candidate = std::bind(OnSrcIceCandidate, std::placeholders::_1, this);
-        src_manager_->SetIceCandidateAddedCallback(on_ice_candidate);
-
-        auto on_src_stream_ready = std::bind(OnSrcStreamReady, std::placeholders::_1, this);
-        src_manager_->SetStreamReadyCallback(on_src_stream_ready);
+        src_manager_->SetStreamStartCallback(std::bind(OnStreamStarted, this));
+        src_manager_->SetStreamStopCallback(std::bind(OnSrcStreamStopped, this));
+        src_manager_->SetIceCandidateAddedCallback(
+              std::bind(OnSrcIceCandidate, this));
 
         src_manager_->Start();
     }
@@ -827,18 +762,9 @@ class SinkSrcStreamManagerTest : public testing::Test {
               msg.size());
     }
 
-    static void OnSrcIceCandidate(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
+    static void OnSrcIceCandidate(SinkSrcStreamManagerTest *test)
     {
         DBG("OnIceCandidateAdded");
-        auto discovery_message = test->src_manager_->GetDiscoveryMessage();
-        test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(),
-              discovery_message.data(), discovery_message.size());
-    }
-
-    static void OnSrcStreamReady(WebRtcStream &stream, SinkSrcStreamManagerTest *test)
-    {
-        DBG("OnSrcStreamReady");
-
         auto discovery_message = test->src_manager_->GetDiscoveryMessage();
         test->src_discovery_engine_.UpdateDiscoveryMsg(test->src_manager_->GetTopic(),
               discovery_message.data(), discovery_message.size());

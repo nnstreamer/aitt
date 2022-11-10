@@ -48,8 +48,7 @@ class WebRtcEventHandler {
     };
     void UnsetOnSignalingStateNotifyCb(void) { on_signaling_state_notify_cb_ = nullptr; };
 
-    void SetOnIceCandidateCb(
-          std::function<void(std::string)> on_ice_candidate_cb)
+    void SetOnIceCandidateCb(std::function<void(std::string)> on_ice_candidate_cb)
     {
         on_ice_candidate_cb_ = on_ice_candidate_cb;
     };
