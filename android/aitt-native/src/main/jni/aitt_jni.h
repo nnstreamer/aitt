@@ -16,6 +16,8 @@
 #pragma once
 
 #include <AITT.h>
+#include <AittDiscovery.h>
+
 #include <android/log.h>
 #include <jni.h>
 #include <string>
@@ -24,6 +26,7 @@
 #define JNI_LOG(a, b, c) __android_log_write(a, b, c)
 
 using AITT = aitt::AITT;
+using AittDiscovery = aitt::AittDiscovery;
 
 class AittNativeInterface {
 private:
@@ -31,6 +34,7 @@ private:
         JavaVM *jvm;
         jmethodID messageCallbackMethodID;
         jmethodID connectionCallbackMethodID;
+        jmethodID discoveryCallbackMethodID;
     };
 
 private:
@@ -38,35 +42,43 @@ private:
 
     virtual ~AittNativeInterface(void);
 
+    void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
+                                  const void *msg, const int szmsg);
+
     static std::string GetStringUTF(JNIEnv *env, jstring str);
 
-    static bool checkParams(JNIEnv *env, jobject jniInterfaceObject);
+    static bool CheckParams(JNIEnv *env, jobject jniInterfaceObject);
 
-    static bool jniStatusCheck(JNIEnv *&env, int JNIStatus);
+    static bool JniStatusCheck(JNIEnv *&env, int JNIStatus);
 
 public:
-    static jlong init(JNIEnv *env, jobject jniInterfaceObject,
+    static jlong Init(JNIEnv *env, jobject jniInterfaceObject,
                       jstring id, jstring ip, jboolean clearSession);
 
-    static void connect(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+    static void Connect(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
                         jstring host, jint port);
 
-    static jlong subscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+    static jlong Subscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
                            jstring topic, jint protocol, jint qos);
 
-    static void publish(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+    static void Publish(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
                         jstring topic, jbyteArray data, jlong datalen, jint protocol,
                         jint qos, jboolean retain);
 
-    static void unsubscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+    static void Unsubscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
                             jlong aittSubId);
 
-    static void disconnect(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+    static void Disconnect(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
 
-    static void setConnectionCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+    static void SetConnectionCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle);
+
+    static int SetDiscoveryCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle, jstring topic);
+
+    static void RemoveDiscoveryCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle, jint cbHandle);
 
 private:
     AITT aitt;
+    AittDiscovery *discovery;
     jobject cbObject;
     static CallbackContext cbContext;
 };

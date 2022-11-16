@@ -72,6 +72,10 @@ class API AITT {
   private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
+
+#ifdef ANDROID
+    friend class AittDiscoveryHelper;
+#endif
 };
 
 }  // namespace aitt

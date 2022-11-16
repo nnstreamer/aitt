@@ -16,6 +16,7 @@
 package com.samsung.android.aittnative;
 
 import android.util.Log;
+import android.util.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Map;
 public class JniInterface {
     private static final String TAG = "JniInterface";
     private Map<String, ArrayList<JniCallback>> subscribeJNICallbacks = new HashMap<>();
+    private final Map<String, Pair<Integer, JniDiscoveryCallback>> discoveryCallbacks = new HashMap<>();
     private JniConnectionCallback jniConnectionCallback;
     private long instance = 0;
 
@@ -46,14 +48,21 @@ public class JniInterface {
      * JNI callback interface to send data from JNI layer to Java layer(aitt or transport module)
      */
     public interface JniCallback {
-        void jniDataPush(String topic, byte[] data);
+        void onDataReceived(String topic, byte[] data);
     }
 
     /**
      * JNI callback interface to send connection callback status to aitt layer
      */
     public interface JniConnectionCallback {
-        void jniConnectionCB(int status);
+        void onConnectionStatusReceived(int status);
+    }
+
+    /**
+     * JNI callback interface to receive discovery messages
+     */
+    public interface JniDiscoveryCallback {
+        void onDiscoveryMessageReceived(String status, byte[] data);
     }
 
     /**
@@ -136,6 +145,41 @@ public class JniInterface {
     }
 
     /**
+     * JNI Interface API to set discovery callback
+     * @param topic String for which discovery information is required
+     * @param callback callback instance of JniDiscoveryCallback interface
+     */
+    public void setDiscoveryCallback(String topic, JniDiscoveryCallback callback) {
+        int cb = setDiscoveryCallbackJNI(instance, topic);
+        synchronized (this) {
+            discoveryCallbacks.put(topic, new Pair<>(cb, callback));
+        }
+    }
+
+    /**
+     * JNI Interface API to remove discovery callback
+     * @param topic String for which discovery information is not required
+     */
+    public void removeDiscoveryCallback(String topic) {
+        synchronized (this) {
+            Pair<Integer, JniDiscoveryCallback> pair = discoveryCallbacks.get(topic);
+            if (pair != null) {
+                removeDiscoveryCallbackJNI(instance, pair.first);
+            }
+            discoveryCallbacks.remove(topic);
+        }
+    }
+
+    /**
+     * JNI Interface API to update discovery message
+     * @param topic String for which discovery information is to be updated
+     * @param discoveryMessage ByteArray containing discovery information
+     */
+    public void updateDiscoveryMessage(String topic, byte[] discoveryMessage) {
+        //ToDO: Finalize discovery message format
+    }
+
+    /**
      * messageCallback API to receive data from JNI layer to JNI interface layer
      * @param topic Topic to which data is received
      * @param payload Data that is sent from JNI to JNI interface layer
@@ -147,7 +191,7 @@ public class JniInterface {
 
                 if (cbList != null) {
                     for (int i = 0; i < cbList.size(); i++) {
-                        cbList.get(i).jniDataPush(topic, payload);
+                        cbList.get(i).onDataReceived(topic, payload);
                     }
                 }
             }
@@ -162,8 +206,12 @@ public class JniInterface {
      */
     void connectionStatusCallback(int status) {
         if (jniConnectionCallback != null) {
-            jniConnectionCallback.jniConnectionCB(status);
+            jniConnectionCallback.onConnectionStatusReceived(status);
         }
+    }
+
+    private void discoveryMessageCallback(String status, byte[] payload) {
+        //ToDo: Finalize discovery message format. The topic should include topic information to find the right callback.
     }
 
     /**
@@ -205,6 +253,12 @@ public class JniInterface {
 
     /* Native API for setting connection callback */
     private native void setConnectionCallbackJNI(long instance);
+
+    /* Native API for setting discovery callback */
+    private native int setDiscoveryCallbackJNI(long instance, final String topic);
+
+    /* Native API for removing discovery callback */
+    private native void removeDiscoveryCallbackJNI(long instance, int cbHandle);
 
     /* Native API for publishing to a topic */
     private native void publishJNI(long instance, final String topic, final byte[] data, long datalen, int protocol, int qos, boolean retain);

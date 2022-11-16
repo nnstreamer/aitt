@@ -97,6 +97,10 @@ class AITT::Impl {
     std::string mqtt_broker_ip_;
     int mqtt_broker_port_;
     unsigned short reply_id;
+
+#ifdef ANDROID
+    friend class AittDiscoveryHelper;
+#endif
 };
 
 }  // namespace aitt

@@ -27,7 +27,6 @@ android {
                 arguments '-DCMAKE_INSTALL_PREFIX:PATH=/usr'
                 arguments '-DANDROID_STL=c++_shared'
                 arguments "-DANDROID_NDK_HOME=${System.env.ANDROID_NDK_ROOT}"
-                arguments "-DGSTREAMER_ROOT_ANDROID=${System.env.GSTREAMER_ROOT_ANDROID}"
                 arguments '-DBUILD_TESTING=OFF'
                 arguments '-DUSE_PREBUILT=OFF'
                 arguments '-DVERSIONING=OFF'

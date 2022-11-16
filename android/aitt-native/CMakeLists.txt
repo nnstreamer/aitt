@@ -10,7 +10,7 @@ set(LOG_LIBRARIES ${ALOG})
 
 add_subdirectory(${PROJECT_ROOT_DIR} ${CMAKE_BINARY_DIR}/aitt)
 
-include_directories(${PROJECT_ROOT_DIR}/include)
+include_directories(${PROJECT_ROOT_DIR}/include ${PROJECT_ROOT_DIR}/common)
 
 set(ANDROID_SRC src/main/jni/aitt_jni.cc)
 
