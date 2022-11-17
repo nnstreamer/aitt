@@ -56,17 +56,12 @@ WebRtcMessage::Type WebRtcMessage::getMessageType(const std::string &message)
 
 bool WebRtcMessage::IsValidStreamInfo(const std::vector<uint8_t> &message)
 {
-    if (!flexbuffers::GetRoot(message).IsVector())
+    if (!flexbuffers::GetRoot(message).IsMap())
         return false;
 
-    auto streams = flexbuffers::GetRoot(message).AsVector();
-    for (size_t idx = 0; idx < streams.size(); ++idx) {
-        auto stream = streams[idx].AsMap();
-        if (!IsValidStream(stream))
-            return false;
-    }
+    auto stream_info = flexbuffers::GetRoot(message).AsMap();
 
-    return true;
+    return IsValidStream(stream_info);
 }
 
 bool WebRtcMessage::IsValidStream(const flexbuffers::Map &info)

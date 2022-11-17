@@ -22,6 +22,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <memory>
 
 namespace AittWebRTCNamespace {
 
@@ -51,9 +52,9 @@ class StreamManager {
     // TODO: why dont' we remove below
     std::string aitt_id_;
     std::string thread_id_;
-    // TODO: What if user copies the module?
-    // Think about that case with destructor
-    std::map<std::string /* Peer Aitt Discovery ID */, WebRtcStream *> streams_;
+    //We assume Module class can't be copyable
+    std::string peer_aitt_id_;
+    WebRtcStream stream_;
     StreamStartCallback stream_start_cb_;
     StreamStopCallback stream_stop_cb_;
     IceCandidateAddedCallback ice_candidate_added_cb_;

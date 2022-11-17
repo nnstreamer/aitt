@@ -36,10 +36,8 @@ void StreamManager::Start(void)
 void StreamManager::Stop(void)
 {
     DBG("%s %s", __func__, GetTopic().c_str());
-    // TODO: You should take care about stream resource
-    for (auto itr = streams_.begin(); itr != streams_.end(); ++itr)
-        itr->second->Destroy();
-    streams_.clear();
+    peer_aitt_id_.clear();
+    stream_.Destroy();
 
     if (stream_stop_cb_)
         stream_stop_cb_();
@@ -47,15 +45,12 @@ void StreamManager::Stop(void)
 
 void StreamManager::HandleRemovedClient(const std::string &discovery_id)
 {
-    auto stream_itr = streams_.find(discovery_id);
-    if (stream_itr == streams_.end()) {
-        DBG("There's no stream %s", discovery_id.c_str());
+    if (peer_aitt_id_ != discovery_id){
+        ERR("There's no stream %s", discovery_id.c_str());
         return;
     }
 
-    // TODO: You should take care about stream resource
-    stream_itr->second->Destroy();
-    streams_.erase(stream_itr);
+    stream_.Destroy();
 
     return;
 }

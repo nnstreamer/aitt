@@ -32,10 +32,6 @@ SrcStreamManager::SrcStreamManager(const std::string &topic, const std::string &
 
 SrcStreamManager::~SrcStreamManager()
 {
-    // TODO: You should take care about stream resource
-    for (auto itr = streams_.begin(); itr != streams_.end(); ++itr)
-        itr->second->Destroy();
-    streams_.clear();
 }
 
 void SrcStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
@@ -87,7 +83,7 @@ void SrcStreamManager::HandleStreamState(const std::string &discovery_id,
     if (sink_state.compare("STOP") == 0)
         HandleRemovedClient(discovery_id);
     else
-        DBG("Invalid message %s", sink_state);
+        ERR("Invalid message %s", sink_state);
 }
 
 void SrcStreamManager::HandleStreamInfo(const std::string &discovery_id,
@@ -95,53 +91,50 @@ void SrcStreamManager::HandleStreamInfo(const std::string &discovery_id,
 {
     DBG("%s", __func__);
     if (!WebRtcMessage::IsValidStreamInfo(message)) {
-        DBG("Invalid streams info");
+        ERR("Invalid streams info");
         return;
     }
 
-    // sink_streams have a stream at normal situation
-    auto sink_streams = flexbuffers::GetRoot(message).AsVector();
-    for (size_t stream_idx = 0; stream_idx < sink_streams.size(); ++stream_idx) {
-        auto stream = sink_streams[stream_idx].AsMap();
-        auto id = stream["id"].AsString().str();
-        auto peer_id = stream["peer_id"].AsString().str();
-        auto sdp = stream["sdp"].AsString().str();
-        std::vector<std::string> ice_candidates;
-        auto ice_info = stream["ice_candidates"].AsVector();
-        for (size_t ice_idx = 0; ice_idx < ice_info.size(); ++ice_idx)
-            ice_candidates.push_back(ice_info[ice_idx].AsString().str());
-        UpdateStreamInfo(discovery_id, id, peer_id, sdp, ice_candidates);
-    }
+    // have a stream at Current status
+    auto stream = flexbuffers::GetRoot(message).AsMap();
+    auto id = stream["id"].AsString().str();
+    auto peer_id = stream["peer_id"].AsString().str();
+    auto sdp = stream["sdp"].AsString().str();
+    std::vector<std::string> ice_candidates;
+    auto ice_info = stream["ice_candidates"].AsVector();
+    for (size_t ice_idx = 0; ice_idx < ice_info.size(); ++ice_idx)
+        ice_candidates.push_back(ice_info[ice_idx].AsString().str());
+    UpdateStreamInfo(discovery_id, id, peer_id, sdp, ice_candidates);
 }
 
 void SrcStreamManager::UpdateStreamInfo(const std::string &discovery_id, const std::string &id,
       const std::string &peer_id, const std::string &sdp,
       const std::vector<std::string> &ice_candidates)
 {
-    auto sink_stream = streams_.find(discovery_id);
-    if (sink_stream == streams_.end())
+    // There's only one stream for a aitt ID
+    if (peer_aitt_id_.empty())
         AddStream(discovery_id, id, sdp, ice_candidates);
+    else if (peer_aitt_id_ == discovery_id && peer_id.compare(stream_.GetStreamId()) != 0)
+        stream_.UpdatePeerInformation(ice_candidates);
     else
-        sink_stream->second->UpdatePeerInformation(ice_candidates);
+        ERR("Invalid peer ID");
 }
 
 void SrcStreamManager::AddStream(const std::string &discovery_id, const std::string &id,
       const std::string &sdp, const std::vector<std::string> &ice_candidates)
 {
-    auto stream = new WebRtcStream();
-    SetWebRtcStreamCallbacks(*stream);
-    stream->Create(true, false);
-    stream->AttachCameraSource();
-    stream->Start();
+    SetWebRtcStreamCallbacks(stream_);
+    stream_.Create(true, false);
+    stream_.AttachCameraSource();
+    stream_.Start();
 
     std::stringstream s_stream;
-    s_stream << static_cast<void *>(stream);
+    s_stream << static_cast<void *>(&stream_);
 
-    stream->SetStreamId(std::string(thread_id_ + s_stream.str()));
-    stream->SetPeerId(id);
-    stream->AddPeerInformation(sdp, ice_candidates);
-
-    streams_[discovery_id] = stream;
+    stream_.SetStreamId(std::string(thread_id_ + s_stream.str()));
+    stream_.SetPeerId(id);
+    peer_aitt_id_ = discovery_id;
+    stream_.AddPeerInformation(sdp, ice_candidates);
 
     return;
 }
@@ -151,19 +144,15 @@ std::vector<uint8_t> SrcStreamManager::GetDiscoveryMessage(void)
     std::vector<uint8_t> message;
 
     flexbuffers::Builder fbb;
-    fbb.Vector([&] {
-        for (auto itr = streams_.begin(); itr != streams_.end(); ++itr) {
-            fbb.Map([&] {
-                fbb.String("id", itr->second->GetStreamId());
-                fbb.String("peer_id", itr->second->GetPeerId());
-                fbb.String("sdp", itr->second->GetLocalDescription());
-                fbb.Vector("ice_candidates", [&]() {
-                    for (const auto &candidate : itr->second->GetIceCandidates()) {
-                        fbb.String(candidate);
-                    }
-                });
-            });
-        }
+    fbb.Map([&] {
+        fbb.String("id", stream_.GetStreamId());
+        fbb.String("peer_id", stream_.GetPeerId());
+        fbb.String("sdp", stream_.GetLocalDescription());
+        fbb.Vector("ice_candidates", [&]() {
+            for (const auto &candidate : stream_.GetIceCandidates()) {
+                fbb.String(candidate);
+            }
+        });
     });
     fbb.Finish();
 
