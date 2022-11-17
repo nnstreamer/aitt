@@ -104,14 +104,14 @@ class Module : public AittTransport {
     using HostMap = std::map<std::string /* clientId */, PortMap>;
     using PublishMap = std::map<std::string /* topic */, HostMap>;
 
-    static void AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
+    static int AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
           MainLoopHandler::MainLoopData *watchData);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
-    static void ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
+    static int ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
           MainLoopHandler::MainLoopData *watchData);
-    void HandleClientDisconnect(int handle);
+    int HandleClientDisconnect(int handle);
     std::string GetTopicName(TCPData *connect_info);
     void ThreadMain(void);
     void UpdatePublishTable(const std::string &topic, const std::string &host,

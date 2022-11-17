@@ -30,6 +30,8 @@
 #define TEST_MSG2 "This message is going to be delivered through a specified AittProtocol"
 #define SLEEP_MS 1000
 
+#define CHECK_INTERVAL 10
+
 using aitt::MainLoopHandler;
 
 class AittTests {
@@ -52,13 +54,16 @@ class AittTests {
 
     void ToggleReady() { ready = true; }
     void ToggleReady2() { ready2 = true; }
-    void ReadyCheck(void *data)
+    int ReadyCheck(void *data)
     {
         AittTests *test = static_cast<AittTests *>(data);
 
         if (test->ready) {
             test->StopEventLoop();
+            return AITT_LOOP_EVENT_REMOVE;
         }
+
+        return AITT_LOOP_EVENT_CONTINUE;
     }
 
     void StopEventLoop(void) { mainLoop.Quit(); }

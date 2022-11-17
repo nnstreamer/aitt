@@ -15,37 +15,35 @@
  */
 #pragma once
 
-#include <fcntl.h>
+#include <poll.h>
 #include <signal.h>
-#include <string.h>
-#include <sys/poll.h>
-#include <time.h>
-#include <unistd.h>
 
 #include <deque>
-#include <functional>
 #include <map>
 #include <mutex>
 
-#include "aitt_internal.h"
-
-#define BUF_SIZE 10
+#include "MainLoopIface.h"
 
 namespace aitt {
 
-class MainLoopHandler {
+class PosixMainLoop : public MainLoopIface {
   public:
-    enum MainLoopResult {
-        OK,
-        ERROR,
-        REMOVED,
-        HANGUP,
-    };
+    PosixMainLoop();
+    virtual ~PosixMainLoop();
 
+    void Run() override;
+    bool Quit() override;
+    void AddIdle(const mainLoopCB &cb, MainLoopData *user_data) override;
+    void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data) override;
+    MainLoopData *RemoveWatch(int fd) override;
+    unsigned int AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *user_data) override;
+    void RemoveTimeout(unsigned int id) override;
+
+  private:
     enum PipeValue {
-        INVALID = -3,
-        TIMEOUT = -2,
-        IDLE = -1,
+        INVALID = 0,
+        IDLE = 1,
+        TIMEOUT_START = 2,
     };
 
     struct TimeoutData {
@@ -53,45 +51,27 @@ class MainLoopHandler {
         int pipe_fd;
     };
 
-    struct MainLoopData {
-        virtual ~MainLoopData() = default;
-    };
-    using mainLoopCB = std::function<void(MainLoopResult result, int fd, MainLoopData *data)>;
-
-    MainLoopHandler();
-    ~MainLoopHandler();
-
-    static void AddIdle(MainLoopHandler *handle, const mainLoopCB &cb, MainLoopData *user_data);
-    static void WriteToPipe(int pipe_fd, int identifier);
-
-    void Run();
-    bool Quit();
-    void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data);
-    MainLoopData *RemoveWatch(int fd);
-    unsigned int AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *user_data);
-    void RemoveTimeout(unsigned int id);
-
-  private:
     struct MainLoopCbData {
         MainLoopCbData();
         mainLoopCB cb;
         MainLoopData *data;
         MainLoopResult result;
         int fd;
-        unsigned int timeout_id;
+        int timeout_interval;
     };
 
-    using WatchMap = std::multimap<int, MainLoopCbData *>;
+    using WatchMap = std::map<int, MainLoopCbData *>;
     using TimeoutMap = std::map<unsigned int, MainLoopCbData *>;
     using IdleQueue = std::deque<MainLoopCbData *>;
 
-    void WatchTableInsert(int identifier, MainLoopCbData *cb_data);
+    static void WriteToPipe(int pipe_fd, unsigned int identifier);
+    static void TimerHandler(int sig, siginfo_t *si, void *uc);
+
     void TimeoutTableInsert(unsigned int identifier, MainLoopCbData *cb_data);
-    void IdleTableInsert(MainLoopCbData *cb_data);
-    void CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
-    void CheckTimeout(pollfd pfd, short int event);
+    bool CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
+    bool CheckTimeout(pollfd pfd, short int event);
     void CheckIdle(pollfd pfd, short int event);
-    void SetTimer(int interval, unsigned int timeout_id);
+    int SetTimer(int interval, unsigned int timeout_id);
 
     WatchMap watch_table;
     TimeoutMap timeout_table;
@@ -101,6 +81,5 @@ class MainLoopHandler {
     int idle_pipe[2];
 
     bool is_running;
-    bool is_idle;
 };
 }  // namespace aitt

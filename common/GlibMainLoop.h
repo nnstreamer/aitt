@@ -15,39 +15,27 @@
  */
 #pragma once
 
-#include <AittTypes.h>
 #include <glib.h>
 
-#include <functional>
 #include <map>
 #include <mutex>
 
+#include "MainLoopIface.h"
+
 namespace aitt {
 
-class MainLoopHandler {
+class GlibMainLoop : public MainLoopIface {
   public:
-    enum MainLoopResult {
-        OK,
-        ERROR,
-        REMOVED,
-        HANGUP,
-    };
-    struct MainLoopData {
-        virtual ~MainLoopData() = default;
-    };
-    using mainLoopCB = std::function<void(MainLoopResult result, int fd, MainLoopData *data)>;
+    GlibMainLoop();
+    ~GlibMainLoop();
 
-    MainLoopHandler();
-    ~MainLoopHandler();
-
-    static void AddIdle(MainLoopHandler *handle, const mainLoopCB &cb, MainLoopData *user_data);
-
-    void Run();
-    bool Quit();
-    void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data);
-    MainLoopData *RemoveWatch(int fd);
-    unsigned int AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *user_data);
-    void RemoveTimeout(unsigned int id);
+    void Run() override;
+    bool Quit() override;
+    void AddIdle(const mainLoopCB &cb, MainLoopData *user_data) override;
+    void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data) override;
+    MainLoopData *RemoveWatch(int fd) override;
+    unsigned int AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *user_data) override;
+    void RemoveTimeout(unsigned int id) override;
 
   private:
     struct MainLoopCbData {
@@ -60,8 +48,7 @@ class MainLoopHandler {
     };
     using CallbackMap = std::map<int, std::pair<GSource *, MainLoopCbData *>>;
 
-    static void AddIdle(MainLoopCbData *, GDestroyNotify);
-    static gboolean IdlerHandler(gpointer user_data);
+    static gboolean CallbackHandler(gpointer user_data);
     static gboolean EventHandler(GIOChannel *src, GIOCondition cond, gpointer user_data);
     static void DestroyNotify(gpointer data);
 

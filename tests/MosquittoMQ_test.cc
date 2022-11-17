@@ -50,14 +50,9 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
                         [](aitt::MSG *handle, const std::string &topic, const void *msg,
                               const int szmsg, void *cbdata) {},
                         user_data);
-                  mainLoop.AddTimeout(
-                        10,
-                        [&](MainLoopHandler::MainLoopResult result, int fd,
-                              MainLoopHandler::MainLoopData *data) {
-                            MQTest *test = static_cast<MQTest *>(user_data);
-                            test->ToggleReady();
-                        },
-                        nullptr);
+
+                  MQTest *test = static_cast<MQTest *>(user_data);
+                  test->ToggleReady();
               },
               static_cast<void *>(this));
 
@@ -65,10 +60,10 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         mq.Publish("MQ_TEST_TOPIC1", TEST_MSG, sizeof(TEST_MSG));
 
         mainLoop.AddTimeout(
-              100,
+              CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
               },
               nullptr);
 

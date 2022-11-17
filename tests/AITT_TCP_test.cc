@@ -61,13 +61,11 @@ class AITTTCPTest : public testing::Test, public AittTests {
             aitt.Publish("test/value2", dump_msg, 1600, protocol);
             aitt.Publish("test/value3", dump_msg, 1600, protocol);
 
-            mainLoop.AddTimeout(
-                  100,
+            mainLoop.AddTimeout(CHECK_INTERVAL,
                   [&](MainLoopHandler::MainLoopResult result, int fd,
-                        MainLoopHandler::MainLoopData *data) {
-                      ReadyCheck(static_cast<AittTests *>(this));
-                  },
-                  nullptr);
+                        MainLoopHandler::MainLoopData *data) -> int {
+                      return ReadyCheck(static_cast<AittTests *>(this));
+                  });
             IterateEventLoop();
 
             ASSERT_TRUE(ready);
@@ -105,13 +103,11 @@ TEST_F(AITTTCPTest, TCP_Wildcards1_Anytime)
         aitt.Publish("test/step2/value1", dump_msg, 1600, AITT_TYPE_TCP);
         aitt.Publish("test/step2/value1", dump_msg, 1600, AITT_TYPE_TCP);
 
-        mainLoop.AddTimeout(
-              100,
+        mainLoop.AddTimeout(CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
-              },
-              nullptr);
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              });
         IterateEventLoop();
 
         ASSERT_TRUE(ready);

@@ -108,13 +108,11 @@ class AITTRRTest : public testing::Test, public AittTests {
             }
         }
 
-        mainLoop.AddTimeout(
-              100,
+        mainLoop.AddTimeout(CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
-              },
-              nullptr);
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              });
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -128,6 +126,8 @@ class AITTRRTest : public testing::Test, public AittTests {
         bool sub_ok, reply1_ok, reply2_ok;
         sub_ok = reply1_ok = reply2_ok = false;
 
+        bool connect1 = false;
+
         AITT sub_aitt(clientId + "sub", LOCAL_IP, AittOption(true, false));
         sub_aitt.SetConnectionCallback([&](AITT &handle, int status, void *user_data) {
             if (status != AITT_CONNECTED)
@@ -138,6 +138,7 @@ class AITTRRTest : public testing::Test, public AittTests {
                       sub_aitt.SendReply(msg, reply.c_str(), reply.size());
                       sub_ok = true;
                   });
+            connect1 = true;
         });
         sub_aitt.Connect();
 
@@ -147,6 +148,10 @@ class AITTRRTest : public testing::Test, public AittTests {
                   if (status != AITT_CONNECTED)
                       return;
 
+                  usleep(CHECK_INTERVAL * SLEEP_MS);
+                  while (!connect1) {
+                      usleep(SLEEP_MS);
+                  }
                   using namespace std::placeholders;
                   auto replyCB = std::bind(&AITTRRTest::PublishSyncInCallback, GetHandle(), &handle,
                         &reply1_ok, &reply2_ok, _1, _2, _3, _4);
@@ -164,13 +169,11 @@ class AITTRRTest : public testing::Test, public AittTests {
               this);
         aitt.Connect();
 
-        mainLoop.AddTimeout(
-              150,
+        mainLoop.AddTimeout(CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
-              },
-              nullptr);
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              });
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -211,13 +214,11 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
                     std::placeholders::_4),
               nullptr, correlation);
 
-        mainLoop.AddTimeout(
-              100,
+        mainLoop.AddTimeout(CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
-              },
-              nullptr);
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              });
         IterateEventLoop();
 
         EXPECT_TRUE(sub_ok);
@@ -277,13 +278,11 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
               },
               nullptr, correlation);
 
-        mainLoop.AddTimeout(
-              100,
+        mainLoop.AddTimeout(CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
-                  ReadyCheck(static_cast<AittTests *>(this));
-              },
-              nullptr);
+                    MainLoopHandler::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              });
         IterateEventLoop();
 
         EXPECT_TRUE(sub_ok);

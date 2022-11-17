@@ -305,15 +305,15 @@ void Module::UpdateDiscoveryMsg()
     discovery.UpdateDiscoveryMsg(NAME[secure], buf.data(), buf.size());
 }
 
-void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
+int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
       MainLoopHandler::MainLoopData *user_data)
 {
     TCPData *tcp_data = dynamic_cast<TCPData *>(user_data);
-    RET_IF(tcp_data == nullptr);
+    RETV_IF(tcp_data == nullptr, AITT_LOOP_EVENT_REMOVE);
     TCPServerData *parent_info = tcp_data->parent;
-    RET_IF(parent_info == nullptr);
+    RETV_IF(parent_info == nullptr, AITT_LOOP_EVENT_REMOVE);
     Module *impl = parent_info->impl;
-    RET_IF(impl == nullptr);
+    RETV_IF(impl == nullptr, AITT_LOOP_EVENT_REMOVE);
 
     if (result == MainLoopHandler::HANGUP) {
         ERR("The main loop hung up. Disconnect the client.");
@@ -328,7 +328,7 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
         topic = impl->GetTopicName(tcp_data);
         if (topic.empty()) {
             ERR("A topic is empty.");
-            return;
+            return AITT_LOOP_EVENT_CONTINUE;
         }
 
         szmsg = tcp_data->client->RecvSizedData((void **)&msg);
@@ -339,7 +339,7 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     } catch (std::exception &e) {
         ERR("An exception(%s) occurs", e.what());
         free(msg);
-        return;
+        return AITT_LOOP_EVENT_CONTINUE;
     }
 
     std::string correlation;
@@ -347,14 +347,16 @@ void Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
 
     parent_info->cb(topic, msg, szmsg, parent_info->cbdata, correlation);
     free(msg);
+
+    return AITT_LOOP_EVENT_CONTINUE;
 }
 
-void Module::HandleClientDisconnect(int handle)
+int Module::HandleClientDisconnect(int handle)
 {
     TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(handle));
     if (tcp_data == nullptr) {
         ERR("No watch data");
-        return;
+        return AITT_LOOP_EVENT_REMOVE;
     }
     tcp_data->parent->client_lock.lock();
     auto it = std::find(tcp_data->parent->client_list.begin(), tcp_data->parent->client_list.end(),
@@ -363,6 +365,7 @@ void Module::HandleClientDisconnect(int handle)
     tcp_data->parent->client_lock.unlock();
 
     delete tcp_data;
+    return AITT_LOOP_EVENT_REMOVE;
 }
 
 std::string Module::GetTopicName(Module::TCPData *tcp_data)
@@ -387,13 +390,13 @@ std::string Module::GetTopicName(Module::TCPData *tcp_data)
     return topic;
 }
 
-void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
+int Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
       MainLoopHandler::MainLoopData *user_data)
 {
     TCPServerData *listen_info = dynamic_cast<TCPServerData *>(user_data);
-    RET_IF(listen_info == nullptr);
+    RETV_IF(listen_info == nullptr, AITT_LOOP_EVENT_REMOVE);
     Module *impl = listen_info->impl;
-    RET_IF(impl == nullptr);
+    RETV_IF(impl == nullptr, AITT_LOOP_EVENT_REMOVE);
 
     std::unique_ptr<TCP> client;
     {
@@ -401,14 +404,14 @@ void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle
 
         auto clientIt = impl->subscribeTable.find(listen_info->topic);
         if (clientIt == impl->subscribeTable.end())
-            return;
+            return AITT_LOOP_EVENT_REMOVE;
 
         client = clientIt->second->AcceptPeer();
     }
 
     if (client == nullptr) {
         ERR("Unable to accept a peer");  // NOTE: FATAL ERROR
-        return;
+        return AITT_LOOP_EVENT_CONTINUE;
     }
 
     int client_handle = client->GetHandle();
@@ -419,6 +422,7 @@ void Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle
     ecd->client = std::move(client);
 
     impl->main_loop.AddWatch(client_handle, ReceiveData, ecd);
+    return AITT_LOOP_EVENT_CONTINUE;
 }
 
 void Module::UpdatePublishTable(const std::string &topic, const std::string &clientId,

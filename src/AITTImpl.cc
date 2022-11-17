@@ -94,12 +94,14 @@ void AITT::Impl::SetConnectionCallback(ConnectionCallback cb, void *user_data)
     }
 }
 
-void AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status,
+int AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status,
       MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data)
 {
-    RET_IF(cb == nullptr);
+    RETV_IF(cb == nullptr, AITT_LOOP_EVENT_REMOVE);
 
     cb(public_api, status, user_data);
+
+    return AITT_LOOP_EVENT_REMOVE;
 }
 
 void AITT::Impl::Connect(const std::string &host, int port, const std::string &username,
@@ -221,15 +223,16 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
           user_data, qos);
 }
 
-void AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const int datalen,
+int AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const int datalen,
       void *user_data, MainLoopHandler::MainLoopResult result, int fd,
       MainLoopHandler::MainLoopData *loop_data)
 {
-    RET_IF(cb == nullptr);
+    RETV_IF(cb == nullptr, AITT_LOOP_EVENT_REMOVE);
 
     cb(&msg, data, datalen, user_data);
 
     free(data);
+    return AITT_LOOP_EVENT_REMOVE;
 }
 
 void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
@@ -353,10 +356,11 @@ void AITT::Impl::HandleTimeout(int timeout_ms, unsigned int &timeout_id,
     timeout_id = sync_loop.AddTimeout(
           timeout_ms,
           [&, timeout_ms](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) {
+                MainLoopHandler::MainLoopData *data) -> int {
               ERR("PublishWithReplySync() timeout(%d)", timeout_ms);
               sync_loop.Quit();
               is_timeout = true;
+              return AITT_LOOP_EVENT_REMOVE;
           },
           nullptr);
 }

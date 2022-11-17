@@ -65,12 +65,13 @@ TEST(AITT_C_MANUAL, will_set_P)
         sleep(1);
         kill(pid, SIGKILL);
         handler.AddTimeout(
-              10,
+              CHECK_INTERVAL,
               [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) {
+                    MainLoopHandler::MainLoopData *data) -> int {
                   if (sub_called) {
                       handler.Quit();
                   }
+                  return AITT_LOOP_EVENT_REMOVE;
               },
               nullptr);
 

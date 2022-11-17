@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "MainLoopHandler.h"
+#include "GlibMainLoop.h"
 
 #include <glib.h>
 
@@ -21,31 +21,31 @@
 
 namespace aitt {
 
-MainLoopHandler::MainLoopHandler()
+GlibMainLoop::GlibMainLoop()
 {
     GMainContext *ctx = g_main_context_new();
     if (ctx == nullptr)
-        throw std::runtime_error("Failed to create a context");
+        throw std::runtime_error("g_main_context_new() Fail");
 
     loop = g_main_loop_new(ctx, FALSE);
     if (loop == nullptr) {
         g_main_context_unref(ctx);
-        throw std::runtime_error("Failed to create a loop");
+        throw std::runtime_error("g_main_loop_new() Fail");
     }
     g_main_context_unref(ctx);
 }
 
-MainLoopHandler::~MainLoopHandler()
+GlibMainLoop::~GlibMainLoop()
 {
     g_main_loop_unref(loop);
 }
 
-void MainLoopHandler::Run()
+void GlibMainLoop::Run()
 {
     g_main_loop_run(loop);
 }
 
-bool MainLoopHandler::Quit()
+bool GlibMainLoop::Quit()
 {
     if (g_main_loop_is_running(loop) == FALSE) {
         ERR("main loop is not running");
@@ -56,7 +56,21 @@ bool MainLoopHandler::Quit()
     return true;
 }
 
-void MainLoopHandler::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data)
+void GlibMainLoop::AddIdle(const mainLoopCB &cb, MainLoopData *user_data)
+{
+    MainLoopCbData *cb_data = new MainLoopCbData();
+    cb_data->cb = cb;
+    cb_data->data = user_data;
+    cb_data->ctx = g_main_loop_get_context(loop);
+
+    GSource *source = g_idle_source_new();
+    g_source_set_priority(source, G_PRIORITY_HIGH);
+    g_source_set_callback(source, CallbackHandler, cb_data, DestroyNotify);
+    g_source_attach(source, cb_data->ctx);
+    g_source_unref(source);
+}
+
+void GlibMainLoop::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data)
 {
     MainLoopCbData *cb_data = new MainLoopCbData();
     GMainContext *ctx = g_main_loop_get_context(loop);
@@ -78,7 +92,7 @@ void MainLoopHandler::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_
     callback_table_lock.unlock();
 }
 
-MainLoopHandler::MainLoopData *MainLoopHandler::RemoveWatch(int fd)
+GlibMainLoop::MainLoopData *GlibMainLoop::RemoveWatch(int fd)
 {
     GSource *source;
     MainLoopData *user_data = nullptr;
@@ -97,7 +111,7 @@ MainLoopHandler::MainLoopData *MainLoopHandler::RemoveWatch(int fd)
     return user_data;
 }
 
-unsigned int MainLoopHandler::AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *data)
+unsigned int GlibMainLoop::AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *data)
 {
     MainLoopCbData *cb_data = new MainLoopCbData();
     GMainContext *ctx = g_main_loop_get_context(loop);
@@ -106,14 +120,14 @@ unsigned int MainLoopHandler::AddTimeout(int interval, const mainLoopCB &cb, Mai
     cb_data->data = data;
 
     GSource *source = g_timeout_source_new(interval);
-    g_source_set_callback(source, IdlerHandler, cb_data, DestroyNotify);
+    g_source_set_callback(source, CallbackHandler, cb_data, DestroyNotify);
     unsigned int id = g_source_attach(source, cb_data->ctx);
     g_source_unref(source);
 
     return id;
 }
 
-void MainLoopHandler::RemoveTimeout(unsigned int id)
+void GlibMainLoop::RemoveTimeout(unsigned int id)
 {
     GSource *source;
     source = g_main_context_find_source_by_id(g_main_loop_get_context(loop), id);
@@ -121,42 +135,16 @@ void MainLoopHandler::RemoveTimeout(unsigned int id)
         g_source_destroy(source);
 }
 
-void MainLoopHandler::AddIdle(MainLoopHandler *handle, const mainLoopCB &cb,
-      MainLoopData *user_data)
-{
-    RET_IF(handle == nullptr);
-
-    MainLoopCbData *cb_data = new MainLoopCbData();
-    cb_data->cb = cb;
-    cb_data->data = user_data;
-    cb_data->ctx = g_main_loop_get_context(handle->loop);
-
-    AddIdle(cb_data, DestroyNotify);
-}
-
-void MainLoopHandler::AddIdle(MainLoopCbData *cb_data, GDestroyNotify destroy)
-{
-    RET_IF(cb_data->ctx == nullptr);
-
-    GSource *source = g_idle_source_new();
-    g_source_set_priority(source, G_PRIORITY_HIGH);
-    g_source_set_callback(source, IdlerHandler, cb_data, destroy);
-    g_source_attach(source, cb_data->ctx);
-    g_source_unref(source);
-}
-
-gboolean MainLoopHandler::IdlerHandler(gpointer user_data)
+gboolean GlibMainLoop::CallbackHandler(gpointer user_data)
 {
     RETV_IF(user_data == nullptr, FALSE);
 
     MainLoopCbData *cb_data = static_cast<MainLoopCbData *>(user_data);
 
-    cb_data->cb(cb_data->result, cb_data->fd, cb_data->data);
-
-    return FALSE;
+    return cb_data->cb(cb_data->result, cb_data->fd, cb_data->data);
 }
 
-gboolean MainLoopHandler::EventHandler(GIOChannel *src, GIOCondition condition, gpointer user_data)
+gboolean GlibMainLoop::EventHandler(GIOChannel *src, GIOCondition condition, gpointer user_data)
 {
     RETV_IF(user_data == nullptr, FALSE);
 
@@ -169,18 +157,18 @@ gboolean MainLoopHandler::EventHandler(GIOChannel *src, GIOCondition condition, 
         ret = FALSE;
     }
 
-    cb_data->cb(cb_data->result, cb_data->fd, cb_data->data);
+    ret &= cb_data->cb(cb_data->result, cb_data->fd, cb_data->data);
 
     return ret;
 }
 
-void MainLoopHandler::DestroyNotify(gpointer data)
+void GlibMainLoop::DestroyNotify(gpointer data)
 {
     MainLoopCbData *cb_data = static_cast<MainLoopCbData *>(data);
     delete cb_data;
 }
 
-MainLoopHandler::MainLoopCbData::MainLoopCbData() : data(nullptr), result(OK), fd(-1), ctx(nullptr)
+GlibMainLoop::MainLoopCbData::MainLoopCbData() : data(nullptr), result(OK), fd(-1), ctx(nullptr)
 {
 }
 
