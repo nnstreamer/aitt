@@ -60,11 +60,4 @@ public interface TransportHandler extends ModuleHandler {
      * @return returns details of self device
      */
     byte[] getPublishData();
-
-    /**
-     * Interface to implement handler data callback mechanism
-     */
-    interface HandlerDataCallback {
-        void pushHandlerData(byte[] data);
-    }
 }

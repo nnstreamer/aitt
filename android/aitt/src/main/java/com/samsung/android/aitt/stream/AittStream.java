@@ -15,6 +15,8 @@
  */
 package com.samsung.android.aitt.stream;
 
+import com.samsung.android.aitt.handler.ModuleHandler;
+
 public interface AittStream {
 
     enum StreamRole {
@@ -22,13 +24,23 @@ public interface AittStream {
         SUBSCRIBER
     }
 
+    enum StreamState {
+        INIT,
+        READY,
+        PLAYING
+    }
+
     void setConfig();
 
     void start();
+
+    boolean publish(String topic, String ip, int port, byte[] message);
+
+    void disconnect();
 
     void stop();
 
     void setStateCallback();
 
-    void setReceiveCallback();
+    void setReceiveCallback(ModuleHandler.HandlerDataCallback handlerDataCallback);
 }

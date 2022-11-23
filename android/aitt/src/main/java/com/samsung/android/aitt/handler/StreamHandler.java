@@ -22,7 +22,7 @@ import com.samsung.android.aitt.stream.AittStream;
 
 public class StreamHandler implements ModuleHandler {
 
-    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role) {
+    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
         // TODO: Change this function properly after refactoring WebRTC modules.
         return null;
     }

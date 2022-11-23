@@ -15,6 +15,8 @@
  */
 package com.samsung.android.aitt.handler;
 
+import android.content.Context;
+
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
 import com.samsung.android.aitt.stream.RTSPStream;
@@ -22,7 +24,7 @@ import com.samsung.android.aitt.stream.RTSPStream;
 public class RTSPHandler extends StreamHandler {
 
     @Override
-    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role) {
+    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
         // TODO: implement this function.
         return new RTSPStream();
     }

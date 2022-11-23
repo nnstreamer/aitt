@@ -27,11 +27,14 @@ import java.util.List;
 /**
  * Class to implement WebRTC server related functionalities
  */
-public class WebRTCServer {
+public final class WebRTCServer {
+
     private static final String TAG = "WebRTCServer";
+
     private final Context appContext;
-    private final WebRTC.ReceiveDataCallback dataCallback;
     private final List<WebRTC> connectionList = new ArrayList<>();
+
+    private WebRTC.ReceiveDataCallback dataCallback;
     private ServerSocket serverSocket = null;
     private ServerThread serverThread = null;
     private Thread thread;
@@ -39,11 +42,18 @@ public class WebRTCServer {
     /**
      * WebRTCServer constructor to create its instance
      *
-     * @param appContext   Application context of the app creating WebRTCServer instance
+     * @param appContext Application context of the app creating WebRTCServer instance
+     */
+    public WebRTCServer(Context appContext) {
+        this.appContext = appContext;
+    }
+
+    /**
+     * Setter to set a WebRTC ReceiveDataCallback
+     *
      * @param dataCallback Data callback object to create call back mechanism
      */
-    public WebRTCServer(Context appContext, WebRTC.ReceiveDataCallback dataCallback) {
-        this.appContext = appContext;
+    public void setDataCallback(WebRTC.ReceiveDataCallback dataCallback) {
         this.dataCallback = dataCallback;
     }
 
@@ -53,6 +63,11 @@ public class WebRTCServer {
      * @return Returns Port number on success and -1 on failure
      */
     public int start() {
+        if (dataCallback == null) {
+            Log.e(TAG, "Data callback is null.");
+            return -1;
+        }
+
         try {
             serverSocket = new ServerSocket(0);
         } catch (IOException e) {

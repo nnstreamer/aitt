@@ -15,6 +15,8 @@
  */
 package com.samsung.android.aitt.stream;
 
+import com.samsung.android.aitt.handler.ModuleHandler;
+
 public class RTSPStream implements AittStream {
 
     @Override
@@ -24,6 +26,17 @@ public class RTSPStream implements AittStream {
 
     @Override
     public void start() {
+        // TODO: implement this function.
+    }
+
+    @Override
+    public boolean publish(String topic, String ip, int port, byte[] message) {
+        // TODO: implement this function.
+        return true;
+    }
+
+    @Override
+    public void disconnect() {
         // TODO: implement this function.
     }
 
@@ -46,7 +59,7 @@ public class RTSPStream implements AittStream {
     }
 
     @Override
-    public void setReceiveCallback() {
+    public void setReceiveCallback(ModuleHandler.HandlerDataCallback handlerDataCallback) {
         // TODO: implement this function.
     }
 }

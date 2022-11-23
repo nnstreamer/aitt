@@ -15,105 +15,40 @@
  */
 package com.samsung.android.aitt.handler;
 
+import static com.samsung.android.aitt.stream.WebRTCStream.createPublisherStream;
+import static com.samsung.android.aitt.stream.WebRTCStream.createSubscriberStream;
+
 import android.content.Context;
+import android.util.Log;
 
-import com.google.flatbuffers.FlexBuffersBuilder;
 import com.samsung.android.aitt.Aitt;
-import com.samsung.android.aitt.Definitions;
-import com.samsung.android.modules.webrtc.WebRTC;
-import com.samsung.android.modules.webrtc.WebRTCServer;
+import com.samsung.android.aitt.stream.AittStream;
 
-import java.nio.ByteBuffer;
+import java.security.InvalidParameterException;
 
-public class WebRTCHandler implements TransportHandler {
+public final class WebRTCHandler extends StreamHandler {
 
-    private Context appContext;
-    private String ip;
-    private byte[] publishData;
-    private WebRTC webrtc;
-    private WebRTCServer ws;
-    //ToDo - For now using sample app parameters, later fetch frameWidth & frameHeight from app
-    private final Integer frameWidth = 640;
-    private final Integer frameHeight = 480;
+    private static final String TAG = "WebRTCHandler";
 
-    public WebRTCHandler() {
-        //ToDo : Copy jni interface and use to communicate with JNI
+    @Override
+    public void setAppContext(Context context) {
     }
 
     @Override
-    public void setAppContext(Context appContext) {
-        this.appContext = appContext;
-    }
+    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
+        if (protocol != Aitt.Protocol.WEBRTC)
+            throw new InvalidParameterException("Invalid protocol");
 
-    @Override
-    public void setSelfIP(String ip) {
-        this.ip = ip;
-    }
-
-    @Override
-    public void subscribe(String topic, HandlerDataCallback handlerDataCallback) {
-        WebRTC.ReceiveDataCallback cb = handlerDataCallback::pushHandlerData;
-        ws = new WebRTCServer(appContext, cb);
-        int serverPort = ws.start();
-        if (serverPort < 0) {
-            throw new IllegalArgumentException("Failed to start webRTC server-socket");
-        }
-
-        publishData = wrapPublishData(topic, serverPort);
-    }
-
-    @Override
-    public byte[] getPublishData() {
-        return publishData;
-    }
-
-    /**
-     * Method to wrap topic, device IP address, webRTC server instance port number for publishing
-     *
-     * @param topic      Topic to which the application has subscribed to
-     * @param serverPort Port number of the WebRTC server instance
-     * @return Byte data wrapped, contains topic, device IP, webRTC server port number
-     */
-    private byte[] wrapPublishData(String topic, int serverPort) {
-        FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
-        {
-            int smap = fbb.startMap();
-            fbb.putString(Definitions.STATUS, Definitions.JOIN_NETWORK);
-            fbb.putString("host", ip);
-            {
-                int smap1 = fbb.startMap();
-                fbb.putInt("protocol", Aitt.Protocol.WEBRTC.getValue());
-                fbb.putInt("port", serverPort);
-                fbb.endMap(topic, smap1);
+        try {
+            if (role == AittStream.StreamRole.SUBSCRIBER) {
+                return createSubscriberStream(topic, role, context);
+            } else {
+                return createPublisherStream(topic, role, context);
             }
-            fbb.endMap(null, smap);
+        } catch (Exception e) {
+            Log.e(TAG, "Fail to create an AittStream instance.");
         }
-        ByteBuffer buffer = fbb.finish();
-        byte[] data = new byte[buffer.remaining()];
-        buffer.get(data, 0, data.length);
-        return data;
-    }
 
-    @Override
-    public void publish(String topic, String ip, int port, byte[] message) {
-        if (webrtc == null) {
-            webrtc = new WebRTC(appContext);
-            webrtc.connect(ip, port);
-        }
-        if (topic.endsWith(Definitions.RESPONSE_POSTFIX)) {
-            webrtc.sendMessageData(message);
-        } else {
-            webrtc.sendVideoData(message, frameWidth, frameHeight);
-        }
-    }
-
-    @Override
-    public void unsubscribe() {
-        ws.stop();
-    }
-
-    @Override
-    public void disconnect() {
-
+        return null;
     }
 }

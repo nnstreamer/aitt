@@ -24,4 +24,11 @@ public interface ModuleHandler {
      * @param appContext application context
      */
     void setAppContext(Context appContext);
+
+    /**
+     * Interface to implement handler data callback mechanism
+     */
+    interface HandlerDataCallback {
+        void pushHandlerData(byte[] data);
+    }
 }

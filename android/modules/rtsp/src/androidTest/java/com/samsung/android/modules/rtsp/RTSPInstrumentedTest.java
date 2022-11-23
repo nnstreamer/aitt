@@ -54,7 +54,7 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream subscriber = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, SUBSCRIBER);
-            subscriber.setReceiveCallback(/* TODO */);
+            subscriber.setReceiveCallback(/* TODO */null);
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);

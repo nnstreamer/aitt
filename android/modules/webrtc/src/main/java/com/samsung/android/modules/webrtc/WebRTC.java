@@ -65,14 +65,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * WebRTC class to implement webRTC functionalities
  */
-public class WebRTC {
+public final class WebRTC {
+
     public static final String VIDEO_TRACK_ID = "ARDAMSv0";
     public static final String EOF_MESSAGE = "EOF";
     public static final int MAX_MESSAGE_SIZE = 32768;
+
     private static final String TAG = "WebRTC";
     private static final String CANDIDATE = "candidate";
+
     private final Context appContext;
     private final boolean isReceiver;
+
     private java.net.Socket socket;
     private boolean isInitiator;
     private boolean isChannelReady;
@@ -421,8 +425,7 @@ public class WebRTC {
                             buffer.data.rewind();
                             buffer.data.get(array);
                             dataCallback.pushData(array);
-                        }
-                        else {
+                        } else {
                             String message = StandardCharsets.UTF_8.decode(buffer.data).toString();
                             handlelargeMessage(message, buffer);
                         }
@@ -485,11 +488,10 @@ public class WebRTC {
      *
      * @param message message to be sent in byte format
      */
-    public void sendMessageData(byte[] message) {
-        if (message.length < MAX_MESSAGE_SIZE ) {
+    public boolean sendMessageData(byte[] message) {
+        if (message.length < MAX_MESSAGE_SIZE) {
             ByteBuffer data = ByteBuffer.wrap(message);
-            localDataChannel.send(new DataChannel.Buffer(data, false));
-            return;
+            return localDataChannel.send(new DataChannel.Buffer(data, false));
         }
 
         ByteBuffer chunkData;
@@ -504,7 +506,7 @@ public class WebRTC {
         }
 
         chunkData = ByteBuffer.wrap(EOF_MESSAGE.getBytes(StandardCharsets.UTF_8));
-        localDataChannel.send(new DataChannel.Buffer(chunkData, false));
+        return localDataChannel.send(new DataChannel.Buffer(chunkData, false));
     }
 
     /**

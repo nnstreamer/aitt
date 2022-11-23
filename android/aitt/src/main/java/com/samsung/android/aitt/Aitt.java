@@ -27,6 +27,7 @@ import androidx.annotation.Nullable;
 
 import com.google.flatbuffers.FlexBuffers;
 import com.samsung.android.aitt.stream.AittStream;
+import com.samsung.android.aitt.stream.WebRTCStream;
 import com.samsung.android.aittnative.JniInterface;
 
 import java.nio.ByteBuffer;
@@ -45,14 +46,17 @@ import java.util.Map;
  * 6. API to set MQTT Connection Callback
  */
 public class Aitt {
+
     private static final String TAG = "AITT_ANDROID";
     private static final String INVALID_TOPIC = "Invalid topic";
+
     private final Map<String, HostTable> publishTable = new HashMap<>();
     private final Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
     private final JniInterface mJniInterface;
     private final String ip;
     private final Context appContext;
     private final long instance;
+
     private Map<String, ArrayList<SubscribeCallback>> subscribeCallbacks = new HashMap<>();
     private Map<String, Long> aittSubId = new HashMap<>();
     private ConnectionCallback connectionCallback = null;
@@ -289,9 +293,8 @@ public class Aitt {
                                 Log.e(TAG, "Pair for port: " + port + "is null.");
                                 continue;
                             }
-                            Object transportHandler = protocolPair.second;
                             if (protocolPair.first == protocol)
-                                publishHandler(protocol, portTable, topic, transportHandler, hostIp, port, message);
+                                publishHandler(protocol, portTable, topic, protocolPair.second, hostIp, port, message);
                         }
                     }
                 }
@@ -301,32 +304,77 @@ public class Aitt {
         }
     }
 
+    // TODO: Update publish with proper stream interface.
+    public boolean publish(AittStream stream, String topic, byte[] message, Protocol protocol) {
+        if (stream == null) {
+            Log.e(TAG, "Stream is null.");
+            return false;
+        }
+
+        try {
+            synchronized (this) {
+                if (!publishTable.containsKey(topic)) {
+                    Log.e(TAG, "Invalid publish request over unsubscribed topic");
+                    return false;
+                }
+                HostTable hostTable = publishTable.get(topic);
+                if (hostTable == null) {
+                    Log.d(TAG, "Host table for topic [" + topic + "] is null.");
+                    return false;
+                }
+                for (String hostIp : hostTable.hostMap.keySet()) {
+                    PortTable portTable = hostTable.hostMap.get(hostIp);
+                    if (portTable == null) {
+                        Log.e(TAG, "Port table for host [" + hostIp + "] is null.");
+                        continue;
+                    }
+                    for (Integer port : portTable.portMap.keySet()) {
+                        Pair<Protocol, Object> protocolPair = portTable.portMap.get(port);
+                        if (protocolPair == null) {
+                            Log.e(TAG, "Pair for port: " + port + "is null.");
+                            continue;
+                        }
+                        if (protocolPair.first != protocol) {
+                            Log.d(TAG, "protocol is not matched.");
+                            continue;
+                        }
+
+                        return stream.publish(topic, hostIp, port, message);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error during publish", e);
+        }
+
+        return false;
+    }
+
     /**
      * Method to create transportHandler and publish message based on protocol
      *
-     * @param protocol               protocol using which data needs to be published
-     * @param portTable              portTable has information about port and associated protocol with transport Handler object
-     * @param topic                  The topic to which data is published
-     * @param transportHandlerObject transportHandler object used to publish message
-     * @param ip                     IP address of the destination
-     * @param port                   Port number of the destination
-     * @param message                Data to be transferred over WebRTC
+     * @param protocol            protocol using which data needs to be published
+     * @param portTable           portTable has information about port and associated protocol with transport Handler object
+     * @param topic               The topic to which data is published
+     * @param moduleHandlerObject transportHandler object used to publish message
+     * @param ip                  IP address of the destination
+     * @param port                Port number of the destination
+     * @param message             Data to be transferred over WebRTC
      */
-    private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object transportHandlerObject, String ip, int port, byte[] message) {
+    private void publishHandler(Protocol protocol, PortTable portTable, String topic, Object moduleHandlerObject, String ip, int port, byte[] message) {
         // TODO: Validate protocol type.
         TransportHandler transportHandler;
-        if (transportHandlerObject == null) {
+        if (moduleHandlerObject == null) {
             transportHandler = (TransportHandler) createModuleHandler(protocol);
             if (transportHandler != null)
                 transportHandler.setAppContext(appContext);
             portTable.portMap.replace(port, new Pair<>(protocol, transportHandler));
         } else {
-            transportHandler = (TransportHandler) transportHandlerObject;
+            transportHandler = (TransportHandler) moduleHandlerObject;
         }
 
-        if (transportHandler != null) {
+        if (transportHandler != null)
             transportHandler.publish(topic, ip, port, message);
-        }
     }
 
     /**
@@ -664,6 +712,18 @@ public class Aitt {
                 return;
             }
 
+            // TODO: Handle multiple ports with the same topic.
+            if (portTable.portMap.isEmpty() == false) {
+                StringBuilder portLists = new StringBuilder();
+                for (int p : portTable.portMap.keySet()) {
+                    portLists.append(p);
+                    portLists.append(", ");
+                }
+                Log.d(TAG, "Existing ports list: " + portLists);
+                portTable.portMap.clear();
+            }
+
+            Log.d(TAG, "[updatePublishTable] port " + port + "is added. (Topic,Host) = (" + topic + "," + host + ")");
             portTable.portMap.put(port, new Pair<>(protocol, null));
         }
     }
@@ -707,15 +767,23 @@ public class Aitt {
     }
 
     public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) {
-        // TODO: update this function.
         ModuleHandler moduleHandler = createModuleHandler(protocol);
+        if (moduleHandler != null && protocol == Protocol.WEBRTC) {
+            WebRTCStream webRTCStream = (WebRTCStream) ((WebRTCHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+            if (webRTCStream != null && streamRole == AittStream.StreamRole.SUBSCRIBER) {
+                webRTCStream.setSelfIP(ip);
+                webRTCStream.setJNIInterface(mJniInterface);
+            }
+
+            return webRTCStream;
+        }
         if (moduleHandler != null && protocol == Protocol.RTSP)
-            return ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole);
+            return ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+
         return null;
     }
 
     public void destroyStream(AittStream aittStream) {
         // TODO: implement this function.
     }
-
 }
