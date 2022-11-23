@@ -42,8 +42,8 @@ private:
 
     virtual ~AittNativeInterface(void);
 
-    void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
-                                  const void *msg, const int szmsg);
+    void DiscoveryMessageCallback(const std::string &topic, const std::string &clientId,
+                                  const std::string &status, const void *msg, const int szmsg);
 
     static std::string GetStringUTF(JNIEnv *env, jstring str);
 
@@ -75,6 +75,9 @@ public:
     static int SetDiscoveryCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle, jstring topic);
 
     static void RemoveDiscoveryCallback(JNIEnv *env, jobject jniInterfaceObject, jlong handle, jint cbHandle);
+
+    static void UpdateDiscoveryMessage(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                                       jstring topic, jbyteArray data, jlong datalen);
 
 private:
     AITT aitt;

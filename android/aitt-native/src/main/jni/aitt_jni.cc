@@ -378,14 +378,14 @@ jint AittNativeInterface::SetDiscoveryCallback(JNIEnv *env, jobject jni_interfac
     }
 
     int cb = instance->discovery->AddDiscoveryCB(_topic,
-                std::bind(&AittNativeInterface::DiscoveryMessageCallback, instance, std::placeholders::_1,
-                std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+                std::bind(&AittNativeInterface::DiscoveryMessageCallback, instance, _topic,
+                std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
     return (jint) cb;
 }
 
 /**
- * JNI API to set the discovery callback with aitt C++
+ * JNI API to remove the discovery callback with aitt C++
  * @param env JNI interface pointer
  * @param jni_interface_object JNI interface object
  * @param handle AittNativeInterface object
@@ -402,8 +402,41 @@ void AittNativeInterface::RemoveDiscoveryCallback(JNIEnv *env, jobject jni_inter
     instance->discovery->RemoveDiscoveryCB(cbHandle);
 }
 
-void AittNativeInterface::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
-      const void *msg, const int szmsg)
+/**
+ * JNI API to update discovery message
+ * @param env JNI interface pointer
+ * @param jni_interface_object JNI interface object
+ * @param handle AittNativeInterface object
+ * @param topic String for which discovery message to be updated
+ * @param data ByteArray containing discovery message
+ * @param data_len int length of discovery message
+ */
+void AittNativeInterface::UpdateDiscoveryMessage(JNIEnv *env, jobject jni_interface_object,
+      jlong handle, jstring topic, jbyteArray data, jlong data_len)
+{
+    if (!CheckParams(env, jni_interface_object)) {
+        return;
+    }
+
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    std::string _topic = GetStringUTF(env, topic);
+    if (_topic.empty()) {
+        return;
+    }
+
+    int num_bytes = (int)data_len;
+    const char *cdata = (char *)env->GetByteArrayElements(data, nullptr);
+    if (cdata == nullptr) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to get byte array elements");
+        return;
+    }
+    const void *_data = reinterpret_cast<const void *>(cdata);
+
+    instance->discovery->UpdateDiscoveryMsg(_topic, _data, num_bytes);
+}
+
+void AittNativeInterface::DiscoveryMessageCallback(const std::string &topic, const std::string &clientId,
+      const std::string &status, const void *msg, const int szmsg)
 {
     JNIEnv *env;
     int JNIStatus = cbContext.jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
@@ -413,6 +446,13 @@ void AittNativeInterface::DiscoveryMessageCallback(const std::string &clientId, 
     }
 
     if (env != nullptr) {
+        jstring _topic = env->NewStringUTF(topic.c_str());
+        if (env->ExceptionCheck() == true) {
+            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
+            cbContext.jvm->DetachCurrentThread();
+            return;
+        }
+
         jstring _status = env->NewStringUTF(status.c_str());
         if (env->ExceptionCheck() == true) {
             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
@@ -429,7 +469,7 @@ void AittNativeInterface::DiscoveryMessageCallback(const std::string &clientId, 
             return;
         }
 
-        env->CallVoidMethod(cbObject, cbContext.discoveryCallbackMethodID, _status, array);
+        env->CallVoidMethod(cbObject, cbContext.discoveryCallbackMethodID, _topic, _status, array);
         if (env->ExceptionCheck() == true) {
             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
             cbContext.jvm->DetachCurrentThread();
@@ -492,7 +532,7 @@ jlong AittNativeInterface::Init(JNIEnv *env, jobject jni_interface_object, jstri
         cbContext.connectionCallbackMethodID =
                 env->GetMethodID(callbackClass, "connectionStatusCallback", "(I)V");
         cbContext.discoveryCallbackMethodID =
-                env->GetMethodID(callbackClass, "discoveryMessageCallback", "(Ljava/lang/String;[B)V");
+                env->GetMethodID(callbackClass, "discoveryMessageCallback", "(Ljava/lang/String;Ljava/lang/String;[B)V");
         env->DeleteLocalRef(callbackClass);
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
@@ -529,7 +569,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
             {"disconnectJNI",               "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::Disconnect)},
             {"setConnectionCallbackJNI",    "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::SetConnectionCallback)},
             {"setDiscoveryCallbackJNI",     "(JLjava/lang/String;)I",                   reinterpret_cast<void *>(AittNativeInterface::SetDiscoveryCallback)},
-            {"removeDiscoveryCallbackJNI",  "(JI)V",                                    reinterpret_cast<void *>(AittNativeInterface::RemoveDiscoveryCallback)}};
+            {"removeDiscoveryCallbackJNI",  "(JI)V",                                    reinterpret_cast<void *>(AittNativeInterface::RemoveDiscoveryCallback)},
+            {"updateDiscoveryMessageJNI",   "(JLjava/lang/String;[BJ)V",                reinterpret_cast<void *>(AittNativeInterface::UpdateDiscoveryMessage)}};
     if (env->RegisterNatives(klass, aitt_jni_methods,
                              sizeof(aitt_jni_methods) / sizeof(aitt_jni_methods[0]))) {
         env->DeleteLocalRef(klass);

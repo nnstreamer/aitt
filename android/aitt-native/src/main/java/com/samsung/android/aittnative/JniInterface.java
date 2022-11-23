@@ -18,6 +18,10 @@ package com.samsung.android.aittnative;
 import android.util.Log;
 import android.util.Pair;
 
+import com.google.flatbuffers.FlexBuffers;
+import com.google.flatbuffers.FlexBuffersBuilder;
+
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -176,7 +180,7 @@ public class JniInterface {
      * @param discoveryMessage ByteArray containing discovery information
      */
     public void updateDiscoveryMessage(String topic, byte[] discoveryMessage) {
-        //ToDO: Finalize discovery message format
+        updateDiscoveryMessageJNI(instance, topic, discoveryMessage, discoveryMessage.length);
     }
 
     /**
@@ -210,8 +214,13 @@ public class JniInterface {
         }
     }
 
-    private void discoveryMessageCallback(String status, byte[] payload) {
-        //ToDo: Finalize discovery message format. The topic should include topic information to find the right callback.
+    void discoveryMessageCallback(String topic, String status, byte[] message) {
+        synchronized (this) {
+            Pair<Integer, JniDiscoveryCallback> pair = discoveryCallbacks.get(topic);
+            if (pair != null) {
+                pair.second.onDiscoveryMessageReceived(status, message);
+            }
+        }
     }
 
     /**
@@ -259,6 +268,9 @@ public class JniInterface {
 
     /* Native API for removing discovery callback */
     private native void removeDiscoveryCallbackJNI(long instance, int cbHandle);
+
+    /* Native API for updating discovery message */
+    private native void updateDiscoveryMessageJNI(long instance, final String topic, final byte[] data, long datalen);
 
     /* Native API for publishing to a topic */
     private native void publishJNI(long instance, final String topic, final byte[] data, long datalen, int protocol, int qos, boolean retain);
