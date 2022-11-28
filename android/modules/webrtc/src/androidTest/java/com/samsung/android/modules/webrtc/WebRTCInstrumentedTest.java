@@ -75,6 +75,7 @@ public class WebRTCInstrumentedTest {
 
         try {
             String ip = wifiIpAddress();
+            Log.d(TAG, "Final WiFi IP = " + ip);
 
             Aitt serverSubscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID, ip, true);
             serverSubscriber.connect(brokerIp, PORT);
@@ -117,6 +118,10 @@ public class WebRTCInstrumentedTest {
 
             Looper.loop();
             Log.i(TAG, "A looper is finished.");
+
+            clientPublisherStream.disconnect();
+
+            serverSubscriberStream.stop();
         } catch (Exception e) {
             fail("Failed testWebRTCBasicStreaming, (" + e + ")");
         }
@@ -128,6 +133,7 @@ public class WebRTCInstrumentedTest {
         LinkProperties linkProperties = connectivityManager.getLinkProperties(currentNetwork);
         for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
             String targetIp = linkAddress.toString();
+            Log.d(TAG, "Searched IP = " + targetIp);
             if (targetIp.contains("192.168")) {
                 StringTokenizer tokenizer = new StringTokenizer(targetIp, "/");
                 if (tokenizer.hasMoreTokens())

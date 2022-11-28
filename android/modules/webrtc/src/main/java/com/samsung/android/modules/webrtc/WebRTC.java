@@ -101,6 +101,9 @@ public final class WebRTC {
      * @param appContext Application context creating webRTC instance
      */
     public WebRTC(Context appContext) {
+        if (appContext == null)
+            throw new IllegalArgumentException("App context is null.");
+
         this.appContext = appContext;
         this.isReceiver = false;
     }
@@ -123,7 +126,10 @@ public final class WebRTC {
      *
      * @param cb aitt callback registered to receive a webrtc data
      */
-    public void registerDataCallback(ReceiveDataCallback cb) {
+    void registerDataCallback(ReceiveDataCallback cb) {
+        if (cb == null)
+            throw new IllegalArgumentException("Callback is null.");
+
         this.dataCallback = cb;
     }
 
@@ -156,7 +162,7 @@ public final class WebRTC {
     /**
      * Method to establish a socket connection with peer node
      */
-    public void connect() {
+    void connect() {
         initialize();
     }
 
@@ -170,6 +176,7 @@ public final class WebRTC {
         this.receiverIP = receiverIP;
         this.receiverPort = receiverPort;
         initialize();
+        Log.i(TAG, "A WebRTC client is connected.");
     }
 
     /**
@@ -180,6 +187,8 @@ public final class WebRTC {
 
         initializePeerConnectionFactory();
         initializePeerConnections();
+        Log.i(TAG, "Peer connections are initialized.");
+
         if (!isReceiver) {
             createVideoTrack();
             addVideoTrack();
@@ -427,7 +436,7 @@ public final class WebRTC {
                             dataCallback.pushData(array);
                         } else {
                             String message = StandardCharsets.UTF_8.decode(buffer.data).toString();
-                            handlelargeMessage(message, buffer);
+                            handleLargeMessage(message, buffer);
                         }
                     }
                 });
@@ -453,7 +462,7 @@ public final class WebRTC {
         return factory.createPeerConnection(rtcConfig, pcConstraints, pcObserver);
     }
 
-    private void handlelargeMessage(String message, DataChannel.Buffer buffer) {
+    private void handleLargeMessage(String message, DataChannel.Buffer buffer) {
         if (EOF_MESSAGE.equals(message)) {
             Log.d(TAG, "Byte array size: " + baos.size());
             dataCallback.pushData(baos.toByteArray());
@@ -628,6 +637,7 @@ public final class WebRTC {
 
             createSocket();
             invokeSendMessage();
+            Log.i(TAG, "The SDP thread of WebRTC client started.");
 
             while (isRunning) {
                 try {
@@ -703,6 +713,7 @@ public final class WebRTC {
                 }
                 outStream = new ObjectOutputStream(socket.getOutputStream());
                 inputStream = new ObjectInputStream(socket.getInputStream());
+                Log.i(TAG, "A WebRTC client socket and input/output streams are created.");
             } catch (Exception e) {
                 Log.e(TAG, "Error during create socket", e);
             }

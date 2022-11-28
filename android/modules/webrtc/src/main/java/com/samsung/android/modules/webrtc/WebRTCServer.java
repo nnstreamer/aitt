@@ -45,6 +45,9 @@ public final class WebRTCServer {
      * @param appContext Application context of the app creating WebRTCServer instance
      */
     public WebRTCServer(Context appContext) {
+        if (appContext == null)
+            throw new IllegalArgumentException("App context is null.");
+
         this.appContext = appContext;
     }
 
