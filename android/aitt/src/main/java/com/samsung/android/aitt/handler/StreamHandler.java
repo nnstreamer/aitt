@@ -22,11 +22,23 @@ import com.samsung.android.aitt.stream.AittStream;
 
 public class StreamHandler implements ModuleHandler {
 
+    /**
+     * Method to create and return stream object
+     * @param protocol Streaming protocol
+     * @param topic String topic to which subscribe/publish is called
+     * @param role Role of the stream object
+     * @param context context of the application
+     * @return returns stream object
+     */
     AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
         // TODO: Change this function properly after refactoring WebRTC modules.
         return null;
     }
 
+    /**
+     * Method to set application context to stream object
+     * @param appContext application context
+     */
     @Override
     public void setAppContext(Context appContext) {
         // TODO: implement this function.

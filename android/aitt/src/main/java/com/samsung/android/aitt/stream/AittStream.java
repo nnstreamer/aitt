@@ -15,32 +15,71 @@
  */
 package com.samsung.android.aitt.stream;
 
-import com.samsung.android.aitt.handler.ModuleHandler;
-
 public interface AittStream {
 
+    /**
+     * Role of the stream object
+     */
     enum StreamRole {
         PUBLISHER,
         SUBSCRIBER
     }
 
+    /**
+     * State of the stream object
+     */
     enum StreamState {
         INIT,
         READY,
         PLAYING
     }
 
+    /**
+     * Interface to implement handler data callback mechanism
+     */
+    interface StreamDataCallback {
+        void pushStreamData(byte[] data);
+    }
+
+    /**
+     * Method to set configuration
+     */
     void setConfig();
 
+    /**
+     * Method to start stream
+     */
     void start();
 
+    /**
+     * Method to publish to a topic
+     * @param topic String topic to which data is published
+     * @param ip Ip of the receiver
+     * @param port Port of the receiver
+     * @param message Data to be published
+     * @return returns status
+     */
     boolean publish(String topic, String ip, int port, byte[] message);
 
+    /**
+     * Method to disconnect from the broker
+     */
     void disconnect();
 
+    /**
+     * Method to stop the stream
+     */
     void stop();
 
+    /**
+     * Method to set state callback
+     */
     void setStateCallback();
 
-    void setReceiveCallback(ModuleHandler.HandlerDataCallback handlerDataCallback);
+    /**
+     * Method to set subscribe callback
+     * @param streamDataCallback subscribe callback object
+     */
+    void setReceiveCallback(AittStream.StreamDataCallback streamDataCallback);
+
 }

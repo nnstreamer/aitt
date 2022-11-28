@@ -25,6 +25,8 @@ import android.content.Context;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
+import com.samsung.android.aitt.AittMessage;
+import com.samsung.android.aitt.handler.ModuleHandler;
 import com.samsung.android.aitt.stream.AittStream;
 
 import org.junit.BeforeClass;
@@ -54,7 +56,14 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream subscriber = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, SUBSCRIBER);
-            subscriber.setReceiveCallback(/* TODO */null);
+
+            AittStream.StreamDataCallback callback = new AittStream.StreamDataCallback() {
+                @Override
+                public void pushStreamData(byte[] data) {
+                    //Do something
+                }
+            };
+            subscriber.setReceiveCallback(callback);
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);

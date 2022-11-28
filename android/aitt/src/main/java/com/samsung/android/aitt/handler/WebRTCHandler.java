@@ -22,6 +22,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.samsung.android.aitt.Aitt;
+
 import com.samsung.android.aitt.stream.AittStream;
 
 import java.security.InvalidParameterException;

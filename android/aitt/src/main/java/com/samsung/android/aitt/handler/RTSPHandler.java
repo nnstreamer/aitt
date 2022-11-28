@@ -17,15 +17,40 @@ package com.samsung.android.aitt.handler;
 
 import android.content.Context;
 
+import static android.content.ContentValues.TAG;
+import static com.samsung.android.aitt.stream.RTSPStream.createPublisherStream;
+import static com.samsung.android.aitt.stream.RTSPStream.createSubscriberStream;
+
+import android.util.Log;
+
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
-import com.samsung.android.aitt.stream.RTSPStream;
+
+import java.security.InvalidParameterException;
 
 public class RTSPHandler extends StreamHandler {
 
     @Override
+    public void setAppContext(Context context) {
+    }
+
+    @Override
     public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
-        // TODO: implement this function.
-        return new RTSPStream();
+        if (protocol != Aitt.Protocol.RTSP)
+            throw new InvalidParameterException("Invalid protocol");
+
+        if (topic == null || topic.isEmpty())
+            throw new InvalidParameterException("Invalid topic");
+
+        try {
+            if (role == AittStream.StreamRole.SUBSCRIBER) {
+                return createSubscriberStream(topic, role);
+            } else {
+                return createPublisherStream(topic, role);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Fail to create an AittStream instance.");
+        }
+        return null;
     }
 }

@@ -23,12 +23,12 @@ import android.content.Context;
 import android.util.Log;
 import android.util.Pair;
 
-import androidx.annotation.Nullable;
-
 import com.google.flatbuffers.FlexBuffers;
 import com.samsung.android.aitt.stream.AittStream;
 import com.samsung.android.aitt.stream.WebRTCStream;
 import com.samsung.android.aittnative.JniInterface;
+
+import androidx.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -384,7 +384,7 @@ public class Aitt {
      * @return true if the protocol is specific to android implementation
      */
     private boolean classifyProtocol(Protocol protocols) {
-        return protocols.equals(Protocol.WEBRTC) || protocols.equals(Protocol.IPC);
+        return protocols.equals(Protocol.WEBRTC) || protocols.equals(Protocol.IPC) || protocols.equals(Protocol.RTSP);
     }
 
     /**

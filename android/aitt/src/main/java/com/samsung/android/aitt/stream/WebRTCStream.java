@@ -6,7 +6,6 @@ import android.util.Log;
 import com.google.flatbuffers.FlexBuffersBuilder;
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.Definitions;
-import com.samsung.android.aitt.handler.ModuleHandler;
 import com.samsung.android.aittnative.JniInterface;
 import com.samsung.android.modules.webrtc.WebRTC;
 import com.samsung.android.modules.webrtc.WebRTCServer;
@@ -87,12 +86,12 @@ public final class WebRTCStream implements AittStream {
     }
 
     @Override
-    public void setReceiveCallback(ModuleHandler.HandlerDataCallback handlerDataCallback) {
-        if (handlerDataCallback == null)
+    public void setReceiveCallback(AittStream.StreamDataCallback streamDataCallback) {
+        if (streamDataCallback == null)
             throw new IllegalArgumentException("The given callback is null.");
 
         if (streamRole == StreamRole.SUBSCRIBER) {
-            WebRTC.ReceiveDataCallback cb = handlerDataCallback::pushHandlerData;
+            WebRTC.ReceiveDataCallback cb = streamDataCallback::pushStreamData;
             ws.setDataCallback(cb);
         } else if (streamRole == StreamRole.PUBLISHER) {
             Log.e(TAG, "Invalid function call");
