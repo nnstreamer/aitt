@@ -213,6 +213,18 @@ public class AittUnitTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
+    public void testInitializeInvalidIp_N() {
+        String ip = "";
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId, ip, false);
+            aitt.close();
+        } catch (InstantiationException e) {
+            fail("Error during testInitializeInvalidIp" + e);
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void testInitializeInvalidContext_N() {
         String _id = "";
         try {

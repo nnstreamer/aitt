@@ -18,10 +18,6 @@ package com.samsung.android.aittnative;
 import android.util.Log;
 import android.util.Pair;
 
-import com.google.flatbuffers.FlexBuffers;
-import com.google.flatbuffers.FlexBuffersBuilder;
-
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,13 +27,13 @@ import java.util.Map;
  */
 public class JniInterface {
     private static final String TAG = "JniInterface";
-    private Map<String, ArrayList<JniCallback>> subscribeJNICallbacks = new HashMap<>();
+    private final Map<String, ArrayList<JniMessageCallback>> subscribeCallbacks = new HashMap<>();
     private final Map<String, Pair<Integer, JniDiscoveryCallback>> discoveryCallbacks = new HashMap<>();
     private JniConnectionCallback jniConnectionCallback;
     private long instance = 0;
 
     /*
-      Load aitt-android library
+      Load aitt-native library
      */
     static {
         try {
@@ -51,7 +47,7 @@ public class JniInterface {
     /**
      * JNI callback interface to send data from JNI layer to Java layer(aitt or transport module)
      */
-    public interface JniCallback {
+    public interface JniMessageCallback {
         void onDataReceived(String topic, byte[] data);
     }
 
@@ -97,8 +93,8 @@ public class JniInterface {
      * @param qos QoS at which the message should be delivered
      * @return returns the subscribe instance in long
      */
-    public long subscribe(final String topic, JniCallback jniCallback, int protocol, int qos) {
-        addCallBackToSubscribeMap(topic, jniCallback);
+    public long subscribe(final String topic, JniMessageCallback callback, int protocol, int qos) {
+        addCallBackToSubscribeMap(topic, callback);
         return subscribeJNI(instance, topic, protocol, qos);
     }
 
@@ -107,10 +103,9 @@ public class JniInterface {
      */
     public void disconnect() {
         synchronized (this) {
-            if (subscribeJNICallbacks != null) {
-                subscribeJNICallbacks.clear();
-                subscribeJNICallbacks = null;
-            }
+            subscribeCallbacks.clear();
+            discoveryCallbacks.clear();
+            jniConnectionCallback = null;
         }
         disconnectJNI(instance);
     }
@@ -134,7 +129,7 @@ public class JniInterface {
      */
     public void unsubscribe(String topic, final long aittSubId) {
         synchronized (this) {
-            subscribeJNICallbacks.remove(topic);
+            subscribeCallbacks.remove(topic);
         }
         unsubscribeJNI(instance, aittSubId);
     }
@@ -191,11 +186,11 @@ public class JniInterface {
     void messageCallback(String topic, byte[] payload) {
         try {
             synchronized (this) {
-                ArrayList<JniCallback> cbList = subscribeJNICallbacks.get(topic);
+                ArrayList<JniMessageCallback> cbList = subscribeCallbacks.get(topic);
 
                 if (cbList != null) {
-                    for (int i = 0; i < cbList.size(); i++) {
-                        cbList.get(i).onDataReceived(topic, payload);
+                    for (JniMessageCallback cb : cbList) {
+                        cb.onDataReceived(topic, payload);
                     }
                 }
             }
@@ -229,10 +224,10 @@ public class JniInterface {
      * @param topic    String to which application can subscribe
      * @param callback JniInterface callback instance created during JNI subscribe call
      */
-    private void addCallBackToSubscribeMap(String topic, JniCallback callback) {
+    private void addCallBackToSubscribeMap(String topic, JniMessageCallback callback) {
         synchronized (this) {
             try {
-                ArrayList<JniCallback> cbList = subscribeJNICallbacks.get(topic);
+                ArrayList<JniMessageCallback> cbList = subscribeCallbacks.get(topic);
 
                 if (cbList != null) {
                     // check whether the list already contains same callback
@@ -242,7 +237,7 @@ public class JniInterface {
                 } else {
                     cbList = new ArrayList<>();
                     cbList.add(callback);
-                    subscribeJNICallbacks.put(topic, cbList);
+                    subscribeCallbacks.put(topic, cbList);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error during JNI callback add", e);

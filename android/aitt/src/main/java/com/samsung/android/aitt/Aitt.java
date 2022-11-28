@@ -159,6 +159,9 @@ public class Aitt {
         if (id == null || id.isEmpty()) {
             throw new IllegalArgumentException("Invalid id");
         }
+        if (ip == null || ip.isEmpty()) {
+            throw new IllegalArgumentException("Invalid ip");
+        }
         mJniInterface = new JniInterface();
         instance = mJniInterface.init(id, ip, clearSession);
         if (instance == 0L) {
