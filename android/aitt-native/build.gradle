@@ -32,7 +32,7 @@ android {
                 arguments '-DVERSIONING=OFF'
                 arguments '-DPLATFORM=android'
                 arguments '-DCOVERAGE=OFF'
-                abiFilters 'arm64-v8a', 'x86'
+                abiFilters 'arm64-v8a', 'x86', 'armeabi-v7a'
                 cppFlags "-std=c++17"
                 targets "aitt-native", "aitt-transport-tcp"
             }

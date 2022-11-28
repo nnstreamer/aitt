@@ -28,7 +28,7 @@ android {
                 arguments '-DWITH_APPS=OFF'
                 arguments '-DDOCUMENTATION=OFF'
                 cppFlags "-std=c++17"
-                abiFilters 'arm64-v8a', 'x86'
+                abiFilters 'arm64-v8a', 'x86', 'armeabi-v7a'
                 targets "libmosquitto", "mosquittopp", "libmosquitto_static", "mosquittopp_static"
             }
         }

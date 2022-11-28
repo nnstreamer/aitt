@@ -27,7 +27,7 @@ android {
                 arguments '-DFLATBUFFERS_BUILD_CPP17=ON'
                 arguments '-DFLATBUFFERS_INSTALL=OFF'
                 cppFlags "-std=c++17"
-                abiFilters 'arm64-v8a', 'x86'
+                abiFilters 'arm64-v8a', 'x86', 'armeabi-v7a'
                 targets "flatbuffers"
             }
         }
