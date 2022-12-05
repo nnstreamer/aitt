@@ -28,6 +28,8 @@ import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.AittMessage;
 import com.samsung.android.aitt.handler.ModuleHandler;
 import com.samsung.android.aitt.stream.AittStream;
+import com.samsung.android.aitt.stream.AittStreamConfig;
+import com.samsung.android.aitt.stream.AittStreamConfigBuilder;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -38,6 +40,7 @@ public class RTSPInstrumentedTest {
     private static final String AITT_ID = "AITT_ANDROID";
     private static final String ERROR_MESSAGE_AITT_NULL = "An AITT instance is null.";
     private static final int PORT = 1883;
+    private static final String RTSP_URL = "rtsp://192.168.1.4:1935";
 
     private static String brokerIp;
     private static Context appContext;
@@ -57,17 +60,16 @@ public class RTSPInstrumentedTest {
 
             AittStream subscriber = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, SUBSCRIBER);
 
-            AittStream.StreamDataCallback callback = new AittStream.StreamDataCallback() {
-                @Override
-                public void pushStreamData(byte[] data) {
-                    //Do something
-                }
+            AittStream.StreamDataCallback callback = data -> {
+                //Do something
             };
             subscriber.setReceiveCallback(callback);
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            publisher.setConfig(/* TODO */);
+            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
+            builder.setUrl(RTSP_URL);
+            publisher.setConfig(builder.build());
             publisher.start();
 
             publisher.stop();

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import android.content.Context;
 
 import com.google.flatbuffers.FlexBuffersBuilder;
+import com.samsung.android.aitt.internal.Definitions;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +33,6 @@ import org.mockito.Mock;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

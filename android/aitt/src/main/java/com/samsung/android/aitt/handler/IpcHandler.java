@@ -19,7 +19,7 @@ import android.content.Context;
 import android.util.Log;
 import com.google.flatbuffers.FlexBuffersBuilder;
 import com.samsung.android.aitt.Aitt;
-import com.samsung.android.aitt.Definitions;
+import com.samsung.android.aitt.internal.Definitions;
 import com.samsung.android.modules.ipc.Ipc;
 
 import java.nio.ByteBuffer;

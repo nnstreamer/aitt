@@ -17,8 +17,15 @@ package com.samsung.android.aitt.stream;
 
 import android.util.Log;
 
+import com.google.flatbuffers.FlexBuffers;
+import com.google.flatbuffers.FlexBuffersBuilder;
+import com.samsung.android.aitt.internal.Definitions;
+import com.samsung.android.aittnative.JniInterface;
 import com.samsung.android.modules.rtsp.RTSPClient;
 
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -26,10 +33,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RTSPStream implements AittStream {
 
-    private static String TAG = "RTSPStream";
-    private StreamRole streamRole;
+    private static final String TAG = "RTSPStream";
+    private static final String SERVER_STATE = "server_state";
+    private static final String URL = "url";
+    private static final String ID = "id";
+    private static final String PASSWORD = "password";
+    private static final String URL_PREFIX = "rtsp://";
+
+    private final StreamRole streamRole;
+    private final String topic;
+    private final Map<String, String> info = new HashMap<>();
     private RTSPClient rtspClient;
-    private AittStream.StreamDataCallback subscribeCallback;
+    private StreamDataCallback streamCallback;
+    private StreamStateChangeCallback stateChangeCallback = null;
+    private JniInterface jniInterface;
+    private StreamState serverState = StreamState.INIT;
+    private StreamState clientState = StreamState.INIT;
 
     /**
      * RTSPStream constructor
@@ -37,8 +56,17 @@ public class RTSPStream implements AittStream {
      * @param streamRole Role of the RTSPStream object
      */
     private RTSPStream(String topic, StreamRole streamRole) {
-        //TODO: create and assign topic to a local variable (topic)
+        this.topic = topic;
         this.streamRole = streamRole;
+
+        if (streamRole == StreamRole.SUBSCRIBER) {
+            RTSPClient.ReceiveDataCallback dataCallback = frame -> {
+                if (streamCallback != null)
+                    streamCallback.pushStreamData(frame);
+            };
+
+            rtspClient = new RTSPClient(new AtomicBoolean(false), dataCallback);
+        }
     }
 
     /**
@@ -69,10 +97,29 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to set configuration
+     * @param config AittStreamConfig object
      */
     @Override
-    public void setConfig() {
-        // TODO: implement this function.
+    public void setConfig(AittStreamConfig config) {
+        if (config == null) {
+            Log.e(TAG, "Invalid configuration");
+            return;
+        }
+
+        if (config.getUrl() != null) {
+            String url = config.getUrl();
+            if (!url.startsWith(URL_PREFIX)) {
+                Log.e(TAG, "Invalid RTSP URL");
+                return;
+            }
+            info.put(URL, config.getUrl());
+        }
+        if (config.getId() != null) {
+            info.put(ID, config.getId());
+        }
+        if (config.getPassword() != null) {
+            info.put(PASSWORD, config.getPassword());
+        }
     }
 
     /**
@@ -81,25 +128,15 @@ public class RTSPStream implements AittStream {
     @Override
     public void start() {
         if (streamRole == StreamRole.SUBSCRIBER) {
-            RTSPClient.ReceiveDataCallback dataCallback = new RTSPClient.ReceiveDataCallback() {
-                @Override
-                public void pushData(byte[] frame) {
-                    subscribeCallback.pushStreamData(frame);
-                }
-            };
-
-            rtspClient = new RTSPClient(new AtomicBoolean(false), dataCallback);
-            RTSPClient.SocketConnectCallback cb = socketSuccess -> {
-                if (socketSuccess) {
-                    rtspClient.initRtspClient();
-                    rtspClient.start();
-                } else {
-                    Log.e(TAG, "Error creating socket");
-                }
-            };
-            rtspClient.createClientSocket(cb);
+            if (serverState == StreamState.READY) {
+                startRtspClient();
+            } else {
+                Log.d(TAG, "RTSP server not yet ready");
+                updateState(streamRole, StreamState.READY);
+            }
         } else {
-            Log.d(TAG, "Publisher role is not yet supported");
+            updateState(streamRole, StreamState.READY);
+            updateDiscoveryMessage();
         }
     }
 
@@ -122,7 +159,8 @@ public class RTSPStream implements AittStream {
      */
     @Override
     public void disconnect() {
-        // TODO: implement this function.
+        //ToDo : disconnect and stop can be merged
+        jniInterface.removeDiscoveryCallback(topic);
     }
 
     /**
@@ -130,10 +168,14 @@ public class RTSPStream implements AittStream {
      */
     @Override
     public void stop() {
-        if(streamRole == StreamRole.SUBSCRIBER)
-            rtspClient.stop();
-        else
-            Log.d(TAG, "Publisher role is not yet supported");
+        if(streamRole == StreamRole.SUBSCRIBER) {
+            if (clientState == StreamState.PLAYING)
+                rtspClient.stop();
+            updateState(streamRole, StreamState.INIT);
+        } else {
+            updateState(streamRole, StreamState.INIT);
+            updateDiscoveryMessage();
+        }
     }
 
     /**
@@ -154,8 +196,8 @@ public class RTSPStream implements AittStream {
      * Method to set state callback
      */
     @Override
-    public void setStateCallback() {
-        // TODO: implement this function.
+    public void setStateCallback(StreamStateChangeCallback callback) {
+        this.stateChangeCallback = callback;
     }
 
     /**
@@ -163,10 +205,124 @@ public class RTSPStream implements AittStream {
      * @param streamDataCallback subscribe callback object
      */
     @Override
-    public void setReceiveCallback(AittStream.StreamDataCallback streamDataCallback) {
+    public void setReceiveCallback(StreamDataCallback streamDataCallback) {
         if(streamRole == StreamRole.SUBSCRIBER)
-            subscribeCallback = streamDataCallback;
+            streamCallback = streamDataCallback;
         else
             throw new IllegalArgumentException("The role of this stream is not subscriber");
+    }
+
+    /**
+     * Method to set subscribe callback
+     * @param jniInterface JniInterface object
+     */
+    public void setJNIInterface(JniInterface jniInterface) {
+        this.jniInterface = jniInterface;
+
+        jniInterface.setDiscoveryCallback(topic, (status, data) -> {
+            Log.d(TAG, "Received discovery callback");
+            if (streamRole == StreamRole.PUBLISHER)
+                return;
+
+            if (status.compareTo(Definitions.WILL_LEAVE_NETWORK) == 0) {
+                if (clientState == StreamState.PLAYING) {
+                    rtspClient.stop();
+                    updateState(streamRole, StreamState.READY);
+                } else {
+                    updateState(streamRole, StreamState.INIT);
+                }
+
+                return;
+            }
+
+            ByteBuffer buffer = ByteBuffer.wrap(data);
+            FlexBuffers.Map map = FlexBuffers.getRoot(buffer).asMap();
+            if (map.size() != 4) {
+                Log.e(TAG, "Invalid RTSP discovery message");
+                return;
+            }
+
+            StreamState state = StreamState.values()[map.get(SERVER_STATE).asInt()];
+            updateState(StreamRole.PUBLISHER, state);
+            info.put(URL, map.get(URL).asString());
+            info.put(ID, map.get(ID).asString());
+            info.put(PASSWORD, map.get(PASSWORD).asString());
+
+            String url = createCompleteUrl();
+            Log.d(TAG, "RTSP URL : " + url);
+            if (url.isEmpty()) {
+                return;
+            }
+            rtspClient.setRtspUrl(url);
+
+            if (serverState == StreamState.READY) {
+                if (clientState == StreamState.READY) {
+                    startRtspClient();
+                }
+            } else if (serverState == StreamState.INIT) {
+                if (clientState == StreamState.PLAYING) {
+                    rtspClient.stop();
+                    updateState(streamRole, StreamState.READY);
+                }
+            }
+        });
+    }
+
+    private String createCompleteUrl() {
+        String completeUrl = info.get(URL);
+        if (completeUrl == null || completeUrl.isEmpty())
+            return "";
+
+        String id = info.get(ID);
+        if (id == null || id.isEmpty())
+            return completeUrl;
+
+        String password = info.get(PASSWORD);
+        if (password == null || password.isEmpty())
+            return completeUrl;
+
+        completeUrl = new StringBuilder(completeUrl).insert(URL_PREFIX.length(), id + ":" + password + "@").toString();
+        return completeUrl;
+    }
+
+    private void startRtspClient() {
+        RTSPClient.SocketConnectCallback cb = socketSuccess -> {
+            if (socketSuccess) {
+                rtspClient.initRtspClient();
+                rtspClient.start();
+                updateState(streamRole, StreamState.PLAYING);
+            } else {
+                Log.e(TAG, "Error creating socket");
+            }
+        };
+
+        rtspClient.createClientSocket(cb);
+    }
+
+    private void updateDiscoveryMessage() {
+        FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
+        {
+            int smap = fbb.startMap();
+            fbb.putInt(SERVER_STATE, serverState.ordinal());
+            fbb.putString(URL, info.get(URL));
+            fbb.putString(ID, info.get(ID));
+            fbb.putString(PASSWORD, info.get(PASSWORD));
+            fbb.endMap(null, smap);
+        }
+        ByteBuffer buffer = fbb.finish();
+        byte[] data = new byte[buffer.remaining()];
+        buffer.get(data, 0, data.length);
+
+        jniInterface.updateDiscoveryMessage(topic, data);
+    }
+
+    private void updateState(StreamRole role, StreamState state) {
+        if (role == StreamRole.PUBLISHER)
+            serverState = state;
+        else
+            clientState = state;
+
+        if (role == streamRole && stateChangeCallback != null)
+            stateChangeCallback.pushStataChange(state);
     }
 }

@@ -24,7 +24,9 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.google.flatbuffers.FlexBuffers;
+import com.samsung.android.aitt.internal.Definitions;
 import com.samsung.android.aitt.stream.AittStream;
+import com.samsung.android.aitt.stream.RTSPStream;
 import com.samsung.android.aitt.stream.WebRTCStream;
 import com.samsung.android.aittnative.JniInterface;
 
@@ -780,8 +782,14 @@ public class Aitt {
 
             return webRTCStream;
         }
-        if (moduleHandler != null && protocol == Protocol.RTSP)
-            return ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+        if (moduleHandler != null && protocol == Protocol.RTSP) {
+            RTSPStream rtspStream = (RTSPStream) ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+            if (rtspStream != null) {
+                rtspStream.setJNIInterface(mJniInterface);
+            }
+
+            return rtspStream;
+        }
 
         return null;
     }

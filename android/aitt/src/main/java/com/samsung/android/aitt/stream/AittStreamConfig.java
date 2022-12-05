@@ -13,16 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.samsung.android.aitt;
+package com.samsung.android.aitt.stream;
 
-public class Definitions {
+// Class to set stream configuration parameters
+public class AittStreamConfig {
 
-    public static final String WILL_LEAVE_NETWORK = "disconnected";
-    public static final String AITT_LOCALHOST = "127.0.0.1";
-    public static final int AITT_PORT = 1883;
-    public static final String JAVA_SPECIFIC_DISCOVERY_TOPIC = "/java/aitt/discovery/";
-    public static final String JOIN_NETWORK = "connected";
-    public static final String RESPONSE_POSTFIX = "_AittRe_";
-    public static final String STATUS = "status";
-    public static final int DEFAULT_IPC_PORT = 0;
+   private final String url;
+   private final String id;
+   private final String password;
+   // More fields can be added for other streams
+
+   public AittStreamConfig(String url, String id, String password) {
+      this.url = url;
+      this.id = id;
+      this.password = password;
+   }
+
+   public String getUrl() {
+      return this.url;
+   }
+
+   public String getId() {
+      return this.id;
+   }
+
+   public String getPassword() {
+      return this.password;
+   }
 }

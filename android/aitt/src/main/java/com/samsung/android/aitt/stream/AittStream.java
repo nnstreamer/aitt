@@ -35,16 +35,23 @@ public interface AittStream {
     }
 
     /**
-     * Interface to implement handler data callback mechanism
+     * Callback to get stream data
      */
     interface StreamDataCallback {
         void pushStreamData(byte[] data);
     }
 
     /**
+     * Callback to get stream state change
+     */
+    interface StreamStateChangeCallback {
+        void pushStataChange(StreamState state);
+    }
+
+    /**
      * Method to set configuration
      */
-    void setConfig();
+    void setConfig(AittStreamConfig config);
 
     /**
      * Method to start stream
@@ -74,12 +81,12 @@ public interface AittStream {
     /**
      * Method to set state callback
      */
-    void setStateCallback();
+    void setStateCallback(StreamStateChangeCallback stateChangeCallback);
 
     /**
      * Method to set subscribe callback
      * @param streamDataCallback subscribe callback object
      */
-    void setReceiveCallback(AittStream.StreamDataCallback streamDataCallback);
+    void setReceiveCallback(StreamDataCallback streamDataCallback);
 
 }

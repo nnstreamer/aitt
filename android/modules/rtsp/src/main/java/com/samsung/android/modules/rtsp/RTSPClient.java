@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RTSPClient {
     private static final String TAG = "RTSPClient";
-    private String rtspURL = "rtsp://192.168.1.2:5540/ch0";  //RTSP server URL is hardcoded for now //Todo - Update this using discovery mechanism
+    private String rtspUrl = null;
     private static volatile Socket clientSocket;
     private static int socketTimeout = 10000;
     private AtomicBoolean exitFlag;
@@ -70,7 +70,12 @@ public class RTSPClient {
      * @param socketCB socket connection callback to notify success/failure of socket creation
      */
     public void createClientSocket(SocketConnectCallback socketCB){
-        Uri uri = Uri.parse(rtspURL);
+        if (rtspUrl == null || rtspUrl.isEmpty()) {
+            Log.e(TAG, "Failed create client socket: Invalid RTSP URL");
+            return;
+        }
+
+        Uri uri = Uri.parse(rtspUrl);
         try {
             Thread thread = new Thread(new Runnable() {
                 @Override
@@ -139,7 +144,7 @@ public class RTSPClient {
             }
         };
 
-        Uri uri = Uri.parse(rtspURL);
+        Uri uri = Uri.parse(rtspUrl);
         mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientlistener)
                 .requestAudio(false)
                 .requestVideo(true)
@@ -165,6 +170,14 @@ public class RTSPClient {
         } catch (Exception E) {
             Log.e(TAG, "Error closing socket");
         }
+    }
+
+    /**
+     * Method to set RTSP URL
+     * @param url String for RTSP URL
+     */
+    public void setRtspUrl(String url) {
+        rtspUrl = url;
     }
 
     /**
