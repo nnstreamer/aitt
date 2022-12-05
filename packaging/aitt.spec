@@ -8,28 +8,29 @@ License: Apache-2.0
 Source0: %{name}-%{version}.tar.gz
 Source1001: %{name}.manifest
 
-%{!?stdoutlog: %global stdoutlog 0}
-%{!?test: %global test 1}
-%{!?gcov: %global gcov 0}
-%{!?glib: %global glib 1}
+%{?!stdoutlog: %global stdoutlog 0}
+%{?!test: %global test 1}
+%{?!gcov: %global gcov 0}
+%{?!use_glib: %global use_glib 1}
 
 BuildRequires: cmake
+BuildRequires: pkgconfig(bundle)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(flatbuffers)
-BuildRequires: pkgconfig(glib-2.0)
-BuildRequires: pkgconfig(libmosquitto)
 BuildRequires: pkgconfig(gmock_main)
-BuildRequires: pkgconfig(capi-media-tool)
-BuildRequires: pkgconfig(capi-media-sound-manager)
-BuildRequires: pkgconfig(bundle)
-BuildRequires: elementary-tizen
-BuildRequires: pkgconfig(capi-media-webrtc)
-BuildRequires: pkgconfig(capi-media-camera)
-BuildRequires: pkgconfig(json-glib-1.0)
+BuildRequires: pkgconfig(libmosquitto)
 BuildRequires: pkgconfig(openssl1.1)
+%if %{use_glib}
+BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(capi-media-player)
+BuildRequires: pkgconfig(capi-media-sound-manager)
+BuildRequires: pkgconfig(capi-media-tool)
+BuildRequires: pkgconfig(capi-media-webrtc)
+BuildRequires: pkgconfig(glib-2.0)
+BuildRequires: pkgconfig(json-glib-1.0)
 BuildRequires: pkgconfig(mm-display-interface)
-%if 0%{gcov}
+%endif
+%if %{gcov}
 BuildRequires: lcov
 %endif
 
@@ -78,7 +79,7 @@ cp %{SOURCE1001} .
     -DCMAKE_VERBOSE_MAKEFILE=OFF \
     -DBUILD_TESTING:BOOL=%{test} \
     -DCOVERAGE_TEST:BOOL=%{gcov} \
-    -DUSE_GLIB=%{glib}
+    -DUSE_GLIB=%{use_glib}
 
 %__make %{?_smp_mflags}
 
@@ -105,8 +106,7 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 
 %files plugins
 %manifest %{name}.manifest
-%{_libdir}/lib%{name}-transport*.so*
-%{_libdir}/lib%{name}-stream*.so*
+%{_libdir}/lib%{name}-*.so*
 %license LICENSE.APLv2
 
 %if 0%{test}
