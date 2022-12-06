@@ -241,6 +241,31 @@ public class Aitt {
      * @param topic    String to which message needs to be published
      * @param message  Byte message that needs to be published
      * @param protocol Protocol to be used to publish message
+     */
+    public void publish(String topic, byte[] message, Protocol protocol) {
+        EnumSet<Protocol> protocolSet = EnumSet.of(protocol);
+        publish(topic, message, protocolSet, QoS.AT_MOST_ONCE, false);
+    }
+
+    /**
+     * Method to publish message to a specific topic
+     *
+     * @param topic    String to which message needs to be published
+     * @param message  Byte message that needs to be published
+     * @param protocol Protocol to be used to publish message
+     * @param qos      QoS at which the message should be delivered
+     */
+    public void publish(String topic, byte[] message, Protocol protocol, QoS qos) {
+        EnumSet<Protocol> protocolSet = EnumSet.of(protocol);
+        publish(topic, message, protocolSet, qos, false);
+    }
+
+    /**
+     * Method to publish message to a specific topic
+     *
+     * @param topic    String to which message needs to be published
+     * @param message  Byte message that needs to be published
+     * @param protocol Protocol to be used to publish message
      * @param qos      QoS at which the message should be delivered
      * @param retain   Boolean to decide whether or not the message should be retained by the broker
      */
@@ -400,6 +425,18 @@ public class Aitt {
      */
     public void subscribe(String topic, SubscribeCallback callback) {
         EnumSet<Protocol> protocolSet = EnumSet.of(Protocol.MQTT);
+        subscribe(topic, callback, protocolSet, QoS.AT_MOST_ONCE);
+    }
+
+    /**
+     * Method to subscribe to a specific topic
+     *
+     * @param topic    String to which applications can subscribe, to receive data
+     * @param callback Callback object specific to a subscribe call
+     * @param protocol Protocol supported by application, invoking subscribe
+     */
+    public void subscribe(String topic, SubscribeCallback callback, Protocol protocol) {
+        EnumSet<Protocol> protocolSet = EnumSet.of(protocol);
         subscribe(topic, callback, protocolSet, QoS.AT_MOST_ONCE);
     }
 

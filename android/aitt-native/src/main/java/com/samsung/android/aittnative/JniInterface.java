@@ -114,13 +114,13 @@ public class JniInterface {
      * JNI Interface API to publish data to specified topic
      * @param topic String to which message needs to be published
      * @param data Byte message to be published
-     * @param datalen Size/length of the message to be published
+     * @param dataLen Size/length of the message to be published
      * @param protocol Protocol to be used to publish message
      * @param qos QoS at which the message should be delivered
      * @param retain Boolean to decide whether or not the message should be retained by the broker
      */
-    public void publish(final String topic, final byte[] data, long datalen, int protocol, int qos, boolean retain) {
-        publishJNI(instance, topic, data, datalen, protocol, qos, retain);
+    public void publish(final String topic, final byte[] data, long dataLen, int protocol, int qos, boolean retain) {
+        publishJNI(instance, topic, data, dataLen, protocol, qos, retain);
     }
 
     /**
@@ -265,10 +265,10 @@ public class JniInterface {
     private native void removeDiscoveryCallbackJNI(long instance, int cbHandle);
 
     /* Native API for updating discovery message */
-    private native void updateDiscoveryMessageJNI(long instance, final String topic, final byte[] data, long datalen);
+    private native void updateDiscoveryMessageJNI(long instance, final String topic, final byte[] data, long dataLen);
 
     /* Native API for publishing to a topic */
-    private native void publishJNI(long instance, final String topic, final byte[] data, long datalen, int protocol, int qos, boolean retain);
+    private native void publishJNI(long instance, final String topic, final byte[] data, long dataLen, int protocol, int qos, boolean retain);
 
     /* Native API for subscribing to a topic */
     private native long subscribeJNI(long instance, final String topic, int protocol, int qos);

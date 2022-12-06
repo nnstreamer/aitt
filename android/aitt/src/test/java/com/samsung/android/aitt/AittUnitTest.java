@@ -196,7 +196,7 @@ public class AittUnitTest {
             Aitt aitt = new Aitt(appContext, id);
             assertNotNull("Aitt Instance not null", aitt);
         } catch (Exception e) {
-            fail("Failed testInitialize " + e);
+            fail("Failed testAittConstructor " + e);
         }
     }
 
@@ -316,9 +316,7 @@ public class AittUnitTest {
             String _topic = "";
             byte[] payload = message.getBytes();
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -353,9 +351,7 @@ public class AittUnitTest {
             String _topic = "";
             byte[] payload = message.getBytes();
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -390,9 +386,7 @@ public class AittUnitTest {
             String _topic = "";
             byte[] payload = message.getBytes();
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE, false);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -427,9 +421,7 @@ public class AittUnitTest {
             String _topic = "";
             byte[] payload = message.getBytes();
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -468,9 +460,7 @@ public class AittUnitTest {
             byte[] payload = message.getBytes();
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(_topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -487,9 +477,7 @@ public class AittUnitTest {
             byte[] payload = message.getBytes();
             EnumSet<Aitt.Protocol> protocols = EnumSet.noneOf(Aitt.Protocol.class);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.publish(topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.publish(topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -506,12 +494,7 @@ public class AittUnitTest {
             assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                    String _topic = message.getTopic();
-                    byte[] payload = message.getPayload();
-                }
+            aitt.subscribe(topic, message -> {
             });
 
             aitt.disconnect();
@@ -529,13 +512,8 @@ public class AittUnitTest {
 
             String _topic = "";
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                    }
-                });
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -551,13 +529,63 @@ public class AittUnitTest {
 
             aitt.connect(brokerIp, port);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(topic, null);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null));
 
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSubscribeMqttInvalidCallback " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeTCP_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            assertNotNull("Aitt Instance not null", aitt);
+            aitt.connect(brokerIp, port);
+
+            aitt.subscribe(topic, message -> {
+            }, Aitt.Protocol.TCP);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeTCP " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeTcpInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            String _topic = "";
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.TCP));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeTcpInvalidTopic " + e);
+        }
+    }
+
+    @Test
+    public void testSubscribeTcpInvalidCallback_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.TCP));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeTcpInvalidCallback " + e);
         }
     }
 
@@ -570,12 +598,7 @@ public class AittUnitTest {
             assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                    String _topic = message.getTopic();
-                    byte[] payload = message.getPayload();
-                }
+            aitt.subscribe(topic, message -> {
             }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
 
             aitt.disconnect();
@@ -593,13 +616,8 @@ public class AittUnitTest {
 
             String _topic = "";
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                    }
-                }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -615,9 +633,7 @@ public class AittUnitTest {
 
             aitt.connect(brokerIp, port);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(topic, null, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -634,12 +650,7 @@ public class AittUnitTest {
             assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                    String _topic = message.getTopic();
-                    byte[] payload = message.getPayload();
-                }
+            aitt.subscribe(topic, message -> {
             }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE);
 
             aitt.disconnect();
@@ -657,13 +668,8 @@ public class AittUnitTest {
 
             String _topic = "";
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                    }
-                }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -680,12 +686,7 @@ public class AittUnitTest {
             assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                    String _topic = message.getTopic();
-                    byte[] payload = message.getPayload();
-                }
+            aitt.subscribe(topic, message -> {
             }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
 
             aitt.disconnect();
@@ -703,13 +704,8 @@ public class AittUnitTest {
 
             String _topic = "";
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                    }
-                }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -725,9 +721,7 @@ public class AittUnitTest {
 
             aitt.connect(brokerIp, port);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -744,15 +738,8 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
             EnumSet<Aitt.Protocol> protocols = EnumSet.noneOf(Aitt.Protocol.class);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                        String _topic = message.getTopic();
-                        byte[] payload = message.getPayload();
-                    }
-                }, protocols, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, message -> {
+            }, protocols, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -770,12 +757,7 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                    String _topic = message.getTopic();
-                    byte[] payload = message.getPayload();
-                }
+            aitt.subscribe(topic, message -> {
             }, protocols, Aitt.QoS.EXACTLY_ONCE);
 
             aitt.disconnect();
@@ -793,13 +775,8 @@ public class AittUnitTest {
 
             String _topic = "";
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(_topic, new Aitt.SubscribeCallback() {
-                    @Override
-                    public void onMessageReceived(AittMessage message) {
-                    }
-                }, protocols, Aitt.QoS.EXACTLY_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, protocols, Aitt.QoS.EXACTLY_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -815,9 +792,7 @@ public class AittUnitTest {
 
             aitt.connect(brokerIp, port);
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.subscribe(topic, null, protocols, Aitt.QoS.AT_MOST_ONCE);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, protocols, Aitt.QoS.AT_MOST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -834,10 +809,7 @@ public class AittUnitTest {
             assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage message) {
-                }
+            aitt.subscribe(topic, message -> {
             });
 
             aitt.unsubscribe(topic);
@@ -856,9 +828,7 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
             String _topic = "";
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.unsubscribe(_topic);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.unsubscribe(_topic));
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -900,9 +870,7 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                aitt.setConnectionCallback(null);
-            });
+            assertThrows(IllegalArgumentException.class, () -> aitt.setConnectionCallback(null));
 
             aitt.connect(brokerIp, port);
             aitt.disconnect();
@@ -948,7 +916,7 @@ public class AittUnitTest {
             int counter = 1;
             while (counter < DISCOVERY_MESSAGES_COUNT) {
                 byte[] discoveryMessage = createDiscoveryMessage(counter);
-                messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+                messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, discoveryMessage);
                 counter++;
             }
 
@@ -969,11 +937,11 @@ public class AittUnitTest {
 
             int counter = 1;
             byte[] discoveryMessage = createDiscoveryMessage(counter);
-            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, discoveryMessage);
 
             counter = 6;
             byte[] disconnectMessage = createDiscoveryMessage(counter);
-            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) disconnectMessage);
+            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, disconnectMessage);
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testDiscoveryMessageCallback " + e);
@@ -990,7 +958,7 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             byte[] discoveryMessage = new byte[0];
-            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, (Object) discoveryMessage);
+            messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, discoveryMessage);
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -1005,12 +973,9 @@ public class AittUnitTest {
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage aittMessage) {
-                    String recvTopic = aittMessage.getTopic();
-                    assertEquals("Received topic and subscribed topic are equal", recvTopic, topic);
-                }
+            aitt.subscribe(topic, aittMessage -> {
+                String receivedTopic = aittMessage.getTopic();
+                assertEquals("Received topic and subscribed topic are equal", receivedTopic, topic);
             });
 
             messageCallbackMethod.invoke(aitt, topic, message.getBytes(StandardCharsets.UTF_8));
@@ -1028,12 +993,9 @@ public class AittUnitTest {
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
 
-            aitt.subscribe(topic, new Aitt.SubscribeCallback() {
-                @Override
-                public void onMessageReceived(AittMessage aittMessage) {
-                    String recvMessage = new String(aittMessage.getPayload(), StandardCharsets.UTF_8);
-                    assertEquals("Received message and sent message are equal", message, recvMessage);
-                }
+            aitt.subscribe(topic, aittMessage -> {
+                String receivedMessage = new String(aittMessage.getPayload(), StandardCharsets.UTF_8);
+                assertEquals("Received message and sent message are equal", message, receivedMessage);
             });
 
             messageCallbackMethod.invoke(aitt, topic, message.getBytes(StandardCharsets.UTF_8));
