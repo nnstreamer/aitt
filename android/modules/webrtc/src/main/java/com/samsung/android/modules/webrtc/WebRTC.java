@@ -56,6 +56,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -232,12 +233,16 @@ public final class WebRTC {
      */
     private void sendMessage(boolean isJSON, Object message) throws IOException {
         Log.d(TAG, message.toString());
-        if (outStream != null) {
-            if (isJSON) {
-                outStream.writeObject(new Packet((JSONObject) message));
-            } else {
-                outStream.writeObject(new Packet((String) message));
+        try {
+            if (outStream != null) {
+                if (isJSON) {
+                    outStream.writeObject(new Packet((JSONObject) message));
+                } else {
+                    outStream.writeObject(new Packet((String) message));
+                }
             }
+        } catch (SocketException e) {
+            Log.e(TAG, "Error during sending a message.", e);
         }
     }
 
@@ -541,23 +546,6 @@ public final class WebRTC {
             isString = false;
             obj = json.toString();
         }
-    }
-
-    /**
-     * Method to read incoming message and convert it to byte format
-     *
-     * @param buffer Message incoming in Byte buffer format
-     * @return returns byteBuffer message in byte format
-     */
-    private byte[] readIncomingMessage(ByteBuffer buffer) {
-        byte[] bytes;
-        if (buffer.hasArray()) {
-            bytes = buffer.array();
-        } else {
-            bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-        }
-        return bytes;
     }
 
     /**

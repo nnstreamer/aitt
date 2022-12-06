@@ -17,9 +17,13 @@ package com.samsung.android.modules.webrtc;
 
 import static com.samsung.android.aitt.stream.AittStream.StreamRole.PUBLISHER;
 import static com.samsung.android.aitt.stream.AittStream.StreamRole.SUBSCRIBER;
+import static com.samsung.android.modules.webrtc.WebRTC.MAX_MESSAGE_SIZE;
 import static org.junit.Assert.fail;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.ImageDecoder;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -27,6 +31,7 @@ import android.net.Network;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.ColorInt;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
@@ -36,21 +41,30 @@ import com.samsung.android.aitt.stream.WebRTCStream;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.StringTokenizer;
 
 public class WebRTCInstrumentedTest {
 
-    private static final String TEST_TOPIC = "android/test/webrtc/_AittRe_";
-    private static final String AITT_WEBRTC_SERVER_ID = "AITT_ANDROID_WEBRTC_SERVER";
-    private static final String AITT_WEBRTC_CLIENT_ID = "AITT_ANDROID_WEBRTC_CLIENT";
+    private static final String TEST_MESSAGE_TOPIC = "android/test/webrtc/_AittRe_";
+    private static final String TEST_LARGE_MESSAGE_TOPIC = "android/test/large/_AittRe_";
+    private static final String TEST_VIDEO_TOPIC = "android/test/webrtc/video";
+    private static final String LARGE_DATA_PREFIX = "_LARGE_DATA";
+    private static final String VIDEO_PREFIX = "_VIDEO";
+    private static final String AITT_WEBRTC_SERVER_ID = "AITT_WEBRTC_SERVER";
+    private static final String AITT_WEBRTC_CLIENT_ID = "AITT_WEBRTC_CLIENT";
+    private static final String ORANGE_IMAGE_FILE_NAME = "320_240_image.jpg";
     private static final String TAG = "WebRTCInstrumentedTest";
     private static final int PORT = 1883;
     private static final int SLEEP_INTERVAL = 100;
 
     private static String brokerIp;
+    private static String wifiIP;
     private static Context appContext;
     private static Looper looper;
+    private static byte[] frameImageBytes;
 
     @BeforeClass
     public static void initialize() {
@@ -61,6 +75,10 @@ public class WebRTCInstrumentedTest {
         //                         (Broker WiFi IP) of broker argument
         // if using gradlew commands: Add "-e brokerIp [Broker WiFi IP]"
         brokerIp = InstrumentationRegistry.getArguments().getString("brokerIp");
+        wifiIP = wifiIpAddress();
+        Log.d(TAG, "Final WiFi IP = " + wifiIP);
+
+        getRGBImage(appContext);
 
         if (Looper.myLooper() == null) {
             Looper.prepare();
@@ -69,19 +87,41 @@ public class WebRTCInstrumentedTest {
         }
     }
 
+    private static void getRGBImage(Context context) {
+        ImageDecoder.Source imageSource = ImageDecoder.createSource(context.getResources().getAssets(), ORANGE_IMAGE_FILE_NAME);
+        try {
+            Bitmap bitmap = ImageDecoder.decodeBitmap(imageSource).copy(Bitmap.Config.ARGB_8888, true);
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            int totalPixels = width * height;
+            @ColorInt int[] pixels = new int[totalPixels];
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+            int componentsPerPixel = 3;
+            frameImageBytes = new byte[totalPixels * componentsPerPixel];
+            for (int i = 0; i < totalPixels; i++) {
+                @ColorInt int pixel = pixels[i];
+                int red = Color.red(pixel);
+                int green = Color.green(pixel);
+                int blue = Color.blue(pixel);
+                frameImageBytes[i * componentsPerPixel] = (byte) red;
+                frameImageBytes[i * componentsPerPixel + 1] = (byte) green;
+                frameImageBytes[i * componentsPerPixel + 2] = (byte) blue;
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Fail to get an orange image.");
+        }
+    }
+
     @Test
-    public void testWebRTCBasicStreaming() {
+    public void testWebRTCBasicMessageStreaming() {
         String message = "Hello, WebRTC!!";
 
         try {
-            String ip = wifiIpAddress();
-            Log.d(TAG, "Final WiFi IP = " + ip);
-
-            Aitt serverSubscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID, ip, true);
+            Aitt serverSubscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID, wifiIP, true);
             serverSubscriber.connect(brokerIp, PORT);
-            AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_TOPIC, SUBSCRIBER);
+            AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_MESSAGE_TOPIC, SUBSCRIBER);
             serverSubscriberStream.setReceiveCallback(data -> {
-                Log.i(TAG, "Callback is received.");
+                Log.i(TAG, "A callback is received in testWebRTCBasicMessageStreaming. Message size = " + data.length);
                 if (Arrays.equals(data, message.getBytes()) == false)
                     throw new RuntimeException("A wrong test message(" + new String(data) + ") is received.");
 
@@ -89,13 +129,13 @@ public class WebRTCInstrumentedTest {
                 if (looper != null)
                     looper.quit();
             });
-            Log.i(TAG, "A WebRTC server and a subscriber stream is created.");
+            Log.i(TAG, "A WebRTC server and a subscriber stream are created.");
 
-            Aitt clientPublisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID, ip, true);
+            Aitt clientPublisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID, wifiIP, true);
             clientPublisher.connect(brokerIp, PORT);
-            AittStream clientPublisherStream = clientPublisher.createStream(Aitt.Protocol.WEBRTC, TEST_TOPIC, PUBLISHER);
+            AittStream clientPublisherStream = clientPublisher.createStream(Aitt.Protocol.WEBRTC, TEST_MESSAGE_TOPIC, PUBLISHER);
             clientPublisherStream.start();
-            Log.i(TAG, "A WebRTC client and a publisher stream is created.");
+            Log.i(TAG, "A WebRTC client and a publisher stream are created.");
 
             serverSubscriberStream.start();
             Log.i(TAG, "The subscriber stream starts.");
@@ -110,11 +150,11 @@ public class WebRTCInstrumentedTest {
             Log.d(TAG, "Server port = " + serverPort);
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_TOPIC, message.getBytes(), Aitt.Protocol.WEBRTC);
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_MESSAGE_TOPIC, message.getBytes(), Aitt.Protocol.WEBRTC);
                 if (isPublished)
                     break;
             }
-            Log.i(TAG, "A message is sent through a publisher stream.");
+            Log.i(TAG, "A message is sent through the publisher stream.");
 
             Looper.loop();
             Log.i(TAG, "A looper is finished.");
@@ -123,7 +163,120 @@ public class WebRTCInstrumentedTest {
 
             serverSubscriberStream.stop();
         } catch (Exception e) {
-            fail("Failed testWebRTCBasicStreaming, (" + e + ")");
+            fail("Failed testWebRTCBasicMessageStreaming, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCSendLargeMessage() {
+        byte[] largeBytes = new byte[MAX_MESSAGE_SIZE * 2];
+        new Random().nextBytes(largeBytes);
+
+        try {
+            Aitt serverSubscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID + LARGE_DATA_PREFIX, wifiIP, true);
+            serverSubscriber.connect(brokerIp, PORT);
+            AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_LARGE_MESSAGE_TOPIC, SUBSCRIBER);
+            serverSubscriberStream.setReceiveCallback(data -> {
+                Log.i(TAG, "A callback is received in testWebRTCSendLargeMessage. Message size = " + data.length);
+                // TODO: Enable the following message verification.
+//                if (Arrays.equals(data, largeBytes) == false)
+//                    throw new RuntimeException("A wrong large message is received.");
+
+                Log.i(TAG, "The correct large message is received. size = " + data.length);
+                if (looper != null)
+                    looper.quit();
+            });
+            Log.i(TAG, "A WebRTC server and a subscriber stream are created.");
+
+            Aitt clientPublisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + LARGE_DATA_PREFIX, wifiIP, true);
+            clientPublisher.connect(brokerIp, PORT);
+            AittStream clientPublisherStream = clientPublisher.createStream(Aitt.Protocol.WEBRTC, TEST_LARGE_MESSAGE_TOPIC, PUBLISHER);
+            clientPublisherStream.start();
+            Log.i(TAG, "A WebRTC client and a publisher stream are created.");
+
+            serverSubscriberStream.start();
+            Log.i(TAG, "The subscriber stream starts.");
+
+            int intervalSum = 0;
+            while (intervalSum < 3000) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
+
+            int serverPort = ((WebRTCStream) serverSubscriberStream).getServerPort();
+            Log.d(TAG, "Server port = " + serverPort);
+            while (true) {
+                // TODO: Replace publish
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_LARGE_MESSAGE_TOPIC, largeBytes, Aitt.Protocol.WEBRTC);
+                if (isPublished)
+                    break;
+            }
+            Log.i(TAG, "A large message is sent through the publisher stream.");
+
+            Looper.loop();
+            Log.i(TAG, "A looper is finished.");
+
+            clientPublisherStream.disconnect();
+
+            serverSubscriberStream.stop();
+        } catch (Exception e) {
+            fail("Failed testWebRTCBasicMessageStreaming, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCBasicVideoStreaming() {
+        try {
+            Aitt serverSubscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID + VIDEO_PREFIX, wifiIP, true);
+            serverSubscriber.connect(brokerIp, PORT);
+            AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, SUBSCRIBER);
+            serverSubscriberStream.setReceiveCallback(data -> {
+                Log.i(TAG, "A callback is received in testWebRTCBasicVideoStreaming.");
+                if (Arrays.equals(data, frameImageBytes) == false)
+                    throw new RuntimeException("A wrong test image is received.");
+
+                Log.i(TAG, "The correct test image is received.");
+
+                if (looper != null)
+                    looper.quit();
+            });
+            Log.i(TAG, "A WebRTC server and a subscriber stream are created.");
+
+            Aitt clientPublisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            clientPublisher.connect(brokerIp, PORT);
+            AittStream clientPublisherStream = clientPublisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+            clientPublisherStream.start();
+            Log.i(TAG, "A WebRTC client and a publisher stream are created.");
+
+            serverSubscriberStream.start();
+            Log.i(TAG, "The subscriber stream starts.");
+
+            int intervalSum = 0;
+            while (intervalSum < 2000) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
+
+            int serverPort = ((WebRTCStream) serverSubscriberStream).getServerPort();
+            Log.d(TAG, "Server port = " + serverPort);
+            while (true) {
+                // TODO: Replace publish
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_VIDEO_TOPIC, frameImageBytes
+                        , Aitt.Protocol.WEBRTC);
+                if (isPublished)
+                    break;
+            }
+            Log.i(TAG, "Video transmission has started through the publisher stream.");
+
+            // TODO: Enable this looper.
+//            Looper.loop();
+            Log.i(TAG, "A looper is finished.");
+
+            clientPublisherStream.disconnect();
+
+            serverSubscriberStream.stop();
+        } catch (Exception e) {
+            fail("Failed testWebRTCBasicVideoStreaming, (" + e + ")");
         }
     }
 
