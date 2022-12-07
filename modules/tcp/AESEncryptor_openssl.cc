@@ -15,6 +15,8 @@
  */
 #include "AESEncryptor.h"
 
+#ifndef WITH_MBEDTLS
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
@@ -135,3 +137,5 @@ int AESEncryptor::Decrypt(const unsigned char *ciphertext, int ciphertext_len,
 }
 
 }  // namespace AittTCPNamespace
+
+#endif  // WITH_MBEDTLS

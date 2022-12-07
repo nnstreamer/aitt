@@ -3,7 +3,7 @@ Section: libs
 Priority: optional
 Maintainer: Semun Lee <semun.lee@samsung.com>
 Build-Depends: gcc-11 | gcc-9 | gcc-8 | gcc-7 | gcc-6 | gcc-5 (>=5.4),
- cmake, debhelper (>=9), libmosquitto-dev, lcov, libgmock-dev, libflatbuffers-dev, libglib2.0-dev
+ cmake, debhelper (>=9), libmosquitto-dev, lcov, libgmock-dev, libflatbuffers-dev, libglib2.0-dev, libmbedtls-dev
 Standards-Version: 0.0.1
 
 Package: aitt
