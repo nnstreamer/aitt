@@ -15,7 +15,9 @@
  */
 #include <gtest/gtest.h>
 
-#include <thread>
+#include <algorithm>
+#include <climits>
+#include <random>
 
 #include "AITT.h"
 #include "AittTests.h"
@@ -124,4 +126,63 @@ TEST_F(AITTTCPTest, TCP_Wildcards2_Anytime)
 TEST_F(AITTTCPTest, SECURE_TCP_Wildcards_Anytime)
 {
     TCPWildcardsTopicTemplate(AITT_TYPE_TCP_SECURE);
+}
+
+TEST_F(AITTTCPTest, SECURE_TCP_various_msg_Anytime)
+{
+    std::independent_bits_engine<std::default_random_engine, CHAR_BIT, unsigned char> random_engine;
+    std::vector<unsigned char> data(20000);
+    std::generate(begin(data), end(data), std::ref(random_engine));
+
+    unsigned char *dump_msg = data.data();
+
+    try {
+        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.SetConnectionCallback(
+              [&, dump_msg](AITT &handle, int status, void *user_data) {
+                  if (status != AITT_CONNECTED) {
+                      ERR("Invalid Status(%d)", status);
+                      return;
+                  }
+                  aitt.Subscribe(
+                        testTopic,
+                        [&](aitt::MSG *handle, const void *msg, const int szmsg,
+                              void *cbdata) -> void {
+                            AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
+
+                            DBG("Subscribe() invoked : size(%d)", szmsg);
+
+                            if (static_cast<int>(data.size()) <= szmsg) {
+                                test->StopEventLoop();
+                                return;
+                            }
+
+                            static int i = 1;
+                            if (i == szmsg) {
+                                EXPECT_EQ(memcmp(msg, data.data(), szmsg), 0);
+                                i *= 3;
+                            } else {
+                                FAIL() << "Unexpected size" << szmsg;
+                            }
+                        },
+                        user_data, AITT_TYPE_TCP_SECURE);
+
+                  // Wait a few seconds until the AITT client gets a server list (discover devices)
+                  usleep(100 * SLEEP_MS);
+
+                  for (int i = 1; i < static_cast<int>(data.size()); i *= 3) {
+                      DBG("Publish(%s) : size(%d)", testTopic.c_str(), i);
+                      aitt.Publish(testTopic, dump_msg, i, AITT_TYPE_TCP_SECURE);
+                  }
+                  aitt.Publish(testTopic, dump_msg, data.size(), AITT_TYPE_TCP_SECURE);
+              },
+              this);
+
+        aitt.Connect();
+
+        IterateEventLoop();
+        aitt.Disconnect();
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
 }
