@@ -40,6 +40,10 @@ public class RTSPClient {
     private AtomicBoolean exitFlag;
     private RtspClient mRtspClient;
     private ReceiveDataCallback streamCb;
+    private H264Decoder decoder;
+    private int sdpInfoSize = 30;
+    private byte[] sps;
+    private byte[] pps;
 
     /**
      * Interface to implement DataCallback from RTSP module to RTSP stream
@@ -112,13 +116,19 @@ public class RTSPClient {
             @Override
             public void onRtspConnected(@NonNull @NotNull RtspClient.SdpInfo sdpInfo) {
                 Log.d(TAG, "Connected to RTSP server");
+                if(sdpInfo.videoTrack != null) {
+                    sps = sdpInfo.videoTrack.sps;
+                    pps = sdpInfo.videoTrack.pps;
+                }
             }
 
             @Override
             public void onRtspVideoNalUnitReceived(@NonNull @NotNull byte[] bytes, int i, int i1, long l) {
-                Log.d(TAG, "RTSP video stream callback");
-                //TODO : Decode the Video Nal units received using H264 decoder
-                streamCb.pushData(bytes);
+                Log.d(TAG, "RTSP video stream callback -- video NAL units received");
+                if (bytes.length < sdpInfoSize)
+                    decoder.initH264Decoder(sps, pps);
+                else
+                    decoder.setRawH264Data(bytes);
             }
 
             @Override
@@ -129,7 +139,7 @@ public class RTSPClient {
 
             @Override
             public void onRtspDisconnected() {
-                stopDecoders();
+                decoder.stopDecoder();
                 Log.d(TAG, "Disconnected from RTSP server");
             }
 
@@ -145,6 +155,8 @@ public class RTSPClient {
         };
 
         Uri uri = Uri.parse(rtspUrl);
+
+        decoder = new H264Decoder(streamCb, exitFlag);
         mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientlistener)
                 .requestAudio(false)
                 .requestVideo(true)
@@ -166,7 +178,7 @@ public class RTSPClient {
     public void stop() {
         try{
             NetUtils.closeSocket(clientSocket);
-            stopDecoders();
+            decoder.stopDecoder();
         } catch (Exception E) {
             Log.e(TAG, "Error closing socket");
         }
@@ -180,10 +192,4 @@ public class RTSPClient {
         rtspUrl = url;
     }
 
-    /**
-     * Method to stop decoders
-     */
-    private void stopDecoders() {
-        //ToDO : Implement this function
-    }
 }
