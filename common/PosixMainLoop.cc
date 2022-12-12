@@ -57,9 +57,6 @@ PosixMainLoop::~PosixMainLoop()
     for (const auto &pair : timeout_table)
         delete pair.second;
 
-    for (const auto &pair : watch_table)
-        delete pair.second;
-
     for (const auto &data : idle_table)
         delete data;
 
@@ -82,21 +79,19 @@ void PosixMainLoop::Run()
 
         table_lock.lock();
         struct pollfd pfds[watch_table.size() + 2];
-
-        // for Watch
-        for (auto iter = watch_table.begin(); iter != watch_table.end(); iter++) {
+        for (auto iter = watch_table.begin(); iter != watch_table.end(); iter++)
             pfds[nfds++] = {iter->second->fd, POLLIN | POLLHUP | POLLERR, 0};
-        }
         table_lock.unlock();
 
-        // for idle
         pfds[nfds++] = {idle_pipe[0], POLLIN, 0};
-        // for timeout
         pfds[nfds++] = {timeout_pipe[0], POLLIN, 0};
 
         if (0 < poll(pfds, nfds, -1)) {
             bool handled = false;
-            handled |= CheckTimeout(pfds[nfds - 1], POLLIN);
+            int ret = CheckTimeout(pfds[nfds - 1], POLLIN);
+            if (ret < 0)
+                break;
+            handled |= !!ret;
             handled |= CheckWatch(pfds, nfds - 2, POLLIN | POLLHUP | POLLERR);
             if (!handled)
                 CheckIdle(pfds[nfds - 2], POLLIN);
@@ -114,7 +109,7 @@ bool PosixMainLoop::Quit()
     }
 
     is_running = false;
-    WriteToPipe(timeout_pipe[1], INVALID);
+    WriteToPipe(timeout_pipe[1], QUIT);
     return true;
 }
 
@@ -138,7 +133,7 @@ void PosixMainLoop::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_da
 
     std::lock_guard<std::mutex> lock(table_lock);
     watch_table.insert(WatchMap::value_type(cb_data->fd, cb_data));
-    WriteToPipe(idle_pipe[1], INVALID);
+    WriteToPipe(idle_pipe[1], PING);
 }
 
 PosixMainLoop::MainLoopData *PosixMainLoop::RemoveWatch(int fd)
@@ -150,7 +145,6 @@ PosixMainLoop::MainLoopData *PosixMainLoop::RemoveWatch(int fd)
         return nullptr;
     }
     MainLoopData *user_data = iter->second->data;
-    delete iter->second;
     watch_table.erase(iter);
 
     return user_data;
@@ -219,14 +213,12 @@ bool PosixMainLoop::CheckWatch(pollfd *pfds, nfds_t nfds, short int event)
 {
     bool handled = false;
     for (nfds_t idx = 0; idx < nfds; idx++) {
-        if (false == (pfds[idx].revents & event)) {
-            DBG("Unknown Event(%d)", pfds[idx].revents);
+        if (false == (pfds[idx].revents & event))
             continue;
-        }
 
         table_lock.lock();
         auto iter = watch_table.find(pfds[idx].fd);
-        MainLoopCbData *cb_data = (watch_table.end() == iter) ? NULL : iter->second;
+        auto cb_data = (watch_table.end() == iter) ? NULL : iter->second;
         table_lock.unlock();
 
         if (cb_data) {
@@ -243,19 +235,17 @@ bool PosixMainLoop::CheckWatch(pollfd *pfds, nfds_t nfds, short int event)
     return handled;
 }
 
-bool PosixMainLoop::CheckTimeout(pollfd pfd, short int event)
+int PosixMainLoop::CheckTimeout(pollfd pfd, short int event)
 {
-    if (false == (pfd.revents & event)) {
-        DBG("Unknown Event(%d)", pfd.revents);
+    if (false == (pfd.revents & event))
         return false;
-    }
 
     bool handled = false;
-    unsigned int identifier = INVALID;
+    int identifier = PING;
     while (read(pfd.fd, &identifier, sizeof(identifier)) == sizeof(identifier)) {
-        if (identifier == INVALID) {
+        if (identifier == QUIT) {
             INFO("Terminating");
-            return true;
+            return -1;
         }
 
         table_lock.lock();
@@ -278,12 +268,10 @@ bool PosixMainLoop::CheckTimeout(pollfd pfd, short int event)
 
 void PosixMainLoop::CheckIdle(pollfd pfd, short int event)
 {
-    if (false == (pfd.revents & event)) {
-        DBG("Unknown Event(%d)", pfd.revents);
+    if (false == (pfd.revents & event))
         return;
-    }
 
-    unsigned int identifier = INVALID;
+    int identifier = PING;
     if (read(pfd.fd, &identifier, sizeof(identifier)) == sizeof(identifier)) {
         if (identifier == IDLE) {
             table_lock.lock();

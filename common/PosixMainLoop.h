@@ -20,6 +20,7 @@
 
 #include <deque>
 #include <map>
+#include <memory>
 #include <mutex>
 
 #include "MainLoopIface.h"
@@ -41,7 +42,8 @@ class PosixMainLoop : public MainLoopIface {
 
   private:
     enum PipeValue {
-        INVALID = 0,
+        QUIT = -1,
+        PING = 0,
         IDLE = 1,
         TIMEOUT_START = 2,
     };
@@ -60,7 +62,7 @@ class PosixMainLoop : public MainLoopIface {
         int timeout_interval;
     };
 
-    using WatchMap = std::map<int, MainLoopCbData *>;
+    using WatchMap = std::map<int, std::shared_ptr<MainLoopCbData>>;
     using TimeoutMap = std::map<unsigned int, MainLoopCbData *>;
     using IdleQueue = std::deque<MainLoopCbData *>;
 
@@ -69,7 +71,7 @@ class PosixMainLoop : public MainLoopIface {
 
     void TimeoutTableInsert(unsigned int identifier, MainLoopCbData *cb_data);
     bool CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
-    bool CheckTimeout(pollfd pfd, short int event);
+    int CheckTimeout(pollfd pfd, short int event);
     void CheckIdle(pollfd pfd, short int event);
     int SetTimer(int interval, unsigned int timeout_id);
 
@@ -79,7 +81,7 @@ class PosixMainLoop : public MainLoopIface {
     std::mutex table_lock;
     int timeout_pipe[2];
     int idle_pipe[2];
-
     bool is_running;
 };
+
 }  // namespace aitt

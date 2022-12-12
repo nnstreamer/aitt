@@ -167,30 +167,27 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
 
 void *Module::Unsubscribe(void *handlePtr)
 {
+    std::lock_guard<std::mutex> autoLock(subscribeTableLock);
+
     int handle = static_cast<int>(reinterpret_cast<intptr_t>(handlePtr));
     TCPServerData *listen_info = dynamic_cast<TCPServerData *>(main_loop.RemoveWatch(handle));
     if (!listen_info)
         return nullptr;
 
-    {
-        std::lock_guard<std::mutex> autoLock(subscribeTableLock);
-        auto it = subscribeTable.find(listen_info->topic);
-        if (it == subscribeTable.end())
-            throw std::runtime_error("Service is not registered: " + listen_info->topic);
+    auto it = subscribeTable.find(listen_info->topic);
+    if (it == subscribeTable.end())
+        throw std::runtime_error("Service is not registered: " + listen_info->topic);
 
-        subscribeTable.erase(it);
+    subscribeTable.erase(it);
 
-        UpdateDiscoveryMsg();
-    }
+    UpdateDiscoveryMsg();
 
     void *cbdata = listen_info->cbdata;
-    listen_info->client_lock.lock();
     for (auto fd : listen_info->client_list) {
         TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(fd));
         delete tcp_data;
     }
     listen_info->client_list.clear();
-    listen_info->client_lock.unlock();
     delete listen_info;
 
     return cbdata;
@@ -353,16 +350,15 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
 
 int Module::HandleClientDisconnect(int handle)
 {
+    std::lock_guard<std::mutex> autoLock(subscribeTableLock);
     TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(handle));
     if (tcp_data == nullptr) {
         ERR("No watch data");
         return AITT_LOOP_EVENT_REMOVE;
     }
-    tcp_data->parent->client_lock.lock();
     auto it = std::find(tcp_data->parent->client_list.begin(), tcp_data->parent->client_list.end(),
           handle);
     tcp_data->parent->client_list.erase(it);
-    tcp_data->parent->client_lock.unlock();
 
     delete tcp_data;
     return AITT_LOOP_EVENT_REMOVE;

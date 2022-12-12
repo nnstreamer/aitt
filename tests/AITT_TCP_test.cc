@@ -30,38 +30,45 @@ class AITTTCPTest : public testing::Test, public AittTests {
     void SetUp() override { Init(); }
     void TearDown() override { Deinit(); }
 
-    void TCPWildcardsTopicTemplate(AittProtocol protocol)
+    void TCPWildcardsTopicTemplate(AittProtocol protocol, bool single_level)
     {
         try {
             char dump_msg[204800];
+            std::string sub_topic = "test/" + std::string(single_level ? "+" : "#");
 
             AITT aitt(clientId, LOCAL_IP);
-            aitt.Connect();
 
             int cnt = 0;
-            aitt.Subscribe(
-                  "test/+",
-                  [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                      AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
-                      INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
-                      ++cnt;
+            aitt.SetConnectionCallback([&](AITT &handle, int status, void *user_data) {
+                if (status != AITT_CONNECTED)
+                    return;
+                aitt.Subscribe(
+                      sub_topic,
+                      [&](aitt::MSG *handle, const void *msg, const int szmsg,
+                            void *cbdata) -> void {
+                          AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
+                          INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
+                          ++cnt;
 
-                      std::stringstream ss;
-                      ss << "test/value" << cnt;
-                      EXPECT_EQ(ss.str(), handle->GetTopic());
+                          if (cnt == 3)
+                              test->ToggleReady();
+                      },
+                      static_cast<void *>(this), protocol);
 
-                      if (cnt == 3)
-                          test->ToggleReady();
-                  },
-                  static_cast<void *>(this), protocol);
+                // Wait a few seconds until the AITT client gets a server list (discover devices)
+                DBG("Sleep %d ms", SLEEP_MS);
+                usleep(100 * SLEEP_MS);
 
-            // Wait a few seconds until the AITT client gets a server list (discover devices)
-            DBG("Sleep %d ms", SLEEP_MS);
-            usleep(100 * SLEEP_MS);
-
-            aitt.Publish("test/value1", dump_msg, 12, protocol);
-            aitt.Publish("test/value2", dump_msg, 1600, protocol);
-            aitt.Publish("test/value3", dump_msg, 1600, protocol);
+                aitt.Publish("test/value1", dump_msg, 12, protocol);
+                if (single_level) {
+                    aitt.Publish("test/value2", dump_msg, 1600, protocol);
+                    aitt.Publish("test/value3", dump_msg, 1600, protocol);
+                } else {
+                    aitt.Publish("test/step1/value1", dump_msg, 1600, protocol);
+                    aitt.Publish("test/step2/value1", dump_msg, 1600, protocol);
+                }
+            });
+            aitt.Connect();
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
                   [&](MainLoopHandler::MainLoopResult result, int fd,
@@ -77,55 +84,24 @@ class AITTTCPTest : public testing::Test, public AittTests {
     }
 };
 
-TEST_F(AITTTCPTest, TCP_Wildcards1_Anytime)
+TEST_F(AITTTCPTest, TCP_Wildcard_single_Anytime)
 {
-    try {
-        char dump_msg[204800];
-
-        AITT aitt(clientId, LOCAL_IP);
-        aitt.Connect();
-
-        aitt.Subscribe(
-              "test/#",
-              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                  AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
-                  INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
-                  static int cnt = 0;
-                  ++cnt;
-                  if (cnt == 3)
-                      test->ToggleReady();
-              },
-              static_cast<void *>(this), AITT_TYPE_TCP);
-
-        // Wait a few seconds until the AITT client gets a server list (discover devices)
-        DBG("Sleep %d ms", SLEEP_MS);
-        usleep(100 * SLEEP_MS);
-
-        aitt.Publish("test/step1/value1", dump_msg, 12, AITT_TYPE_TCP);
-        aitt.Publish("test/step2/value1", dump_msg, 1600, AITT_TYPE_TCP);
-        aitt.Publish("test/step2/value1", dump_msg, 1600, AITT_TYPE_TCP);
-
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
-                  return ReadyCheck(static_cast<AittTests *>(this));
-              });
-        IterateEventLoop();
-
-        ASSERT_TRUE(ready);
-    } catch (std::exception &e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
+    TCPWildcardsTopicTemplate(AITT_TYPE_TCP, true);
 }
 
-TEST_F(AITTTCPTest, TCP_Wildcards2_Anytime)
+TEST_F(AITTTCPTest, SECURE_TCP_Wildcard_single_Anytime)
 {
-    TCPWildcardsTopicTemplate(AITT_TYPE_TCP);
+    TCPWildcardsTopicTemplate(AITT_TYPE_TCP_SECURE, true);
 }
 
-TEST_F(AITTTCPTest, SECURE_TCP_Wildcards_Anytime)
+TEST_F(AITTTCPTest, TCP_Wildcard_multi_Anytime)
 {
-    TCPWildcardsTopicTemplate(AITT_TYPE_TCP_SECURE);
+    TCPWildcardsTopicTemplate(AITT_TYPE_TCP, false);
+}
+
+TEST_F(AITTTCPTest, SECURE_TCP_Wildcard_multi_Anytime)
+{
+    TCPWildcardsTopicTemplate(AITT_TYPE_TCP_SECURE, false);
 }
 
 TEST_F(AITTTCPTest, SECURE_TCP_various_msg_Anytime)

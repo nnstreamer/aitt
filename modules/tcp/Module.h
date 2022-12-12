@@ -56,7 +56,6 @@ class Module : public AittTransport {
         void *cbdata;
         std::string topic;
         std::vector<int> client_list;
-        std::mutex client_lock;
     };
 
     struct TCPData : public MainLoopHandler::MainLoopData {
