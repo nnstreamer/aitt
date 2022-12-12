@@ -72,7 +72,7 @@
     do {                                                                   \
         size_t i;                                                          \
         char dump[len * 3];                                                \
-        for (i = 0; i < len; i++) {                                        \
+        for (i = 0; i < (size_t)len; i++) {                                \
             snprintf(dump + i * 3, (len * 3) - (i * 3), "%02X ", data[i]); \
         }                                                                  \
         DBG("%s", dump);                                                   \

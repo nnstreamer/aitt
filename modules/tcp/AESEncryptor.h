@@ -15,28 +15,30 @@
  */
 #pragma once
 
-#include <string>
 #include <vector>
 
-// AES-256 CBC
+// AES-256
 #define AITT_TCP_ENCRYPTOR_KEY_LEN 32
-#define AITT_TCP_ENCRYPTOR_IV_LEN 16
+#define AITT_TCP_ENCRYPTOR_BLOCK_SIZE 16
+#define AITT_TCP_ENCRYPTOR_IV_LEN AITT_TCP_ENCRYPTOR_BLOCK_SIZE
 
 namespace AittTCPNamespace {
 
 class AESEncryptor {
   public:
-    AESEncryptor();
-    virtual ~AESEncryptor(void);
+    AESEncryptor() = default;
+    virtual ~AESEncryptor(void) = default;
 
     static void GenerateKey(unsigned char (&key)[AITT_TCP_ENCRYPTOR_KEY_LEN],
           unsigned char (&iv)[AITT_TCP_ENCRYPTOR_IV_LEN]);
     void Init(const unsigned char *key, const unsigned char *iv);
     int GetCryptogramSize(int plain_size);
-    int Encrypt(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
-    int Decrypt(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
+    virtual int Encrypt(const unsigned char *plaintext, int plaintext_len,
+          unsigned char *ciphertext) = 0;
+    virtual int Decrypt(const unsigned char *ciphertext, int ciphertext_len,
+          unsigned char *plaintext) = 0;
 
-  private:
+  protected:
     std::vector<unsigned char> key_;
     std::vector<unsigned char> iv_;
 };

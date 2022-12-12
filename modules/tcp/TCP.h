@@ -20,10 +20,10 @@
 
 #include <string>
 
-#include "AESEncryptor.h"
+#include "AESEncryptorMbedTLS.h"
+#include "AESEncryptorOpenSSL.h"
 
 namespace AittTCPNamespace {
-
 class TCP {
   public:
     class Server;
@@ -68,7 +68,11 @@ class TCP {
     socklen_t addrlen;
     sockaddr *addr;
     bool secure;
-    AESEncryptor crypto;
+#ifdef WITH_MBEDTLS
+    AESEncryptorMbedTLS crypto;
+#else
+    AESEncryptorOpenSSL crypto;
+#endif
 };
 
 }  // namespace AittTCPNamespace
