@@ -1,0 +1,22 @@
+name: Minimal CMake build in Ubuntu
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v1
+    - name: install minimal requirements
+      run: sudo add-apt-repository -y ppa:nnstreamer/ppa && sudo apt-get update && sudo apt-get install -y libglib2.0-dev libmosquitto-dev libflatbuffers-dev flatbuffers-compiler libssl-dev
+    - name: run CMake
+      run: cmake . && make -j 2
+
+# Note: libmosquitto-dev does not have pkgconfig until Ubuntu 18.04. Use 20.04 or later for this script.
