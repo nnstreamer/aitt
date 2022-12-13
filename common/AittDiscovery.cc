@@ -158,7 +158,7 @@ void AittDiscovery::PublishDiscoveryMsg()
     fbb.Map([this, &fbb]() {
         fbb.String("status", JOIN_NETWORK);
 
-        for (const std::pair<const std::string &, const DiscoveryBlob &> &node : discovery_map) {
+        for (const std::pair<const std::string &, const DiscoveryBlob &> node : discovery_map) {
             fbb.Key(node.first);
             fbb.Blob(node.second.data.get(), node.second.len);
         }
