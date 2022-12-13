@@ -25,10 +25,7 @@ import android.content.Context;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
-import com.samsung.android.aitt.AittMessage;
-import com.samsung.android.aitt.handler.ModuleHandler;
 import com.samsung.android.aitt.stream.AittStream;
-import com.samsung.android.aitt.stream.AittStreamConfig;
 import com.samsung.android.aitt.stream.AittStreamConfigBuilder;
 
 import org.junit.BeforeClass;

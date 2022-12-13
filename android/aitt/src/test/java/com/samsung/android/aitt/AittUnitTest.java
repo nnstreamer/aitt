@@ -25,6 +25,7 @@ import android.content.Context;
 
 import com.google.flatbuffers.FlexBuffersBuilder;
 import com.samsung.android.aitt.internal.Definitions;
+import com.samsung.android.aitt.stream.AittStream;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -1003,6 +1004,53 @@ public class AittUnitTest {
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSubscribeCallback " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPPublisherStream_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            AittStream rtspPublisher = aitt.createStream(Aitt.Protocol.RTSP, topic, AittStream.StreamRole.PUBLISHER);
+
+            aitt.destroyStream(rtspPublisher);
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPPublisherStream " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPSubscriberStream_P() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            AittStream rtspSubscriber = aitt.createStream(Aitt.Protocol.RTSP, topic, AittStream.StreamRole.SUBSCRIBER);
+
+            aitt.destroyStream(rtspSubscriber);
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPSubscriberStream " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPStreamInvalidTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.RTSP, "", AittStream.StreamRole.SUBSCRIBER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPStreamInvalidTopic " + e);
         }
     }
 }

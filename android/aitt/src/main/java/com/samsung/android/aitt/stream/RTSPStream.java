@@ -46,7 +46,7 @@ public class RTSPStream implements AittStream {
     private RTSPClient rtspClient;
     private StreamDataCallback streamCallback;
     private StreamStateChangeCallback stateChangeCallback = null;
-    private JniInterface jniInterface;
+    private JniInterface jniInterface = null;
     private StreamState serverState = StreamState.INIT;
     private StreamState clientState = StreamState.INIT;
 
@@ -101,17 +101,14 @@ public class RTSPStream implements AittStream {
      */
     @Override
     public void setConfig(AittStreamConfig config) {
-        if (config == null) {
-            Log.e(TAG, "Invalid configuration");
-            return;
-        }
+        if (config == null)
+            throw new IllegalArgumentException("Invalid configuration");
 
         if (config.getUrl() != null) {
             String url = config.getUrl();
-            if (!url.startsWith(URL_PREFIX)) {
-                Log.e(TAG, "Invalid RTSP URL");
-                return;
-            }
+            if (!url.startsWith(URL_PREFIX))
+                throw new IllegalArgumentException("Invalid RTSP URL");
+
             info.put(URL, config.getUrl());
         }
         if (config.getId() != null) {
@@ -160,7 +157,8 @@ public class RTSPStream implements AittStream {
     @Override
     public void disconnect() {
         //ToDo : disconnect and stop can be merged
-        jniInterface.removeDiscoveryCallback(topic);
+        if (jniInterface != null)
+            jniInterface.removeDiscoveryCallback(topic);
     }
 
     /**
@@ -313,7 +311,8 @@ public class RTSPStream implements AittStream {
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data, 0, data.length);
 
-        jniInterface.updateDiscoveryMessage(topic, data);
+        if (jniInterface != null)
+            jniInterface.updateDiscoveryMessage(topic, data);
     }
 
     private void updateState(StreamRole role, StreamState state) {
