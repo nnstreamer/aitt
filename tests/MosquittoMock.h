@@ -15,14 +15,11 @@
  */
 #pragma once
 
-#include <gmock/gmock.h>
+#include <cmock/cmock.h>
 #include <mosquitto.h>
 
-class MQTTMock {
+class MosquittoMock : public CMockMocker<MosquittoMock> {
   public:
-    MQTTMock(void) = default;
-    virtual ~MQTTMock(void) = default;
-
     MOCK_METHOD0(mosquitto_lib_init, int(void));
     MOCK_METHOD0(mosquitto_lib_cleanup, int(void));
     MOCK_METHOD3(mosquitto_new, struct mosquitto *(const char *id, bool clean_session, void *obj));

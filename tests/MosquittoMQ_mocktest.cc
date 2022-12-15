@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "MosquittoMQ.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -20,9 +22,7 @@
 #include <mutex>
 
 #include "AittTypes.h"
-#include "MQMockTest.h"
-#include "MQTTMock.h"
-#include "MosquittoMQ.h"
+#include "MosquittoMock.h"
 
 using ::testing::Return;
 
@@ -33,11 +33,20 @@ using ::testing::Return;
 #define TEST_HOST "localhost"
 #define TEST_HANDLE reinterpret_cast<mosquitto *>(0xbeefbeef)
 
+class MQMockTest : public ::testing::Test {
+  protected:
+    void SetUp() override {}
+
+    void TearDown() override {}
+
+    MosquittoMock mqttMock;
+};
+
 TEST_F(MQMockTest, Create_lib_init_N_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_NOT_SUPPORTED));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(nullptr)).WillOnce(Return());
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_NOT_SUPPORTED));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(nullptr)).WillOnce(Return());
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -49,11 +58,11 @@ TEST_F(MQMockTest, Create_lib_init_N_Anytime)
 
 TEST_F(MQMockTest, Create_new_N_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(nullptr));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(nullptr)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(nullptr)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -65,21 +74,21 @@ TEST_F(MQMockTest, Create_new_N_Anytime)
 
 TEST_F(MQMockTest, Publish_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(),
+    EXPECT_CALL(mqttMock,
           mosquitto_int_option(TEST_HANDLE, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_publish(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC),
-                                 sizeof(TEST_PAYLOAD), TEST_PAYLOAD, AITT_QOS_AT_MOST_ONCE, false))
+    EXPECT_CALL(mqttMock, mosquitto_publish(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC),
+                                sizeof(TEST_PAYLOAD), TEST_PAYLOAD, AITT_QOS_AT_MOST_ONCE, false))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -92,18 +101,18 @@ TEST_F(MQMockTest, Publish_P_Anytime)
 
 TEST_F(MQMockTest, Subscribe_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_subscribe(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC),
-                                 AITT_QOS_AT_MOST_ONCE))
+    EXPECT_CALL(mqttMock, mosquitto_subscribe(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC),
+                                AITT_QOS_AT_MOST_ONCE))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -120,21 +129,21 @@ TEST_F(MQMockTest, Subscribe_P_Anytime)
 
 TEST_F(MQMockTest, Unsubscribe_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_loop_start(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(),
+    EXPECT_CALL(mqttMock,
           mosquitto_subscribe(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC), 0))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(),
+    EXPECT_CALL(mqttMock,
           mosquitto_unsubscribe(TEST_HANDLE, testing::_, testing::StrEq(TEST_TOPIC)))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -152,15 +161,15 @@ TEST_F(MQMockTest, Unsubscribe_P_Anytime)
 
 TEST_F(MQMockTest, Create_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(),
+    EXPECT_CALL(mqttMock,
           mosquitto_int_option(TEST_HANDLE, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5))
           .Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
 
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
@@ -171,15 +180,15 @@ TEST_F(MQMockTest, Create_P_Anytime)
 
 TEST_F(MQMockTest, Connect_will_set_N_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_will_set(TEST_HANDLE, testing::StrEq("lastWill"),
-                                 sizeof(TEST_PAYLOAD), TEST_PAYLOAD, AITT_QOS_AT_MOST_ONCE, true))
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_will_set(TEST_HANDLE, testing::StrEq("lastWill"),
+                                sizeof(TEST_PAYLOAD), TEST_PAYLOAD, AITT_QOS_AT_MOST_ONCE, true))
           .WillOnce(Return(MOSQ_ERR_NOMEM));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
         mq.SetWillInfo("lastWill", TEST_PAYLOAD, sizeof(TEST_PAYLOAD), AITT_QOS_AT_MOST_ONCE, true);
@@ -192,14 +201,14 @@ TEST_F(MQMockTest, Connect_will_set_N_Anytime)
 
 TEST_F(MQMockTest, Connect_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
         mq.Connect(TEST_HOST, TEST_PORT, "", "");
@@ -212,17 +221,17 @@ TEST_F(MQMockTest, Connect_User_P_Anytime)
 {
     std::string username = "test";
     std::string password = "test";
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(),
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock,
           mosquitto_username_pw_set(TEST_HANDLE, username.c_str(), password.c_str()))
           .Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
+    EXPECT_CALL(mqttMock, mosquitto_connect(TEST_HANDLE, testing::StrEq(TEST_HOST), TEST_PORT, 60))
           .WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
         mq.Connect(TEST_HOST, TEST_PORT, username, password);
@@ -233,14 +242,14 @@ TEST_F(MQMockTest, Connect_User_P_Anytime)
 
 TEST_F(MQMockTest, Disconnect_P_Anytime)
 {
-    EXPECT_CALL(GetMock(), mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
+    EXPECT_CALL(mqttMock, mosquitto_lib_init()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_new(testing::StrEq(TEST_CLIENT_ID), true, testing::_))
           .WillOnce(Return(TEST_HANDLE));
-    EXPECT_CALL(GetMock(), mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_disconnect(testing::_)).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_will_clear(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
-    EXPECT_CALL(GetMock(), mosquitto_destroy(TEST_HANDLE)).Times(1);
-    EXPECT_CALL(GetMock(), mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_message_v5_callback_set(TEST_HANDLE, testing::_)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_disconnect(testing::_)).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_will_clear(TEST_HANDLE)).WillOnce(Return(MOSQ_ERR_SUCCESS));
+    EXPECT_CALL(mqttMock, mosquitto_destroy(TEST_HANDLE)).Times(1);
+    EXPECT_CALL(mqttMock, mosquitto_lib_cleanup()).WillOnce(Return(MOSQ_ERR_SUCCESS));
     try {
         aitt::MosquittoMQ mq(TEST_CLIENT_ID, true);
         mq.Disconnect();
