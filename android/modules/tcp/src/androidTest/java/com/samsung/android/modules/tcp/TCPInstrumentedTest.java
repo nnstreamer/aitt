@@ -34,15 +34,22 @@ public class TCPInstrumentedTest {
 
     private static final String TAG = "AITT-ANDROID";
     private static final String AITT_ID = "AITT_ANDROID";
-    private static final String BROKER_IP = "192.168.1.59"; // TODO: Replace with 'localhost' value.
     private static final int PORT = 1883;
     private static final String TEST_TOPIC = "android/test/tcp";
     private static final String TEST_MESSAGE = "This is a test message for TCP protocol.";
     private static final String ERROR_MESSAGE_AITT_NULL = "An AITT instance is null.";
 
+    private static String brokerIp;
+
     @BeforeClass
     public static void initialize() {
         appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        // IMPORTANT NOTE: Should give test arguments as follows.
+        // if using Android studio: Run -> Edit Configurations -> Find 'Instrumentation arguments'
+        //                         -> press '...' button -> add the name as "brokerIp" and the value
+        //                         (Broker WiFi IP) of broker argument
+        // if using gradlew commands: Add "-e brokerIp [Broker WiFi IP]"
+        brokerIp = InstrumentationRegistry.getArguments().getString("brokerIp");
     }
 
     @Test
@@ -50,12 +57,12 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             byte[] payload = TEST_MESSAGE.getBytes();
             aitt.publish(TEST_TOPIC, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
         } catch (Exception e) {
-            fail("Failed to execute testPublishWithTCP_P, (" + e + ")");
+            fail("Failed to execute testPublishWithTCP, (" + e + ")");
         }
     }
 
@@ -64,7 +71,7 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             String _topic = "";
             byte[] payload = TEST_MESSAGE.getBytes();
@@ -73,7 +80,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testPublishWithTCPInvalidTopic_N, (" + e + ")");
+            fail("Failed testPublishWithTCPInvalidTopic, (" + e + ")");
         }
     }
 
@@ -82,13 +89,13 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             aitt.subscribe(TEST_TOPIC, message -> Log.i(TAG, "A subscription callback is called."), Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed to execute testSubscribeWithTCP_P, (" + e + ")");
+            fail("Failed to execute testSubscribeWithTCP, (" + e + ")");
         }
     }
 
@@ -97,7 +104,7 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             Aitt.SubscribeCallback callback1 = message -> {
             };
@@ -110,7 +117,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPMultipleCallbacks_P, (" + e + ")");
+            fail("Failed testSubscribeWithTCPMultipleCallbacks, (" + e + ")");
         }
     }
 
@@ -119,7 +126,7 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             String _topic = "";
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
@@ -127,7 +134,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPInvalidTopic_N, (" + e + ")");
+            fail("Failed testSubscribeWithTCPInvalidTopic, (" + e + ")");
         }
     }
 
@@ -136,14 +143,14 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             String _topic = "topic";
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE));
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPInvalidCallback_N, (" + e + ")");
+            fail("Failed testSubscribeWithTCPInvalidCallback, (" + e + ")");
         }
     }
 
@@ -152,7 +159,7 @@ public class TCPInstrumentedTest {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
             aitt.subscribe(TEST_TOPIC, message -> {
             }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
 
@@ -160,7 +167,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testUnsubscribe_P, (" + e + ")");
+            fail("Failed testUnsubscribe, (" + e + ")");
         }
     }
 
@@ -170,7 +177,7 @@ public class TCPInstrumentedTest {
             String wifiIp = wifiIpAddress();
             Aitt aitt = new Aitt(appContext, AITT_ID, wifiIp, false);
             assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(BROKER_IP, PORT);
+            aitt.connect(brokerIp, PORT);
 
             AtomicBoolean message_received = new AtomicBoolean(false);
             byte[] payload = TEST_MESSAGE.getBytes();
@@ -194,7 +201,7 @@ public class TCPInstrumentedTest {
 
             Assert.assertTrue(message_received.get());
         } catch (Exception e) {
-            fail("Failed to execute testPublishSubscribeWithTCP_P, (" + e + ")");
+            fail("Failed to execute testPublishSubscribeWithTCP, (" + e + ")");
         }
     }
 

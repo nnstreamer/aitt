@@ -251,7 +251,6 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
 
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.close();
@@ -266,7 +265,6 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
 
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(null);
 
             aitt.close();
@@ -280,8 +278,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.disconnect();
@@ -295,8 +291,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
@@ -314,9 +308,9 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
+
             String _topic = "";
             byte[] payload = message.getBytes();
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload));
 
             aitt.disconnect();
@@ -330,8 +324,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
@@ -349,9 +341,9 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
+
             String _topic = "";
             byte[] payload = message.getBytes();
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
@@ -365,8 +357,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
@@ -384,9 +374,9 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
+
             String _topic = "";
             byte[] payload = message.getBytes();
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
@@ -400,8 +390,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
@@ -419,9 +407,9 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
+
             String _topic = "";
             byte[] payload = message.getBytes();
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false));
 
             aitt.disconnect();
@@ -435,8 +423,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
@@ -454,13 +440,11 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
+
             String _topic = "";
             byte[] payload = message.getBytes();
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
@@ -475,9 +459,9 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
             aitt.connect(brokerIp, port);
+
             byte[] payload = message.getBytes();
             EnumSet<Aitt.Protocol> protocols = EnumSet.noneOf(Aitt.Protocol.class);
-
             assertThrows(IllegalArgumentException.class, () -> aitt.publish(topic, payload, protocols, Aitt.QoS.AT_MOST_ONCE, false));
 
             aitt.disconnect();
@@ -491,8 +475,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, message -> {
@@ -512,7 +494,6 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             String _topic = "";
-
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
             }));
 
@@ -527,7 +508,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
 
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null));
@@ -543,8 +523,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, message -> {
@@ -564,7 +542,6 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             String _topic = "";
-
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
             }, Aitt.Protocol.TCP));
 
@@ -579,7 +556,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
 
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.TCP));
@@ -595,8 +571,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, message -> {
@@ -616,7 +590,6 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             String _topic = "";
-
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
             }, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE));
 
@@ -631,7 +604,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
 
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE));
@@ -647,8 +619,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, message -> {
@@ -668,7 +638,6 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             String _topic = "";
-
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
             }, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE));
 
@@ -683,8 +652,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             aitt.subscribe(topic, message -> {
@@ -704,7 +671,6 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             String _topic = "";
-
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
             }, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE));
 
@@ -719,7 +685,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
 
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.TCP, Aitt.QoS.AT_MOST_ONCE));
@@ -735,10 +700,9 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
-            EnumSet<Aitt.Protocol> protocols = EnumSet.noneOf(Aitt.Protocol.class);
 
+            EnumSet<Aitt.Protocol> protocols = EnumSet.noneOf(Aitt.Protocol.class);
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, message -> {
             }, protocols, Aitt.QoS.AT_MOST_ONCE));
 
@@ -753,8 +717,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
@@ -790,8 +752,8 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
+
             EnumSet<Aitt.Protocol> protocols = EnumSet.of(Aitt.Protocol.MQTT, Aitt.Protocol.TCP);
             assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, protocols, Aitt.QoS.AT_MOST_ONCE));
 
@@ -806,10 +768,7 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
-
             aitt.subscribe(topic, message -> {
             });
 
@@ -825,10 +784,9 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
             aitt.connect(brokerIp, port);
-            String _topic = "";
 
+            String _topic = "";
             assertThrows(IllegalArgumentException.class, () -> aitt.unsubscribe(_topic));
 
             aitt.disconnect();
@@ -843,7 +801,6 @@ public class AittUnitTest {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
 
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.setConnectionCallback(new Aitt.ConnectionCallback() {
                 @Override
                 public void onConnected() {
@@ -857,8 +814,8 @@ public class AittUnitTest {
                 public void onConnectionFailed() {
                 }
             });
-            aitt.connect(brokerIp, port);
 
+            aitt.connect(brokerIp, port);
             aitt.disconnect();
         } catch (Exception e) {
             fail("Failed testSetConnectionCallback " + e);
@@ -885,17 +842,14 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             Aitt.SubscribeCallback callback1 = message -> {
             };
+            aitt.subscribe(topic, callback1);
 
             Aitt.SubscribeCallback callback2 = message -> {
             };
-
-            aitt.subscribe(topic, callback1);
             aitt.subscribe(topic, callback2);
 
             aitt.disconnect();
@@ -910,8 +864,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             int counter = 1;
@@ -923,7 +875,7 @@ public class AittUnitTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testDiscoveryMessageCallback " + e);
+            fail("Failed testDiscoveryMessageCallbackConnected " + e);
         }
     }
 
@@ -932,8 +884,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             int counter = 1;
@@ -943,9 +893,10 @@ public class AittUnitTest {
             counter = 6;
             byte[] disconnectMessage = createDiscoveryMessage(counter);
             messageCallbackMethod.invoke(aitt, Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, disconnectMessage);
+
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testDiscoveryMessageCallback " + e);
+            fail("Failed testDiscoveryMessageCallbackDisconnected " + e);
         }
     }
 
@@ -954,8 +905,6 @@ public class AittUnitTest {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
-
-            assertNotNull("Aitt Instance not null", aitt);
             aitt.connect(brokerIp, port);
 
             byte[] discoveryMessage = new byte[0];
@@ -978,12 +927,11 @@ public class AittUnitTest {
                 String receivedTopic = aittMessage.getTopic();
                 assertEquals("Received topic and subscribed topic are equal", receivedTopic, topic);
             });
-
             messageCallbackMethod.invoke(aitt, topic, message.getBytes(StandardCharsets.UTF_8));
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeCallback " + e);
+            fail("Failed testSubscribeCallbackVerifyTopic " + e);
         }
     }
 
@@ -998,12 +946,11 @@ public class AittUnitTest {
                 String receivedMessage = new String(aittMessage.getPayload(), StandardCharsets.UTF_8);
                 assertEquals("Received message and sent message are equal", message, receivedMessage);
             });
-
             messageCallbackMethod.invoke(aitt, topic, message.getBytes(StandardCharsets.UTF_8));
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeCallback " + e);
+            fail("Failed testSubscribeCallbackVerifyPayload " + e);
         }
     }
 

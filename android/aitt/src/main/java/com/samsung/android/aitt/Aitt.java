@@ -51,6 +51,7 @@ public class Aitt {
 
     private static final String TAG = "AITT_ANDROID";
     private static final String INVALID_TOPIC = "Invalid topic";
+    private static final String HOST_STRING = "host";
 
     private final Map<String, HostTable> publishTable = new HashMap<>();
     private final Map<String, Pair<Protocol, Object>> subscribeMap = new HashMap<>();
@@ -95,11 +96,10 @@ public class Aitt {
         }
 
         public static Protocol fromInt(long value) {
-            for (Protocol type : values()) {
-                if (type.getValue() == value) {
+            for (Protocol type : values())
+                if (type.getValue() == value)
                     return type;
-                }
-            }
+
             return null;
         }
     }
@@ -155,20 +155,18 @@ public class Aitt {
      * @param clearSession "clear" the current session when the client disconnects
      */
     public Aitt(Context appContext, String id, String ip, boolean clearSession) throws InstantiationException {
-        if (appContext == null) {
+        if (appContext == null)
             throw new IllegalArgumentException("Invalid appContext");
-        }
-        if (id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty())
             throw new IllegalArgumentException("Invalid id");
-        }
-        if (ip == null || ip.isEmpty()) {
+        if (ip == null || ip.isEmpty())
             throw new IllegalArgumentException("Invalid ip");
-        }
+
         mJniInterface = new JniInterface();
         instance = mJniInterface.init(id, ip, clearSession);
-        if (instance == 0L) {
+        if (instance == 0L)
             throw new InstantiationException("Failed to instantiate native instance");
-        }
+
         this.ip = ip;
         this.appContext = appContext;
     }
@@ -179,9 +177,9 @@ public class Aitt {
      * @param callback ConnectionCallback to which status should be updated
      */
     public void setConnectionCallback(ConnectionCallback callback) {
-        if (callback == null) {
+        if (callback == null)
             throw new IllegalArgumentException("Invalid callback");
-        }
+
         connectionCallback = callback;
         mJniInterface.setConnectionCallback(this::connectionStatusCallback);
     }
@@ -202,9 +200,9 @@ public class Aitt {
      * @param port     Broker port number to which, device has to connect
      */
     public void connect(@Nullable String brokerIp, int port) {
-        if (brokerIp == null || brokerIp.isEmpty()) {
+        if (brokerIp == null || brokerIp.isEmpty())
             brokerIp = Definitions.AITT_LOCALHOST;
-        }
+
         mJniInterface.connect(brokerIp, port);
         //Subscribe to java discovery topic
         mJniInterface.subscribe(Definitions.JAVA_SPECIFIC_DISCOVERY_TOPIC, this::messageCallback, Protocol.MQTT.getValue(), QoS.EXACTLY_ONCE.ordinal());
@@ -236,7 +234,7 @@ public class Aitt {
     }
 
     /**
-     * Method to publish message to a specific topic
+     * Method to publish message to a specific topic with a given protocol
      *
      * @param topic    String to which message needs to be published
      * @param message  Byte message that needs to be published
@@ -248,7 +246,7 @@ public class Aitt {
     }
 
     /**
-     * Method to publish message to a specific topic
+     * Method to publish message to a specific topic with a given protocol and qos
      *
      * @param topic    String to which message needs to be published
      * @param message  Byte message that needs to be published
@@ -261,7 +259,7 @@ public class Aitt {
     }
 
     /**
-     * Method to publish message to a specific topic
+     * Method to publish message to a specific topic with a given protocol, qos, and retain
      *
      * @param topic    String to which message needs to be published
      * @param message  Byte message that needs to be published
@@ -275,7 +273,7 @@ public class Aitt {
     }
 
     /**
-     * Method to publish message to a specific topic
+     * Method to publish message to a specific topic with protocols, qos, and retain
      *
      * @param topic     String to which message needs to be published
      * @param message   Byte message that needs to be published
@@ -284,33 +282,34 @@ public class Aitt {
      * @param retain    Boolean to decide whether or not the message should be retained by the broker
      */
     public void publish(String topic, byte[] message, EnumSet<Protocol> protocols, QoS qos, boolean retain) {
-
         checkParams(topic, protocols);
-        int jniProtocols = 0;
 
+        int jniProtocols = 0;
         for (Protocol p : protocols) {
-            if (!classifyProtocol(p)) {
+            if (isUsingNativePubSub(p)) {
                 jniProtocols += p.getValue();
                 protocols.remove(p);
             }
         }
 
-        if (jniProtocols > 0) {
+        if (jniProtocols > 0)
             mJniInterface.publish(topic, message, message.length, jniProtocols, qos.ordinal(), retain);
-        }
 
+        publishTransportProtocols(topic, message, protocols);
+    }
+
+    /**
+     * Method to publish message to a specific topic with transport protocols
+     *
+     * @param topic     String to which message needs to be published
+     * @param message   Byte message that needs to be published
+     * @param protocols Protocols to be used to publish message
+     */
+    private void publishTransportProtocols(String topic, byte[] message, EnumSet<Protocol> protocols) {
         for (Protocol protocol : protocols) {
             try {
                 synchronized (this) {
-                    if (!publishTable.containsKey(topic)) {
-                        Log.e(TAG, "Invalid publish request over unsubscribed topic");
-                        return;
-                    }
-                    HostTable hostTable = publishTable.get(topic);
-                    if (hostTable == null) {
-                        Log.d(TAG, "Host table for topic [" + topic + "] is null.");
-                        continue;
-                    }
+                    HostTable hostTable = getHostTable(topic);
                     for (String hostIp : hostTable.hostMap.keySet()) {
                         PortTable portTable = hostTable.hostMap.get(hostIp);
                         if (portTable == null) {
@@ -329,9 +328,25 @@ public class Aitt {
                     }
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error during publish", e);
+                Log.e(TAG, "Error during publishing transport protocols", e);
             }
         }
+    }
+
+    /**
+     * Method to get a host table related to a specific topic
+     *
+     * @param topic String to which message needs to be published
+     */
+    private HostTable getHostTable(String topic) {
+        if (!publishTable.containsKey(topic))
+            throw new IllegalArgumentException("Invalid publish request over an unsubscribed topic");
+
+        HostTable hostTable = publishTable.get(topic);
+        if (hostTable == null)
+            throw new IllegalArgumentException("Host table for topic [" + topic + "] is null.");
+
+        return hostTable;
     }
 
     // TODO: Update publish with proper stream interface.
@@ -343,15 +358,7 @@ public class Aitt {
 
         try {
             synchronized (this) {
-                if (!publishTable.containsKey(topic)) {
-                    Log.e(TAG, "Invalid publish request over unsubscribed topic");
-                    return false;
-                }
-                HostTable hostTable = publishTable.get(topic);
-                if (hostTable == null) {
-                    Log.d(TAG, "Host table for topic [" + topic + "] is null.");
-                    return false;
-                }
+                HostTable hostTable = getHostTable(topic);
                 for (String hostIp : hostTable.hostMap.keySet()) {
                     PortTable portTable = hostTable.hostMap.get(hostIp);
                     if (portTable == null) {
@@ -411,10 +418,10 @@ public class Aitt {
      * Method to differentiate android specific protocol
      *
      * @param protocols Protocol to be classified
-     * @return true if the protocol is specific to android implementation
+     * @return true if the protocol is using native publish/subscribe
      */
-    private boolean classifyProtocol(Protocol protocols) {
-        return protocols.equals(Protocol.WEBRTC) || protocols.equals(Protocol.IPC) || protocols.equals(Protocol.RTSP);
+    private boolean isUsingNativePubSub(Protocol protocols) {
+        return protocols.equals(Protocol.MQTT) || protocols.equals(Protocol.TCP) || protocols.equals(Protocol.TCP_SECURE);
     }
 
     /**
@@ -458,21 +465,19 @@ public class Aitt {
      *
      * @param topic     String to which applications can subscribe, to receive data
      * @param callback  Callback object specific to a subscribe call
-     * @param protocols Protocol supported by application, invoking subscribe
+     * @param protocols Protocols supported by application, invoking subscribe
      * @param qos       QoS at which the message should be delivered
      */
     public void subscribe(String topic, SubscribeCallback callback, EnumSet<Protocol> protocols, QoS qos) {
-
         checkParams(topic, protocols);
 
-        if (callback == null) {
+        if (callback == null)
             throw new IllegalArgumentException("Invalid callback");
-        }
 
         int jniProtocols = 0;
 
         for (Protocol p : protocols) {
-            if (!classifyProtocol(p)) {
+            if (isUsingNativePubSub(p)) {
                 jniProtocols += p.getValue();
                 protocols.remove(p);
             }
@@ -515,17 +520,15 @@ public class Aitt {
     /**
      * Method to verify Aitt pub & sub parameters
      *
-     * @param topic     String to which applications can subscribe, to receive data
-     * @param protocols Protocol supported by application, invoking subscribe
+     * @param topic     String to which applications can publish or subscribe data
+     * @param protocols Protocols which indicate the way to publish or subscribe data
      */
     private void checkParams(String topic, EnumSet<Protocol> protocols) {
-        if (topic == null || topic.isEmpty()) {
+        if (topic == null || topic.isEmpty())
             throw new IllegalArgumentException(INVALID_TOPIC);
-        }
 
-        if (protocols.isEmpty()) {
+        if (protocols.isEmpty())
             throw new IllegalArgumentException("Invalid protocols");
-        }
     }
 
     /**
@@ -539,11 +542,8 @@ public class Aitt {
             try {
                 ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
 
-                if (cbList != null) {
-                    // check whether the list already contains same callback
-                    if (!cbList.contains(callback)) {
-                        cbList.add(callback);
-                    }
+                if (cbList != null && !cbList.contains(callback)) {
+                    cbList.add(callback);
                 } else {
                     cbList = new ArrayList<>();
                     cbList.add(callback);
@@ -561,9 +561,8 @@ public class Aitt {
      * @param topic String topic to which application had subscribed
      */
     public void unsubscribe(String topic) {
-        if (topic == null || topic.isEmpty()) {
+        if (topic == null || topic.isEmpty())
             throw new IllegalArgumentException(INVALID_TOPIC);
-        }
 
         boolean isRemoved = false;
         try {
@@ -578,15 +577,13 @@ public class Aitt {
             }
 
             if (!isRemoved) {
-                Long paittSubId = null;
+                Long pAittSubId = null;
                 synchronized (this) {
-                    if (aittSubId.containsKey(topic)) {
-                        paittSubId = aittSubId.get(topic);
-                    }
+                    if (aittSubId.containsKey(topic))
+                        pAittSubId = aittSubId.get(topic);
                 }
-                if (paittSubId != null) {
-                    mJniInterface.unsubscribe(topic, paittSubId);
-                }
+                if (pAittSubId != null)
+                    mJniInterface.unsubscribe(topic, pAittSubId);
             }
 
             synchronized (this) {
@@ -681,15 +678,14 @@ public class Aitt {
         try {
             ByteBuffer buffer = ByteBuffer.wrap(payload);
             FlexBuffers.Map map = FlexBuffers.getRoot(buffer).asMap();
-            String host = map.get("host").asString();
+            String host = map.get(HOST_STRING).asString();
             String status = map.get(Definitions.STATUS).asString();
             if (status != null && status.compareTo(Definitions.WILL_LEAVE_NETWORK) == 0) {
                 synchronized (this) {
                     for (Map.Entry<String, HostTable> entry : publishTable.entrySet()) {
                         HostTable hostTable = entry.getValue();
-                        if (hostTable != null) {
+                        if (hostTable != null)
                             hostTable.hostMap.remove(host);
-                        }
                     }
                 }
                 return;
@@ -698,9 +694,8 @@ public class Aitt {
             FlexBuffers.KeyVector topics = map.keys();
             for (int i = 0; i < topics.size(); i++) {
                 String _topic = topics.get(i).toString();
-                if (_topic.compareTo("host") == 0 || _topic.compareTo(Definitions.STATUS) == 0) {
+                if (HOST_STRING.compareTo(_topic) == 0 || Definitions.STATUS.compareTo(_topic) == 0)
                     continue;
-                }
 
                 FlexBuffers.Map _map = map.get(_topic).asMap();
                 int port = _map.get("port").asInt();
@@ -719,7 +714,7 @@ public class Aitt {
      * @param topic    The topic to which, other parties have subscribed to
      * @param host     String which specifies a particular host
      * @param port     Port of the party which subscribed to given topic
-     * @param protocol protocol supported by the party which subscribed to given topic
+     * @param protocol Protocol supported by the party which subscribed to given topic
      */
     private void updatePublishTable(String topic, String host, int port, Protocol protocol) {
         synchronized (this) {
@@ -755,7 +750,7 @@ public class Aitt {
             }
 
             // TODO: Handle multiple ports with the same topic.
-            if (portTable.portMap.isEmpty() == false) {
+            if (!portTable.portMap.isEmpty()) {
                 StringBuilder portLists = new StringBuilder();
                 for (int p : portTable.portMap.keySet()) {
                     portLists.append(p);
@@ -780,12 +775,12 @@ public class Aitt {
             String topic = message.getTopic();
             synchronized (this) {
                 ArrayList<SubscribeCallback> cbList = subscribeCallbacks.get(topic);
-
-                if (cbList != null) {
-                    for (int i = 0; i < cbList.size(); i++) {
-                        cbList.get(i).onMessageReceived(message);
-                    }
+                if (cbList == null) {
+                    Log.d(TAG, "Subscribe callback list is null.");
+                    return;
                 }
+
+                cbList.forEach(subscribeCallback -> subscribeCallback.onMessageReceived(message));
             }
         } catch (Exception e) {
             Log.e(TAG, "Error during messageReceived", e);
@@ -808,24 +803,36 @@ public class Aitt {
         }
     }
 
+    /**
+     * Method that receives message from JNI layer for topics other than discovery topics
+     *
+     * @param protocol The data received from JNI layer to be sent to application layer
+     * @param topic The data received from JNI layer to be sent to application layer
+     * @param streamRole The data received from JNI layer to be sent to application layer
+     */
     public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) {
         ModuleHandler moduleHandler = createModuleHandler(protocol);
-        if (moduleHandler != null && protocol == Protocol.WEBRTC) {
-            WebRTCStream webRTCStream = (WebRTCStream) ((WebRTCHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
-            if (webRTCStream != null && streamRole == AittStream.StreamRole.SUBSCRIBER) {
-                webRTCStream.setSelfIP(ip);
-                webRTCStream.setJNIInterface(mJniInterface);
-            }
-
-            return webRTCStream;
+        if (moduleHandler == null) {
+            Log.e(TAG, "Fail to create a module handler.");
+            return null;
         }
-        if (moduleHandler != null && protocol == Protocol.RTSP) {
-            RTSPStream rtspStream = (RTSPStream) ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
-            if (rtspStream != null) {
-                rtspStream.setJNIInterface(mJniInterface);
-            }
 
-            return rtspStream;
+        switch (protocol) {
+            case WEBRTC:
+                WebRTCStream webRTCStream = (WebRTCStream) ((WebRTCHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+                if (webRTCStream != null && streamRole == AittStream.StreamRole.SUBSCRIBER) {
+                    webRTCStream.setSelfIP(ip);
+                    webRTCStream.setJNIInterface(mJniInterface);
+                }
+                return webRTCStream;
+            case RTSP:
+                RTSPStream rtspStream = (RTSPStream) ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
+                if (rtspStream != null)
+                    rtspStream.setJNIInterface(mJniInterface);
+                return rtspStream;
+            default:
+                Log.d(TAG, "Not supported yet.");
+                break;
         }
 
         return null;
