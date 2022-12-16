@@ -32,7 +32,7 @@ namespace aitt {
 
 class MosquittoMQ : public MQ {
   public:
-    explicit MosquittoMQ(const std::string &id, bool clear_session = false);
+    explicit MosquittoMQ(const std::string &id, bool clean_session = false);
     virtual ~MosquittoMQ(void);
 
     void SetConnectionCallback(const MQConnectionCallback &cb);

@@ -39,10 +39,10 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
     if (option.GetUseCustomMqttBroker()) {
         mq = modules.NewCustomMQ(id, option);
         AittOption discovery_option = option;
-        discovery_option.SetClearSession(false);
+        discovery_option.SetCleanSession(false);
         discovery.SetMQ(modules.NewCustomMQ(id + 'd', option));
     } else {
-        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetClearSession()));
+        mq = std::unique_ptr<MQ>(new MosquittoMQ(id, option.GetCleanSession()));
         discovery.SetMQ(std::unique_ptr<MQ>(new MosquittoMQ(id + 'd', false)));
     }
     aittThread = std::thread(&AITT::Impl::ThreadMain, this);

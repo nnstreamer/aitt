@@ -17,23 +17,23 @@
 
 #include "aitt_internal.h"
 
-AittOption::AittOption() : clear_session_(false), use_custom_broker(false)
+AittOption::AittOption() : clean_session_(false), use_custom_broker(false)
 {
 }
 
-AittOption::AittOption(bool clear_session, bool use_custom_mqtt_broker)
-      : clear_session_(clear_session), use_custom_broker(use_custom_mqtt_broker)
+AittOption::AittOption(bool clean_session, bool use_custom_mqtt_broker)
+      : clean_session_(clean_session), use_custom_broker(use_custom_mqtt_broker)
 {
 }
 
-void AittOption::SetClearSession(bool val)
+void AittOption::SetCleanSession(bool val)
 {
-    clear_session_ = val;
+    clean_session_ = val;
 }
 
-bool AittOption::GetClearSession() const
+bool AittOption::GetCleanSession() const
 {
-    return clear_session_;
+    return clean_session_;
 }
 
 void AittOption::SetUseCustomMqttBroker(bool val)

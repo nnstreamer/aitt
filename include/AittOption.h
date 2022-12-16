@@ -22,11 +22,11 @@
 class API AittOption {
   public:
     AittOption();
-    explicit AittOption(bool clear_session, bool use_custom_broker);
+    explicit AittOption(bool clean_session, bool use_custom_broker);
     ~AittOption() = default;
 
-    void SetClearSession(bool val);
-    bool GetClearSession() const;
+    void SetCleanSession(bool val);
+    bool GetCleanSession() const;
     void SetUseCustomMqttBroker(bool val);
     bool GetUseCustomMqttBroker() const;
     void SetServiceID(const std::string &id);
@@ -39,7 +39,7 @@ class API AittOption {
     const char *GetCustomRWFile() const;
 
   private:
-    bool clear_session_;
+    bool clean_session_;
     bool use_custom_broker;
     std::string service_id;
     std::string location_id;

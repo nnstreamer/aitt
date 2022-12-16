@@ -126,7 +126,7 @@ API int aitt_option_set(aitt_option_h handle, aitt_option_e option, const char *
     case AITT_OPT_CLEAN_SESSION:
         ret = _to_boolean(value, bool_val);
         if (ret == AITT_ERROR_NONE)
-            handle->option.SetClearSession(bool_val);
+            handle->option.SetCleanSession(bool_val);
         return ret;
     case AITT_OPT_CUSTOM_BROKER:
         ret = _to_boolean(value, bool_val);
@@ -149,7 +149,7 @@ API const char *aitt_option_get(aitt_option_h handle, aitt_option_e option)
     case AITT_OPT_MY_IP:
         return handle->my_ip;
     case AITT_OPT_CLEAN_SESSION:
-        return (handle->option.GetClearSession()) ? "true" : "false";
+        return (handle->option.GetCleanSession()) ? "true" : "false";
     case AITT_OPT_CUSTOM_BROKER:
         return (handle->option.GetUseCustomMqttBroker()) ? "true" : "false";
     default:

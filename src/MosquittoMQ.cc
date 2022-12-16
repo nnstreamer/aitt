@@ -33,7 +33,7 @@ namespace aitt {
 const std::string MosquittoMQ::REPLY_SEQUENCE_NUM_KEY = "sequenceNum";
 const std::string MosquittoMQ::REPLY_IS_END_SEQUENCE_KEY = "isEndSequence";
 
-MosquittoMQ::MosquittoMQ(const std::string &id, bool clear_session)
+MosquittoMQ::MosquittoMQ(const std::string &id, bool clean_session)
       : handle(nullptr),
         keep_alive(60),
         subscribers_iterating(false),
@@ -47,9 +47,9 @@ MosquittoMQ::MosquittoMQ(const std::string &id, bool clear_session)
             break;
         }
 
-        handle = mosquitto_new(id.c_str(), clear_session, this);
+        handle = mosquitto_new(id.c_str(), clean_session, this);
         if (handle == nullptr) {
-            ERR("mosquitto_new(%s, %d) Fail", id.c_str(), clear_session);
+            ERR("mosquitto_new(%s, %d) Fail", id.c_str(), clean_session);
             break;
         }
 
