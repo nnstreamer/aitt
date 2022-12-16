@@ -70,6 +70,7 @@ enum AittConnectionState {
 #define TIZEN_ERROR_PERMISSION_DENIED -EACCES
 #define TIZEN_ERROR_RESOURCE_BUSY -EBUSY
 #define TIZEN_ERROR_INVALID_PARAMETER -EINVAL
+#define TIZEN_ERROR_ALREADY_IN_PROGRESS -EALREADY
 #define TIZEN_ERROR_TIMED_OUT (-1073741824LL + 1)
 #define TIZEN_ERROR_NOT_SUPPORTED (-1073741824LL + 2)
 #define TIZEN_ERROR_AITT -0x04020000
@@ -81,9 +82,10 @@ enum AittError {
     AITT_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED, /**< Permission denied */
     AITT_ERROR_RESOURCE_BUSY = TIZEN_ERROR_RESOURCE_BUSY,         /**< Device or resource busy */
     AITT_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER, /**< Invalid parameter */
-    AITT_ERROR_TIMED_OUT = TIZEN_ERROR_TIMED_OUT,                 /**< Time out */
-    AITT_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED,         /**< Not supported */
-    AITT_ERROR_UNKNOWN = TIZEN_ERROR_AITT | 0x01,                 /**< Unknown Error */
-    AITT_ERROR_SYSTEM = TIZEN_ERROR_AITT | 0x02,                  /**< System errors */
-    AITT_ERROR_NOT_READY = TIZEN_ERROR_AITT | 0x03,               /**< Not available */
+    AITT_ERROR_ALREADY = TIZEN_ERROR_ALREADY_IN_PROGRESS, /**< Operation already in progress */
+    AITT_ERROR_TIMED_OUT = TIZEN_ERROR_TIMED_OUT,         /**< Time out */
+    AITT_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED, /**< Not supported */
+    AITT_ERROR_UNKNOWN = TIZEN_ERROR_AITT | 0x01,         /**< Unknown Error */
+    AITT_ERROR_SYSTEM = TIZEN_ERROR_AITT | 0x02,          /**< System errors */
+    AITT_ERROR_NOT_READY = TIZEN_ERROR_AITT | 0x03,       /**< Not available */
 };

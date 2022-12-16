@@ -31,9 +31,9 @@ struct aitt_handle {
 };
 
 struct aitt_option {
+    aitt_option() : my_ip(nullptr) {}
     const char *my_ip;
-    bool clear_session;
-    bool custom_broker;
+    AittOption option;
 };
 
 API aitt_h aitt_new(const char *id, aitt_option_h option)
@@ -42,23 +42,19 @@ API aitt_h aitt_new(const char *id, aitt_option_h option)
     try {
         std::string valid_id;
         std::string valid_ip;
-        AittOption aitt_option;
-        bool custom_broker = false;
 
         if (id)
             valid_id = id;
 
+        handle = new aitt_handle();
         if (option) {
             if (option->my_ip)
                 valid_ip = option->my_ip;
-            aitt_option.SetClearSession(option->clear_session);
-            aitt_option.SetUseCustomMqttBroker(option->custom_broker);
-            custom_broker = option->custom_broker;
+            handle->custom_broker = option->option.GetUseCustomMqttBroker();
+            handle->aitt = new AITT(valid_id, valid_ip, option->option);
+        } else {
+            handle->aitt = new AITT(valid_id, valid_ip);
         }
-
-        handle = new aitt_handle();
-        handle->aitt = new AITT(valid_id, valid_ip, aitt_option);
-        handle->custom_broker = custom_broker;
     } catch (std::exception &e) {
         ERR("new() Fail(%s)", e.what());
         return nullptr;
@@ -69,10 +65,7 @@ API aitt_h aitt_new(const char *id, aitt_option_h option)
 
 API void aitt_destroy(aitt_h handle)
 {
-    if (handle == nullptr) {
-        ERR("handle is NULL");
-        return;
-    }
+    RET_IF(handle == nullptr);
 
     try {
         delete handle->aitt;
@@ -88,9 +81,6 @@ API aitt_option_h aitt_option_new()
 
     try {
         handle = new aitt_option();
-        handle->my_ip = nullptr;
-        handle->clear_session = false;
-        handle->custom_broker = false;
     } catch (std::exception &e) {
         ERR("new() Fail(%s)", e.what());
     }
@@ -100,10 +90,7 @@ API aitt_option_h aitt_option_new()
 
 API void aitt_option_destroy(aitt_option_h handle)
 {
-    if (handle == nullptr) {
-        ERR("handle is NULL");
-        return;
-    }
+    RET_IF(handle == nullptr);
 
     try {
         delete handle;
@@ -112,7 +99,7 @@ API void aitt_option_destroy(aitt_option_h handle)
     }
 }
 
-static int _option_set_bool(const char *value, bool &dest)
+static int _to_boolean(const char *value, bool &dest)
 {
     if (value) {
         dest = (STR_EQ == strcasecmp(value, "true"));
@@ -129,20 +116,23 @@ static int _option_set_bool(const char *value, bool &dest)
 API int aitt_option_set(aitt_option_h handle, aitt_option_e option, const char *value)
 {
     RETV_IF(handle == nullptr, AITT_ERROR_INVALID_PARAMETER);
+    int ret;
+    bool bool_val = false;
 
     switch (option) {
     case AITT_OPT_MY_IP:
-        try {
-            handle->my_ip = value;
-        } catch (std::exception &e) {
-            ERR("string() Fail(%s)", e.what());
-            return AITT_ERROR_SYSTEM;
-        }
+        handle->my_ip = value;
         break;
     case AITT_OPT_CLEAN_SESSION:
-        return _option_set_bool(value, handle->clear_session);
+        ret = _to_boolean(value, bool_val);
+        if (ret == AITT_ERROR_NONE)
+            handle->option.SetClearSession(bool_val);
+        return ret;
     case AITT_OPT_CUSTOM_BROKER:
-        return _option_set_bool(value, handle->custom_broker);
+        ret = _to_boolean(value, bool_val);
+        if (ret == AITT_ERROR_NONE)
+            handle->option.SetUseCustomMqttBroker(bool_val);
+        return ret;
     default:
         ERR("Unknown option(%d)", option);
         return AITT_ERROR_INVALID_PARAMETER;
@@ -159,9 +149,9 @@ API const char *aitt_option_get(aitt_option_h handle, aitt_option_e option)
     case AITT_OPT_MY_IP:
         return handle->my_ip;
     case AITT_OPT_CLEAN_SESSION:
-        return (handle->clear_session) ? "true" : "false";
+        return (handle->option.GetClearSession()) ? "true" : "false";
     case AITT_OPT_CUSTOM_BROKER:
-        return (handle->custom_broker) ? "true" : "false";
+        return (handle->option.GetUseCustomMqttBroker()) ? "true" : "false";
     default:
         ERR("Unknown option(%d)", option);
     }

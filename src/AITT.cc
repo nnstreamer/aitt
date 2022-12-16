@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "AITT.h"
+
 #include <memory>
 #include <random>
 
@@ -20,9 +22,30 @@
 #include "aitt_internal.h"
 
 namespace aitt {
+AITT::AITT(const std::string notice)
+{
+    if (notice.empty() || notice != std::string(AITT_MUST_CALL_READY)) {
+        ERR("Invalid Argument(%s)", notice.c_str());
+        throw AittException(AittException::INVALID_ARG);
+    }
+}
 
 AITT::AITT(const std::string &id, const std::string &ip_addr, AittOption option)
 {
+    Ready(id, ip_addr, option);
+}
+
+AITT::~AITT(void)
+{
+}
+
+void AITT::Ready(const std::string &id, const std::string &ip_addr, AittOption option)
+{
+    if (pImpl) {
+        ERR("Already Ready");
+        throw AittException(AittException::ALREADY);
+    }
+
     std::string valid_id = id;
     std::string valid_ip = ip_addr;
 
@@ -43,10 +66,6 @@ AITT::AITT(const std::string &id, const std::string &ip_addr, AittOption option)
         valid_ip = "127.0.0.1";
 
     pImpl = std::unique_ptr<AITT::Impl>(new AITT::Impl(*this, valid_id, valid_ip, option));
-}
-
-AITT::~AITT(void)
-{
 }
 
 void AITT::SetWillInfo(const std::string &topic, const void *data, const int datalen, AittQoS qos,

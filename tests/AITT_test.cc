@@ -385,6 +385,54 @@ TEST_F(AITTTest, Connect_twice_P_Anytime)
     }
 }
 
+TEST_F(AITTTest, Ready_P_Anytime)
+{
+    try {
+        AITT aitt(AITT_MUST_CALL_READY);
+        aitt.Ready(clientId, LOCAL_IP, AittOption(true, false));
+        aitt.Connect();
+
+        AITT aitt1("Must Call Ready() First");
+        aitt1.Ready("", LOCAL_IP, AittOption(true, false));
+        aitt1.Connect();
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, Ready_N_Anytime)
+{
+    EXPECT_THROW({ AITT aitt("must call ready() first"); }, aitt::AittException);
+    EXPECT_THROW({ AITT aitt("not ready"); }, aitt::AittException);
+    EXPECT_THROW({ AITT aitt("unknown notice"); }, aitt::AittException);
+
+    EXPECT_THROW(
+          {
+              AITT aitt(AITT_MUST_CALL_READY);
+              aitt.Ready(clientId, LOCAL_IP);
+              aitt.Ready(clientId, LOCAL_IP, AittOption(true, false));
+          },
+          aitt::AittException);
+
+    EXPECT_THROW(
+          {
+              AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+              aitt.Ready(clientId, LOCAL_IP);
+          },
+          aitt::AittException);
+}
+
+TEST_F(AITTTest, Not_READY_STATUS_N)
+{
+    EXPECT_THROW(
+          {
+              AITT aitt(AITT_MUST_CALL_READY);
+              FAIL() << "MUST NOT use the aitt before calling Ready()";
+              aitt.Connect();
+          },
+          std::exception);
+}
+
 TEST_F(AITTTest, Publish_MQTT_P_Anytime)
 {
     try {

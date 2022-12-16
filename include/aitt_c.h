@@ -150,7 +150,6 @@ typedef enum {
 
 /**
  * @brief Set the contents of a @c handle related with @c option to @c value
- * @detail The @c value can be NULL for removing the content
  * @privlevel public
  * @param[in] handle Handle of AITT service
  * @param[in] option value of @a aitt_option_e.

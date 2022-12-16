@@ -27,6 +27,7 @@
 
 #define AITT_LOCALHOST "127.0.0.1"
 #define AITT_PORT 1883
+#define AITT_MUST_CALL_READY "Must Call Ready() First"
 
 namespace aitt {
 
@@ -36,10 +37,13 @@ class API AITT {
           std::function<void(MSG *msg, const void *data, const int datalen, void *user_data)>;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
+    explicit AITT(const std::string notice);
     explicit AITT(const std::string &id, const std::string &ip_addr,
           AittOption option = AittOption(false, false));
     virtual ~AITT(void);
 
+    void Ready(const std::string &id, const std::string &ip_addr,
+          AittOption option = AittOption(false, false));
     void SetWillInfo(const std::string &topic, const void *data, const int datalen, AittQoS qos,
           bool retain);
     void SetConnectionCallback(ConnectionCallback cb, void *user_data = nullptr);

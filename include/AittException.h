@@ -31,6 +31,7 @@ class AittException : public std::exception {
         MQTT_ERR,
         NO_DATA_ERR,
         RESOURCE_BUSY_ERR,
+        ALREADY,
     };
 
     AittException(ErrCode err_code);
