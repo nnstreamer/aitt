@@ -15,9 +15,18 @@
  */
 package com.samsung.android.modules.webrtc;
 
+import static org.webrtc.SessionDescription.Type.ANSWER;
+import static org.webrtc.SessionDescription.Type.OFFER;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.lang.Math.toIntExact;
+
 import android.content.Context;
 import android.os.SystemClock;
 import android.util.Log;
+
+import com.github.luben.zstd.Zstd;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -45,11 +54,6 @@ import org.webrtc.VideoSink;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
-import static org.webrtc.SessionDescription.Type.ANSWER;
-import static org.webrtc.SessionDescription.Type.OFFER;
-
-import static java.lang.Math.min;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -71,7 +75,7 @@ public final class WebRTC {
     public static final String VIDEO_TRACK_ID = "ARDAMSv0";
     public static final String EOF_MESSAGE = "EOF";
     public static final int MAX_MESSAGE_SIZE = 32768;
-
+    public static final int MAX_UNCOMPRESSED_MESSAGE_SIZE = 295936;
     private static final String TAG = "WebRTC";
     private static final String CANDIDATE = "candidate";
 
@@ -469,10 +473,18 @@ public final class WebRTC {
 
     private void handleLargeMessage(String message, DataChannel.Buffer buffer) {
         if (EOF_MESSAGE.equals(message)) {
-            Log.d(TAG, "Byte array size: " + baos.size());
-            dataCallback.pushData(baos.toByteArray());
-            baos.reset();
-            recvLargeChunk = false;
+            // Received data is in compressed format, un compress it
+            try {
+                byte[] compBytes = baos.toByteArray();
+                long deCompSize = Zstd.decompressedSize(compBytes);
+                byte[] deCompBytes = Zstd.decompress(compBytes, max(toIntExact(deCompSize), MAX_UNCOMPRESSED_MESSAGE_SIZE));
+                Log.d(TAG, "UnCompressed Byte array size: " + deCompBytes.length);
+                dataCallback.pushData(deCompBytes);
+                baos.reset();
+                recvLargeChunk = false;
+            } catch (Exception e) {
+                Log.e(TAG, "Error during UnCompression: ");
+            }
         } else {
             recvLargeChunk = true;
             try {
@@ -498,27 +510,31 @@ public final class WebRTC {
     }
 
     /**
-     * Method to send message data
+     * Method to send message data, if the message size is greater than MAX_MESSAGE_SIZE, message will be compressed before sending
      *
      * @param message message to be sent in byte format
      */
     public boolean sendMessageData(byte[] message) {
+        ByteBuffer chunkData;
         if (message.length < MAX_MESSAGE_SIZE) {
             ByteBuffer data = ByteBuffer.wrap(message);
             return localDataChannel.send(new DataChannel.Buffer(data, false));
         }
-
-        ByteBuffer chunkData;
-        int len = message.length;
-        int i = 0;
-        while (i < message.length) {
-            byte[] chunk = Arrays.copyOfRange(message, i, i + min(len, MAX_MESSAGE_SIZE));
-            chunkData = ByteBuffer.wrap(chunk);
-            localDataChannel.send(new DataChannel.Buffer(chunkData, false));
-            i += MAX_MESSAGE_SIZE;
-            len -= MAX_MESSAGE_SIZE;
+        try {
+            byte[] compressData = Zstd.compress(message);
+            int len = compressData.length;
+            int i = 0;
+            while (i < compressData.length) {
+                byte[] chunk = Arrays.copyOfRange(compressData, i, i + min(len, MAX_MESSAGE_SIZE));
+                chunkData = ByteBuffer.wrap(chunk);
+                localDataChannel.send(new DataChannel.Buffer(chunkData, false));
+                i += MAX_MESSAGE_SIZE;
+                len -= MAX_MESSAGE_SIZE;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error during message sending", e);
+            return false;
         }
-
         chunkData = ByteBuffer.wrap(EOF_MESSAGE.getBytes(StandardCharsets.UTF_8));
         return localDataChannel.send(new DataChannel.Buffer(chunkData, false));
     }

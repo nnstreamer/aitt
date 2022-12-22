@@ -18,6 +18,7 @@ package com.samsung.android.modules.webrtc;
 import static com.samsung.android.aitt.stream.AittStream.StreamRole.PUBLISHER;
 import static com.samsung.android.aitt.stream.AittStream.StreamRole.SUBSCRIBER;
 import static com.samsung.android.modules.webrtc.WebRTC.MAX_MESSAGE_SIZE;
+
 import static org.junit.Assert.fail;
 
 import android.content.Context;
@@ -178,13 +179,13 @@ public class WebRTCInstrumentedTest {
             AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_LARGE_MESSAGE_TOPIC, SUBSCRIBER);
             serverSubscriberStream.setReceiveCallback(data -> {
                 Log.i(TAG, "A callback is received in testWebRTCSendLargeMessage. Message size = " + data.length);
-                // TODO: Enable the following message verification.
-//                if (Arrays.equals(data, largeBytes) == false)
-//                    throw new RuntimeException("A wrong large message is received.");
-
+                if (Arrays.equals(data, largeBytes) == false) {
+                    throw new RuntimeException("A wrong large message is received.");
+                }
                 Log.i(TAG, "The correct large message is received. size = " + data.length);
-                if (looper != null)
+                if (looper != null) {
                     looper.quit();
+                }
             });
             Log.i(TAG, "A WebRTC server and a subscriber stream are created.");
 
@@ -210,6 +211,7 @@ public class WebRTCInstrumentedTest {
                 boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_LARGE_MESSAGE_TOPIC, largeBytes, Aitt.Protocol.WEBRTC);
                 if (isPublished)
                     break;
+                Thread.sleep(SLEEP_INTERVAL);
             }
             Log.i(TAG, "A large message is sent through the publisher stream.");
 
