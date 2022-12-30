@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RTSPClient {
     private static final String TAG = "RTSPClient";
     private String rtspUrl = null;
+    private int height;
+    private int width;
     private static volatile Socket clientSocket;
     private static int socketTimeout = 10000;
     private AtomicBoolean exitFlag;
@@ -156,7 +158,7 @@ public class RTSPClient {
 
         Uri uri = Uri.parse(rtspUrl);
 
-        decoder = new H264Decoder(streamCb, exitFlag);
+        decoder = new H264Decoder(streamCb, exitFlag, height, width);
         mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientlistener)
                 .requestAudio(false)
                 .requestVideo(true)
@@ -192,4 +194,13 @@ public class RTSPClient {
         rtspUrl = url;
     }
 
+    /**
+     * Method to set RTSP frame resolution
+     * @param height Height of the RTSP stream
+     * @param width Width of the RTSP stream
+     */
+    public void setResolution(int height, int width) {
+        this.height = height;
+        this.width = width;
+    }
 }

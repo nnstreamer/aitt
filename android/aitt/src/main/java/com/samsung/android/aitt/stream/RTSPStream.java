@@ -39,10 +39,14 @@ public class RTSPStream implements AittStream {
     private static final String ID = "id";
     private static final String PASSWORD = "password";
     private static final String URL_PREFIX = "rtsp://";
+    private static final String HEIGHT = "height";
+    private static final String WIDTH = "width";
 
     private final StreamRole streamRole;
     private final String topic;
-    private final Map<String, String> info = new HashMap<>();
+    private static int streamHeight;
+    private static int streamWidth;
+    private final DiscoveryInfo discoveryInfo = new DiscoveryInfo();
     private RTSPClient rtspClient;
     private StreamDataCallback streamCallback;
     private StreamStateChangeCallback stateChangeCallback = null;
@@ -67,6 +71,17 @@ public class RTSPStream implements AittStream {
 
             rtspClient = new RTSPClient(new AtomicBoolean(false), dataCallback);
         }
+    }
+
+    /**
+     * Class to store discovery parameters in an object
+     */
+    private static class DiscoveryInfo {
+        private String url;
+        private String id;
+        private String password;
+        private int height;
+        private int width;
     }
 
     /**
@@ -109,14 +124,18 @@ public class RTSPStream implements AittStream {
             if (!url.startsWith(URL_PREFIX))
                 throw new IllegalArgumentException("Invalid RTSP URL");
 
-            info.put(URL, config.getUrl());
+            discoveryInfo.url = config.getUrl();
         }
         if (config.getId() != null) {
-            info.put(ID, config.getId());
+            discoveryInfo.id = config.getId();
         }
         if (config.getPassword() != null) {
-            info.put(PASSWORD, config.getPassword());
+            discoveryInfo.password = config.getPassword();
         }
+
+        discoveryInfo.height = config.getHeight();
+
+        discoveryInfo.width = config.getWidth();
     }
 
     /**
@@ -211,6 +230,24 @@ public class RTSPStream implements AittStream {
     }
 
     /**
+     * Method to receive stream height
+     * @return returns height of the stream
+     */
+    @Override
+    public int getStreamHeight() {
+        return streamHeight;
+    }
+
+    /**
+     * Method to receive stream width
+     * @return returns width of the stream
+     */
+    @Override
+    public int getStreamWidth() {
+        return streamWidth;
+    }
+
+    /**
      * Method to set subscribe callback
      * @param jniInterface JniInterface object
      */
@@ -229,22 +266,26 @@ public class RTSPStream implements AittStream {
                 } else {
                     updateState(streamRole, StreamState.INIT);
                 }
-
                 return;
             }
 
             ByteBuffer buffer = ByteBuffer.wrap(data);
             FlexBuffers.Map map = FlexBuffers.getRoot(buffer).asMap();
-            if (map.size() != 4) {
+            if (map.size() != 6) {
                 Log.e(TAG, "Invalid RTSP discovery message");
                 return;
             }
 
             StreamState state = StreamState.values()[map.get(SERVER_STATE).asInt()];
             updateState(StreamRole.PUBLISHER, state);
-            info.put(URL, map.get(URL).asString());
-            info.put(ID, map.get(ID).asString());
-            info.put(PASSWORD, map.get(PASSWORD).asString());
+            discoveryInfo.url = map.get(URL).asString();
+            discoveryInfo.id = map.get(ID).asString();
+            discoveryInfo.password = map.get(PASSWORD).asString();
+            discoveryInfo.height = map.get(HEIGHT).asInt();
+            discoveryInfo.width = map.get(WIDTH).asInt();
+
+            streamHeight = discoveryInfo.height;
+            streamWidth = discoveryInfo.width;
 
             String url = createCompleteUrl();
             Log.d(TAG, "RTSP URL : " + url);
@@ -252,6 +293,7 @@ public class RTSPStream implements AittStream {
                 return;
             }
             rtspClient.setRtspUrl(url);
+            rtspClient.setResolution(discoveryInfo.height, discoveryInfo.width);
 
             if (serverState == StreamState.READY) {
                 if (clientState == StreamState.READY) {
@@ -267,15 +309,15 @@ public class RTSPStream implements AittStream {
     }
 
     private String createCompleteUrl() {
-        String completeUrl = info.get(URL);
+        String completeUrl = discoveryInfo.url;
         if (completeUrl == null || completeUrl.isEmpty())
             return "";
 
-        String id = info.get(ID);
+        String id = discoveryInfo.id;
         if (id == null || id.isEmpty())
             return completeUrl;
 
-        String password = info.get(PASSWORD);
+        String password = discoveryInfo.password;
         if (password == null || password.isEmpty())
             return completeUrl;
 
@@ -286,9 +328,9 @@ public class RTSPStream implements AittStream {
     private void startRtspClient() {
         RTSPClient.SocketConnectCallback cb = socketSuccess -> {
             if (socketSuccess) {
+                updateState(streamRole, StreamState.PLAYING);
                 rtspClient.initRtspClient();
                 rtspClient.start();
-                updateState(streamRole, StreamState.PLAYING);
             } else {
                 Log.e(TAG, "Error creating socket");
             }
@@ -302,9 +344,11 @@ public class RTSPStream implements AittStream {
         {
             int smap = fbb.startMap();
             fbb.putInt(SERVER_STATE, serverState.ordinal());
-            fbb.putString(URL, info.get(URL));
-            fbb.putString(ID, info.get(ID));
-            fbb.putString(PASSWORD, info.get(PASSWORD));
+            fbb.putString(URL, discoveryInfo.url);
+            fbb.putString(ID, discoveryInfo.id);
+            fbb.putString(PASSWORD, discoveryInfo.password);
+            fbb.putInt(HEIGHT, discoveryInfo.height);
+            fbb.putInt(WIDTH, discoveryInfo.width);
             fbb.endMap(null, smap);
         }
         ByteBuffer buffer = fbb.finish();

@@ -181,6 +181,7 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         return;
     }
 
+    //ToDo : Update discovery callback to accommodate new parameters (streamHeight, streamWidth) in discovery message
     auto map = flexbuffers::GetRoot(static_cast<const uint8_t *>(msg), szmsg).AsMap();
     if (map.size() != 4) {
         RTSP_ERR("RTSP Info validation check failed");

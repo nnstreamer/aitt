@@ -89,4 +89,16 @@ public interface AittStream {
      */
     void setReceiveCallback(StreamDataCallback streamDataCallback);
 
+    /**
+     * Method to receive stream height
+     * @return returns height of the stream
+     */
+    int getStreamHeight();
+
+    /**
+     * Method to receive stream width
+     * @return returns width of the stream
+     */
+    int getStreamWidth();
+
 }

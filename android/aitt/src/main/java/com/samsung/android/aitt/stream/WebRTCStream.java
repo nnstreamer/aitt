@@ -113,6 +113,18 @@ public final class WebRTCStream implements AittStream {
         }
     }
 
+    @Override
+    public int getStreamHeight() {
+        //ToDo : Fetch stream height from discovery message and return it.
+        return 0;
+    }
+
+    @Override
+    public int getStreamWidth() {
+        //ToDo : Fetch stream width from discovery message and return it.
+        return 0;
+    }
+
     public int getServerPort() {
         return serverPort;
     }

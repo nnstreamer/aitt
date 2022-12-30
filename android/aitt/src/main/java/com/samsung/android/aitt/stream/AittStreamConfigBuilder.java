@@ -20,6 +20,8 @@ public class AittStreamConfigBuilder {
     private String url;
     private String id;
     private String password;
+    private int width;
+    private int height;
 
     public void setUrl(String url) {
         this.url = url;
@@ -33,7 +35,15 @@ public class AittStreamConfigBuilder {
         this.password = password;
     }
 
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
     public AittStreamConfig build() {
-        return new AittStreamConfig(url, id, password);
+        return new AittStreamConfig(url, id, password, height, width);
     }
 }

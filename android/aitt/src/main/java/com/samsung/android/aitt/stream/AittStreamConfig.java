@@ -21,12 +21,16 @@ public class AittStreamConfig {
    private final String url;
    private final String id;
    private final String password;
+   private final int height;
+   private final int width;
    // More fields can be added for other streams
 
-   public AittStreamConfig(String url, String id, String password) {
+   public AittStreamConfig(String url, String id, String password, int height, int width) {
       this.url = url;
       this.id = id;
       this.password = password;
+      this.height = height;
+      this.width = width;
    }
 
    public String getUrl() {
@@ -39,5 +43,13 @@ public class AittStreamConfig {
 
    public String getPassword() {
       return this.password;
+   }
+
+   public int getHeight() {
+      return this.height;
+   }
+
+   public int getWidth() {
+      return this.width;
    }
 }

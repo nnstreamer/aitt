@@ -27,12 +27,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class H264Decoder {
 
-    private String TAG = "H264Decoder";
+    private static final String TAG = "H264Decoder";
     private ByteBuffer iFrame;
-    private final static int width = 240;  //TODO : Modify width and height based on discovery message
-    private final static int height = 320;
-    private AtomicBoolean exitFlag;
-    private RTSPClient.ReceiveDataCallback streamCb;
+    private final int width;
+    private final int height;
+    private final AtomicBoolean exitFlag;
+    private final RTSPClient.ReceiveDataCallback streamCb;
 
     private MediaCodec mCodec;
 
@@ -44,9 +44,11 @@ public class H264Decoder {
      * @param cb data callback to send data to application
      * @param exitFlag flag to begin/terminate decoder execution
      */
-    public H264Decoder(RTSPClient.ReceiveDataCallback cb, AtomicBoolean exitFlag) {
+    public H264Decoder(RTSPClient.ReceiveDataCallback cb, AtomicBoolean exitFlag, int height, int width) {
         streamCb = cb;
         this.exitFlag = exitFlag;
+        this.height = height;
+        this.width = width;
     }
 
     /**
