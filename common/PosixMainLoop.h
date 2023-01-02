@@ -17,6 +17,7 @@
 
 #include <poll.h>
 #include <signal.h>
+#include <time.h>
 
 #include <deque>
 #include <map>
@@ -55,11 +56,13 @@ class PosixMainLoop : public MainLoopIface {
 
     struct MainLoopCbData {
         MainLoopCbData();
+        ~MainLoopCbData();
         mainLoopCB cb;
         MainLoopData *data;
         MainLoopResult result;
         int fd;
         int timeout_interval;
+        timer_t timerid;
     };
 
     using WatchMap = std::map<int, std::shared_ptr<MainLoopCbData>>;
@@ -73,7 +76,7 @@ class PosixMainLoop : public MainLoopIface {
     bool CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
     int CheckTimeout(pollfd pfd, short int event);
     void CheckIdle(pollfd pfd, short int event);
-    int SetTimer(int interval, unsigned int timeout_id);
+    timer_t SetTimer(int interval, unsigned int identifier);
 
     WatchMap watch_table;
     TimeoutMap timeout_table;
