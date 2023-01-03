@@ -34,6 +34,9 @@ class AittStream {
 
     virtual void SetConfig(const std::string &key, const std::string &value) = 0;
     virtual void SetConfig(const std::string &key, void *obj) = 0;
+    virtual std::string GetFormat(void) = 0;
+    virtual int GetWidth(void) = 0;
+    virtual int GetHeight(void) = 0;
     virtual void Start(void) = 0;
     virtual void Stop(void) = 0;
     virtual void SetStateCallback(StateCallback cb, void *user_data) = 0;

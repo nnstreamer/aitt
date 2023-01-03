@@ -31,11 +31,16 @@ class StreamManager {
     using IceCandidateAddedCallback = std::function<void(void)>;
     using StreamStartCallback = std::function<void(void)>;
     using StreamStopCallback = std::function<void(void)>;
+    using OnFrameCallback = std::function<void(void *)>;
     explicit StreamManager(const std::string &topic, const std::string &watching_topic,
           const std::string &aitt_id, const std::string &thread_id);
     virtual ~StreamManager() = default;
     virtual std::vector<uint8_t> GetDiscoveryMessage(void) = 0;
 
+    void SetFormat(const std::string &format, int width, int height);
+    std::string GetFormat(void);
+    int GetWidth(void);
+    int GetHeight(void);
     void Start(void);
     void Stop(void);
     void HandleRemovedClient(const std::string &discovery_id);
@@ -43,10 +48,15 @@ class StreamManager {
     void SetIceCandidateAddedCallback(IceCandidateAddedCallback cb);
     void SetStreamStartCallback(StreamStartCallback cb);
     void SetStreamStopCallback(StreamStopCallback cb);
+    void SetOnFrameCallback(OnFrameCallback cb);
+
     std::string GetTopic(void) const;
     std::string GetWatchingTopic(void) const;
 
   protected:
+    int width_;
+    int height_;
+    std::string format_;
     std::string topic_;
     std::string watching_topic_;
     // TODO: why dont' we remove below
@@ -58,6 +68,7 @@ class StreamManager {
     StreamStartCallback stream_start_cb_;
     StreamStopCallback stream_stop_cb_;
     IceCandidateAddedCallback ice_candidate_added_cb_;
+    OnFrameCallback on_frame_cb_;
 
   private:
     virtual void SetWebRtcStreamCallbacks(WebRtcStream &stream) = 0;

@@ -83,18 +83,18 @@ class WebRtcEventHandler {
     };
     void UnsetOnIceConnectionStateNotifyeCb(void) { on_ice_connection_state_notify_cb_ = nullptr; };
 
-    void SetOnEncodedFrameCb(std::function<void(void)> on_encoded_frame_cb)
+    void SetOnEncodedFrameCb(std::function<void(media_packet_h packet)> on_encoded_frame_cb)
     {
         on_encoded_frame_cb_ = on_encoded_frame_cb;
     };
-    void CallOnEncodedFrameCb(void) const
+    void CallOnEncodedFrameCb(media_packet_h packet) const
     {
         if (on_encoded_frame_cb_)
-            on_encoded_frame_cb_();
+            on_encoded_frame_cb_(packet);
     };
     void UnsetEncodedFrameCb(void) { on_encoded_frame_cb_ = nullptr; };
 
-    void SetOnTrakAddedCb(std::function<void(unsigned int id)> on_track_added_cb)
+    void SetOnTrackAddedCb(std::function<void(unsigned int id)> on_track_added_cb)
     {
         on_track_added_cb_ = on_track_added_cb;
     };
@@ -112,7 +112,7 @@ class WebRtcEventHandler {
     std::function<void(std::string)> on_ice_candidate_cb_;
     std::function<void(WebRtcState::IceGathering)> on_ice_gathering_state_notify_cb_;
     std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb_;
-    std::function<void(void)> on_encoded_frame_cb_;
+    std::function<void(media_packet_h)> on_encoded_frame_cb_;
     std::function<void(unsigned int id)> on_track_added_cb_;
 };
 

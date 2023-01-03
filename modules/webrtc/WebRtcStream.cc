@@ -402,12 +402,10 @@ void WebRtcStream::AttachSignals(bool is_source, bool need_display)
         ret = webrtc_set_encoded_video_frame_cb(webrtc_handle_, OnEncodedFrame, this);
         ERR("webrtc_set_encoded_video_frame_cb %s",
               ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
-    }
-
-    if (!is_source && need_display) {
         ret = webrtc_set_track_added_cb(webrtc_handle_, OnTrackAdded, this);
         ERR("webrtc_set_track_added_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
     }
+
     ret = webrtc_data_channel_set_open_cb(channel_, OnDataChannelOpen, this);
     DBG("webrtc_data_channel_set_open_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
 
@@ -474,9 +472,6 @@ void WebRtcStream::OnIceGatheringStateChanged(webrtc_h webrtc, webrtc_ice_gather
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
     RET_IF(webrtc_stream == nullptr);
 
-    if (state == WEBRTC_ICE_GATHERING_STATE_COMPLETE)
-        webrtc_stream->SetPeerIceCandidates();
-
     webrtc_stream->GetEventHandler().CallOnIceGatheringStateNotifyCb(
           WebRtcState::ToIceGatheringState(state));
 }
@@ -503,12 +498,11 @@ void WebRtcStream::OnIceCandiate(webrtc_h webrtc, const char *candidate, void *u
 void WebRtcStream::OnEncodedFrame(webrtc_h webrtc, webrtc_media_type_e type, unsigned int track_id,
       media_packet_h packet, void *user_data)
 {
-    ERR("%s", __func__);
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
     RET_IF(webrtc_stream == nullptr);
 
     if (type == WEBRTC_MEDIA_TYPE_VIDEO)
-        webrtc_stream->GetEventHandler().CallOnEncodedFrameCb();
+        webrtc_stream->GetEventHandler().CallOnEncodedFrameCb(packet);
 }
 
 void WebRtcStream::OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsigned int id,

@@ -678,11 +678,7 @@ class SinkSrcStreamManagerTest : public testing::Test {
         sink_discovery_engine_.Restart();
 
         sink_manager_->SetStreamStopCallback(std::bind(OnSinkStreamStopped, this));
-        sink_manager_->SetIceCandidateAddedCallback(
-              std::bind(OnSinkIceCandidate, this));
-
-        static_cast<SinkStreamManager *>(sink_manager_.get())
-              ->SetOnEncodedFrameCallback(std::bind(OnEncodedFrame, this));
+        sink_manager_->SetIceCandidateAddedCallback(std::bind(OnSinkIceCandidate, this));
 
         sink_manager_->Start();
     }
@@ -710,9 +706,6 @@ class SinkSrcStreamManagerTest : public testing::Test {
 
     static void OnEncodedFrame(SinkSrcStreamManagerTest *test)
     {
-        static_cast<SinkStreamManager *>(test->sink_manager_.get())
-              ->SetOnEncodedFrameCallback(nullptr);
-
         if (test->stop_sink_first_)
             test->AddIdleStopSinkStream();
         else
@@ -729,8 +722,7 @@ class SinkSrcStreamManagerTest : public testing::Test {
 
         src_manager_->SetStreamStartCallback(std::bind(OnStreamStarted, this));
         src_manager_->SetStreamStopCallback(std::bind(OnSrcStreamStopped, this));
-        src_manager_->SetIceCandidateAddedCallback(
-              std::bind(OnSrcIceCandidate, this));
+        src_manager_->SetIceCandidateAddedCallback(std::bind(OnSrcIceCandidate, this));
 
         src_manager_->Start();
     }

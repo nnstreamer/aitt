@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <gst/gst.h>
+
 #include <map>
 
 #include "StreamManager.h"
@@ -24,21 +26,19 @@ namespace AittWebRTCNamespace {
 
 class SinkStreamManager : public StreamManager {
   public:
-    using EncodedFrameCallabck = std::function<void(void)>;
     explicit SinkStreamManager(const std::string &topic, const std::string &aitt_id,
           const std::string &thread_id);
     virtual ~SinkStreamManager();
     std::vector<uint8_t> GetDiscoveryMessage(void) override;
-    // TODO: WebRTC CAPI doesn't allow destroy webrtc handle at callback.
-    // We need to avoid that situation
-    void SetOnEncodedFrameCallback(EncodedFrameCallabck cb);
 
   private:
     void SetWebRtcStreamCallbacks(WebRtcStream &stream) override;
     void OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream);
     void OnOfferCreated(std::string sdp, WebRtcStream &stream);
     void OnIceCandidate(void);
-    void OnEncodedFrame(void);
+    void OnEncodedFrame(media_packet_h packet);
+    void OnTrackAdded(void);
+    void BuildDecodePipeline(void);
     void HandleStreamState(const std::string &discovery_id,
           const std::vector<uint8_t> &message) override;
     void HandleStartStream(const std::string &discovery_id);
@@ -48,7 +48,10 @@ class SinkStreamManager : public StreamManager {
     void UpdateStreamInfo(const std::string &discovery_id, const std::string &id,
           const std::string &peer_id, const std::string &sdp,
           const std::vector<std::string> &ice_candidates);
+    static void OnSignalHandOff(GstElement *object, GstBuffer *buffer, GstPad *pad,
+          void *user_data);
 
-    EncodedFrameCallabck encoded_frame_cb_;
+    GstElement *decode_pipeline_;
+    GstElement *video_appsrc_;
 };
 }  // namespace AittWebRTCNamespace

@@ -22,8 +22,35 @@ namespace AittWebRTCNamespace {
 
 StreamManager::StreamManager(const std::string &topic, const std::string &watching_topic,
       const std::string &aitt_id, const std::string &thread_id)
-      : topic_(topic), watching_topic_(watching_topic), aitt_id_(aitt_id), thread_id_(thread_id)
+      : width_(0),
+        height_(0),
+        topic_(topic),
+        watching_topic_(watching_topic),
+        aitt_id_(aitt_id),
+        thread_id_(thread_id)
 {
+}
+
+void StreamManager::SetFormat(const std::string &format, int width, int height)
+{
+    format_ = format;
+    width_ = width;
+    height_ = height;
+}
+
+std::string StreamManager::GetFormat(void)
+{
+    return format_;
+}
+
+int StreamManager::GetWidth(void)
+{
+    return width_;
+}
+
+int StreamManager::GetHeight(void)
+{
+    return height_;
 }
 
 void StreamManager::Start(void)
@@ -45,7 +72,7 @@ void StreamManager::Stop(void)
 
 void StreamManager::HandleRemovedClient(const std::string &discovery_id)
 {
-    if (peer_aitt_id_ != discovery_id){
+    if (peer_aitt_id_ != discovery_id) {
         ERR("There's no stream %s", discovery_id.c_str());
         return;
     }
@@ -86,6 +113,11 @@ void StreamManager::SetStreamStartCallback(StreamStartCallback cb)
 void StreamManager::SetStreamStopCallback(StreamStopCallback cb)
 {
     stream_stop_cb_ = cb;
+}
+
+void StreamManager::SetOnFrameCallback(OnFrameCallback cb)
+{
+    on_frame_cb_ = cb;
 }
 
 }  // namespace AittWebRTCNamespace

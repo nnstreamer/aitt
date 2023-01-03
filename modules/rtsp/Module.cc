@@ -95,6 +95,21 @@ void Module::SetConfig(const std::string &key, void *obj)
     }
 }
 
+std::string Module::GetFormat(void)
+{
+    return std::string();
+}
+
+int Module::GetWidth(void)
+{
+    return 0;
+}
+
+int Module::GetHeight(void)
+{
+    return 0;
+}
+
 void Module::Start(void)
 {
     RTSP_DBG("Start");

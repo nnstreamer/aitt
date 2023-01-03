@@ -16,6 +16,7 @@
 #include "SinkStreamManager.h"
 
 #include <flatbuffers/flexbuffers.h>
+#include <gst/video/video-info.h>
 
 #include <sstream>
 
@@ -24,17 +25,16 @@
 namespace AittWebRTCNamespace {
 SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string &aitt_id,
       const std::string &thread_id)
-      : StreamManager(topic + "/SINK", topic + "/SRC", aitt_id, thread_id)
+      : StreamManager(topic + "/SINK", topic + "/SRC", aitt_id, thread_id),
+        decode_pipeline_(nullptr),
+        video_appsrc_(nullptr)
 {
 }
 
 SinkStreamManager::~SinkStreamManager()
 {
-}
-
-void SinkStreamManager::SetOnEncodedFrameCallback(EncodedFrameCallabck cb)
-{
-    encoded_frame_cb_ = cb;
+    if (decode_pipeline_)
+        gst_object_unref(decode_pipeline_);
 }
 
 void SinkStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
@@ -46,7 +46,9 @@ void SinkStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
           std::bind(&SinkStreamManager::OnIceCandidate, this));
 
     stream.GetEventHandler().SetOnEncodedFrameCb(
-          std::bind(&SinkStreamManager::OnEncodedFrame, this));
+          std::bind(&SinkStreamManager::OnEncodedFrame, this, std::placeholders::_1));
+
+    stream.GetEventHandler().SetOnTrackAddedCb(std::bind(&SinkStreamManager::OnTrackAdded, this));
 }
 
 void SinkStreamManager::OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream)
@@ -61,7 +63,6 @@ void SinkStreamManager::OnStreamStateChanged(WebRtcState::Stream state, WebRtcSt
 void SinkStreamManager::OnOfferCreated(std::string sdp, WebRtcStream &stream)
 {
     DBG("%s", __func__);
-
     stream.SetLocalDescription(sdp);
 }
 
@@ -71,12 +72,94 @@ void SinkStreamManager::OnIceCandidate(void)
         ice_candidate_added_cb_();
 }
 
-void SinkStreamManager::OnEncodedFrame(void)
+void SinkStreamManager::OnEncodedFrame(media_packet_h packet)
 {
-    if (encoded_frame_cb_)
-        encoded_frame_cb_();
+    /* media packet should be freed after use */
+    GstBuffer *buffer;
+    if (media_packet_get_extra(packet, (void **)(&buffer)) != MEDIA_PACKET_ERROR_NONE
+          || !GST_IS_BUFFER(buffer)) {
+        ERR("Failed to get gst buffer");
+        return;
+    }
+    GstFlowReturn gst_ret = GST_FLOW_OK;
+    g_signal_emit_by_name(G_OBJECT(video_appsrc_), "push-buffer", buffer, &gst_ret, nullptr);
+    if (gst_ret != GST_FLOW_OK)
+        ERR("failed to push buffer");
+
+    media_packet_destroy(packet);
 }
 
+void SinkStreamManager::OnTrackAdded(void)
+{
+    DBG("%s", __func__);
+    BuildDecodePipeline();
+}
+
+void SinkStreamManager::BuildDecodePipeline(void)
+{
+    // TODO:What do we need to care about pipeline?
+    GstElement *pipeline = gst_pipeline_new("decode-pipeline");
+    GstElement *src = gst_element_factory_make("appsrc", nullptr);
+
+    // TODO:How do we can know decoder type
+    GstCaps *app_src_caps = gst_caps_new_simple("video/x-vp8", nullptr, nullptr);
+    g_object_set(G_OBJECT(src), "format", GST_FORMAT_TIME, "caps", app_src_caps, nullptr);
+    gst_caps_unref(app_src_caps);
+
+    GstElement *dec = gst_element_factory_make("vp8dec", nullptr);
+    GstElement *convert = gst_element_factory_make("videoconvert", nullptr);
+    GstElement *filter = gst_element_factory_make("capsfilter", "I420toRGBCapsfilter");
+    GstCaps *filter_caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", NULL);
+    g_object_set(G_OBJECT(filter), "caps", filter_caps, NULL);
+    gst_caps_unref(filter_caps);
+    GstElement *tee = gst_element_factory_make("tee", "tee");
+    GstElement *queue_fake_sink = gst_element_factory_make("queue2", "queue_fake_sink");
+    GstElement *fake_sink = gst_element_factory_make("fakesink", "user_sink");
+    GstElement *queue_display = gst_element_factory_make("queue2", "queue_display");
+    GstElement *display_sink_converter = gst_element_factory_make("videoconvert", "sink_converter");
+    GstElement *display_sink = gst_element_factory_make("autovideosink", "display_sink");
+
+    g_object_set(G_OBJECT(fake_sink), "signal-handoffs", true, nullptr);
+    g_signal_connect(fake_sink, "handoff", G_CALLBACK(OnSignalHandOff),
+          static_cast<gpointer>(this));
+
+    gst_bin_add_many(GST_BIN(pipeline), src, dec, convert, filter, tee, queue_fake_sink, fake_sink, queue_display, display_sink_converter, display_sink, nullptr);
+
+    if (!gst_element_link_many(src, dec, convert, tee, nullptr)
+          || !gst_element_link_many(tee, filter, queue_fake_sink, fake_sink, nullptr)
+          || !gst_element_link_many(tee, queue_display, display_sink_converter, display_sink, nullptr))
+        ERR("Failed to gst_element_link_many");
+
+    auto state_change_ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    if (state_change_ret == GST_STATE_CHANGE_FAILURE)
+        ERR("failed to set state to PLAYING");
+
+    decode_pipeline_ = pipeline;
+    video_appsrc_ = src;
+}
+
+void SinkStreamManager::OnSignalHandOff(GstElement *object, GstBuffer *buffer, GstPad *pad,
+      void *user_data)
+{
+    auto manager = static_cast<SinkStreamManager *>(user_data);
+    RET_IF(manager == nullptr);
+    GstCaps *caps = gst_pad_get_current_caps(pad);
+    RET_IF(caps == nullptr);
+
+    GstVideoInfo vinfo;
+    if (!gst_video_info_from_caps(&vinfo, caps)) {
+        gst_caps_unref(caps);
+        DBG("failed to gst_video_info_from_caps()");
+        return;
+    }
+    RET_IF(vinfo.width == 0 || vinfo.height == 0 || vinfo.finfo == nullptr);
+    manager->SetFormat(vinfo.finfo->name, vinfo.width, vinfo.height);
+
+    GstMapInfo map;
+    gst_buffer_map(buffer, &map, GST_MAP_READ);
+    if (manager->on_frame_cb_ != nullptr)
+        manager->on_frame_cb_(map.data);
+}
 void SinkStreamManager::HandleStreamState(const std::string &discovery_id,
       const std::vector<uint8_t> &message)
 {
@@ -140,7 +223,7 @@ void SinkStreamManager::UpdateStreamInfo(const std::string &discovery_id, const 
       const std::string &peer_id, const std::string &sdp,
       const std::vector<std::string> &ice_candidates)
 {
-    //There's only one stream for a aitt ID
+    // There's only one stream for a aitt ID
     if (peer_aitt_id_ != discovery_id) {
         ERR("No matching stream");
         return;

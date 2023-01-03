@@ -32,6 +32,15 @@ TEST(AittStreamTest, Webrtc_Subscriber_Create_P)
         AittStream *subscriber =
               aitt.CreateStream(AITT_STREAM_TYPE_WEBRTC, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
         ASSERT_TRUE(subscriber) << "CreateStream() Fail";
+        subscriber->SetReceiveCallback(
+        [](aitt::AittStream *stream, void *data, void *user_data) {
+            if (stream == nullptr) {
+                printf("Invalid stream\n");
+                return;
+            }
+            printf("width %d height %d\n", stream->GetWidth(), stream->GetHeight());
+        },
+        nullptr);
 
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();

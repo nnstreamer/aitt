@@ -62,6 +62,21 @@ void Module::SetConfig(const std::string &key, void *obj)
 {
 }
 
+std::string Module::GetFormat(void)
+{
+    return stream_manager_->GetFormat();
+}
+
+int Module::GetWidth(void)
+{
+    return stream_manager_->GetWidth();
+}
+
+int Module::GetHeight(void)
+{
+    return stream_manager_->GetHeight();
+}
+
 void Module::Start(void)
 {
     stream_manager_->SetIceCandidateAddedCallback(std::bind(&Module::OnIceCandidateAdded, this));
@@ -116,6 +131,8 @@ void Module::SetReceiveCallback(ReceiveCallback cb, void *user_data)
 {
     receive_callback_ = cb;
     receive_cb_user_data_ = user_data;
+    stream_manager_->SetOnFrameCallback(std::bind(receive_callback_,
+          static_cast<aitt::AittStream *>(this), std::placeholders::_1, receive_cb_user_data_));
 }
 
 void Module::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,

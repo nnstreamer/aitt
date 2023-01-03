@@ -5,6 +5,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 PKG_CHECK_MODULES(AITT_WEBRTC_NEEDS REQUIRED
     capi-media-camera
     capi-media-webrtc
+    gstreamer-video-1.0
     json-glib-1.0
 )
 INCLUDE_DIRECTORIES(${AITT_WEBRTC_NEEDS_INCLUDE_DIRS})
