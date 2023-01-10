@@ -17,10 +17,14 @@ package com.samsung.android.modules.rtsp;
 
 import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Class to implement H264 decoder functionalities
@@ -31,22 +35,21 @@ public class H264Decoder {
     private ByteBuffer iFrame;
     private final int width;
     private final int height;
-    private final AtomicBoolean exitFlag;
     private final RTSPClient.ReceiveDataCallback streamCb;
-
     private MediaCodec mCodec;
-
-    // Async task that takes H264 frames and uses the decoder to update the Surface Texture
-    private DecodeFramesTask mFrameTask;
+    private Handler inputBufferHandler = null;
+    private Handler outputBufferHandler = null;
+    private HandlerThread inputBufferThread = null;
+    private HandlerThread outputBufferThread = null;
 
     /**
      * H264Decoder constructor
      * @param cb data callback to send data to application
-     * @param exitFlag flag to begin/terminate decoder execution
+     * @param height height of rtsp frames
+     * @param width width of rtsp frames
      */
-    public H264Decoder(RTSPClient.ReceiveDataCallback cb, AtomicBoolean exitFlag, int height, int width) {
+    public H264Decoder(RTSPClient.ReceiveDataCallback cb, int height, int width) {
         streamCb = cb;
-        this.exitFlag = exitFlag;
         this.height = height;
         this.width = width;
     }
@@ -57,7 +60,15 @@ public class H264Decoder {
      * @param pps Picture parameter set to set codec format
      */
     public void initH264Decoder(byte[] sps, byte[] pps) {
-        //Create the format settings for the MediaCodec
+        // Create Input thread handler
+        inputBufferThread = new HandlerThread("inputBufferThread", Process.THREAD_PRIORITY_DEFAULT);
+        inputBufferThread.start();
+        inputBufferHandler = new Handler(inputBufferThread.getLooper());
+        // Create Output thread handler
+        outputBufferThread = new HandlerThread("outputBufferThread", Process.THREAD_PRIORITY_DEFAULT);
+        outputBufferThread.start();
+        outputBufferHandler = new Handler(outputBufferThread.getLooper());
+        // Create the format settings for the MediaCodec
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         // Set the SPS frame
         format.setByteBuffer("csd-0", ByteBuffer.wrap(sps));
@@ -69,16 +80,63 @@ public class H264Decoder {
         try {
             // Get an instance of MediaCodec and give it its Mime type
             mCodec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+            // Set a callback for codec to receive input and output buffer free indexes
+            mCodec.setCallback(new MediaCodec.Callback() {
+                @Override
+                public void onInputBufferAvailable(@NonNull MediaCodec mediaCodec, int i) {
+                    inputBufferHandler.post(() -> {
+                        try {
+                            ByteBuffer buffer = mCodec.getInputBuffer(i);
+                            byte[] frame;
+                            //TODO:Wait here till u get a frames, we can use lock/unlock here instead of loop ?
+                            do {
+                                frame = nextFrame();
+                            } while (frame == null);
+                            buffer.put(frame);
+                            clearFrame();
+                            // Inform decoder to process the frame
+                            mCodec.queueInputBuffer(i, 0, frame.length, 0, 0);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to provide NAL units to decoder");
+                        }
+                    });
+                }
+
+                @Override
+                public void onOutputBufferAvailable(@NonNull MediaCodec mediaCodec, int i, @NonNull MediaCodec.BufferInfo bufferInfo) {
+                    outputBufferHandler.post(() -> {
+                        try {
+                            // Decoded frames are available in output buffer get it using index i
+                            ByteBuffer outputBuffer = mCodec.getOutputBuffer(i);
+                            byte[] arr = new byte[bufferInfo.size - bufferInfo.offset];
+                            outputBuffer.get(arr);
+                            mCodec.releaseOutputBuffer(i, true);
+                            if (arr.length != 0) {
+                                Log.d(TAG, "Decoding of frame is completed");
+                                streamCb.pushData(arr);
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to get decoded frames from decoder");
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(@NonNull MediaCodec mediaCodec, @NonNull MediaCodec.CodecException e) {
+                    Log.e(TAG, "onError,please check codec error");
+                }
+
+                @Override
+                public void onOutputFormatChanged(@NonNull MediaCodec mediaCodec, @NonNull MediaFormat mediaFormat) {
+                    Log.i(TAG, "onOutputFormatChanged,please handle this changed format");
+                }
+            });
             // Configure the codec
             mCodec.configure(format, null, null, 0);
             // Start the codec
             mCodec.start();
             Log.d(TAG, "initH264Decoder done");
-            // Create the AsyncTask to get the frames and decode them using the Codec
-            mFrameTask = new DecodeFramesTask();
-            Thread thread = new Thread(mFrameTask);
-            thread.start();
-        } catch (Exception e){
+        } catch (Exception e) {
             Log.e(TAG, "Failed to initialize decoder");
         }
     }
@@ -129,78 +187,21 @@ public class H264Decoder {
      */
     public void stopDecoder() {
         Log.d(TAG, "stopDecoders is invoked");
-        exitFlag.set(true);
         try {
+            if (inputBufferThread != null) {
+                inputBufferThread.quit();
+                inputBufferThread = null;
+                inputBufferHandler = null;
+            }
+            if (outputBufferThread != null) {
+                outputBufferThread.quit();
+                outputBufferThread = null;
+                outputBufferHandler = null;
+            }
             mCodec.stop();
             mCodec.release();
         } catch (Exception e) {
             Log.e(TAG, "Failed to release decoder");
-        }
-    }
-
-    /**
-     * A task to decode frames on a different thread
-     */
-    private class DecodeFramesTask implements Runnable {
-
-        @Override
-        public void run() {
-
-            while (!exitFlag.get()) {
-                byte[] frame = nextFrame();
-
-                if (frame == null || frame.length == 0)
-                    continue;
-
-                // clear iFrame to avoid redundant frame decoding
-                clearFrame();
-                // Now we need to give it to the Codec to decode the frame
-
-                // Get the input buffer from the decoder
-                // Pass in -1 here as in this example we don't have a playback time reference
-                int inputIndex = mCodec.dequeueInputBuffer(-1);
-                // If the buffer number is valid use the buffer with that index
-                if (inputIndex >= 0) {
-                    ByteBuffer buffer = mCodec.getInputBuffer(inputIndex);
-
-                    try {
-                        buffer.put(frame);
-                    } catch(NullPointerException e) {
-                        Log.e(TAG, "Failed to put frame to buffer");
-                    }
-
-                    // Tell the decoder to process the frame
-                    mCodec.queueInputBuffer(inputIndex, 0, frame.length, 0, 0);
-                }
-
-                // Stop decoder execution
-                if (exitFlag.get())
-                    break;
-
-                MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-                int outputIndex = mCodec.dequeueOutputBuffer(info, 5000);
-
-                if (outputIndex >= 0) {
-                    ByteBuffer outputBuffer = mCodec.getOutputBuffer(outputIndex);
-                    outputBuffer.position(info.offset);
-                    outputBuffer.limit(info.offset + info.size);
-                    byte[] arr = new byte[outputBuffer.remaining()];
-                    outputBuffer.get(arr);
-
-                    if(arr.length != 0) {
-                        Log.d(TAG, "Decoding of frame is completed");
-                        streamCb.pushData(arr);
-                    }
-                    mCodec.releaseOutputBuffer(outputIndex, true);
-                }
-
-                // wait for the next frame to be ready, the server/IP camera supports ~30fps
-                try {
-                    Thread.sleep(33);
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to put thread sleep");
-                }
-            }
         }
     }
 }

@@ -34,16 +34,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class RTSPClient {
     private static final String TAG = "RTSPClient";
+    private static volatile Socket clientSocket;
+    private static final int sdpInfoSize = 30;
+    private static final int socketTimeout = 10000;
     private String rtspUrl = null;
     private int height;
     private int width;
-    private static volatile Socket clientSocket;
-    private static int socketTimeout = 10000;
-    private AtomicBoolean exitFlag;
+    private final AtomicBoolean exitFlag;
+    private final ReceiveDataCallback streamCb;
     private RtspClient mRtspClient;
-    private ReceiveDataCallback streamCb;
     private H264Decoder decoder;
-    private int sdpInfoSize = 30;
     private byte[] sps;
     private byte[] pps;
 
@@ -83,17 +83,14 @@ public class RTSPClient {
 
         Uri uri = Uri.parse(rtspUrl);
         try {
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try  {
-                        clientSocket = NetUtils.createSocketAndConnect(uri.getHost(), uri.getPort(), socketTimeout);
-                        if(clientSocket != null)
-                            socketCB.socketConnect(true);
-                    } catch (Exception e) {
-                        socketCB.socketConnect(false);
-                        Log.d(TAG, "Exception in RTSP client socket creation");
-                    }
+            Thread thread = new Thread(() -> {
+                try  {
+                    clientSocket = NetUtils.createSocketAndConnect(uri.getHost(), uri.getPort(), socketTimeout);
+                    if(clientSocket != null)
+                        socketCB.socketConnect(true);
+                } catch (Exception e) {
+                    socketCB.socketConnect(false);
+                    Log.d(TAG, "Exception in RTSP client socket creation");
                 }
             });
 
@@ -109,7 +106,7 @@ public class RTSPClient {
      */
     public void initRtspClient() {
 
-        RtspClient.RtspClientListener clientlistener = new RtspClient.RtspClientListener() {
+        RtspClient.RtspClientListener clientListener = new RtspClient.RtspClientListener() {
             @Override
             public void onRtspConnecting() {
                 Log.d(TAG, "Connecting to RTSP server");
@@ -158,8 +155,8 @@ public class RTSPClient {
 
         Uri uri = Uri.parse(rtspUrl);
 
-        decoder = new H264Decoder(streamCb, exitFlag, height, width);
-        mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientlistener)
+        decoder = new H264Decoder(streamCb, height, width);
+        mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
                 .requestAudio(false)
                 .requestVideo(true)
                 .withDebug(true)
