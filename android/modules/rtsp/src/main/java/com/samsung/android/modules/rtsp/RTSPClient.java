@@ -35,8 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RTSPClient {
     private static final String TAG = "RTSPClient";
     private static volatile Socket clientSocket;
-    // TODO: Set sdpInfoSize properly without a hard-coded value.
-    private static final int sdpInfoSize = 35;
     private static final int socketTimeout = 10000;
     private String rtspUrl = null;
     private int height;
@@ -47,6 +45,15 @@ public class RTSPClient {
     private H264Decoder decoder;
     private byte[] sps;
     private byte[] pps;
+    private DecoderState decoderState = DecoderState.INIT;
+
+    /**
+     * State of decoder
+     */
+    enum DecoderState {
+        INIT,
+        READY
+    }
 
     /**
      * Interface to implement DataCallback from RTSP module to RTSP stream
@@ -126,10 +133,12 @@ public class RTSPClient {
 
             @Override
             public void onRtspVideoNalUnitReceived(@NonNull @NotNull byte[] bytes, int i, int i1, long l) {
-                Log.i(TAG, "RTSP video stream callback -- video NAL units received.  bytes.length = " + bytes.length + ",  sdpInfoSize = " + sdpInfoSize);
-                if (bytes.length < sdpInfoSize)
+                Log.i(TAG, "RTSP video stream callback -- video NAL units received.  bytes.length = " + bytes.length);
+                if (decoderState == DecoderState.INIT) {
                     decoder.initH264Decoder(sps, pps);
-                else
+                    decoderState = DecoderState.READY;
+                }
+                else if (decoderState == DecoderState.READY)
                     decoder.setRawH264Data(bytes);
             }
 
