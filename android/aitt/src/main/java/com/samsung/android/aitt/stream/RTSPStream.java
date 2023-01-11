@@ -56,7 +56,8 @@ public class RTSPStream implements AittStream {
 
     /**
      * RTSPStream constructor
-     * @param topic Topic to which streaming is invoked
+     *
+     * @param topic      Topic to which streaming is invoked
      * @param streamRole Role of the RTSPStream object
      */
     private RTSPStream(String topic, StreamRole streamRole) {
@@ -86,7 +87,8 @@ public class RTSPStream implements AittStream {
 
     /**
      * Create and return RTSPStream object for subscriber role
-     * @param topic  Topic to which Subscribe role is set
+     *
+     * @param topic      Topic to which Subscribe role is set
      * @param streamRole Role of the RTSPStream object
      * @return RTSPStream object
      */
@@ -99,7 +101,8 @@ public class RTSPStream implements AittStream {
 
     /**
      * Create and return RTSPStream object for publisher role
-     * @param topic  Topic to which Publisher role is set
+     *
+     * @param topic      Topic to which Publisher role is set
      * @param streamRole Role of the RTSPStream object
      * @return RTSPStream object
      */
@@ -112,6 +115,7 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to set configuration
+     *
      * @param config AittStreamConfig object
      */
     @Override
@@ -158,9 +162,10 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to publish to a topic
-     * @param topic String topic to which data is published
-     * @param ip Ip of the receiver
-     * @param port Port of the receiver
+     *
+     * @param topic   String topic to which data is published
+     * @param ip      Ip of the receiver
+     * @param port    Port of the receiver
      * @param message Data to be published
      * @return returns status
      */
@@ -185,7 +190,7 @@ public class RTSPStream implements AittStream {
      */
     @Override
     public void stop() {
-        if(streamRole == StreamRole.SUBSCRIBER) {
+        if (streamRole == StreamRole.SUBSCRIBER) {
             if (clientState == StreamState.PLAYING)
                 rtspClient.stop();
             updateState(streamRole, StreamState.INIT);
@@ -219,11 +224,12 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to set subscribe callback
+     *
      * @param streamDataCallback subscribe callback object
      */
     @Override
     public void setReceiveCallback(StreamDataCallback streamDataCallback) {
-        if(streamRole == StreamRole.SUBSCRIBER)
+        if (streamRole == StreamRole.SUBSCRIBER)
             streamCallback = streamDataCallback;
         else
             throw new IllegalArgumentException("The role of this stream is not subscriber");
@@ -231,6 +237,7 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to receive stream height
+     *
      * @return returns height of the stream
      */
     @Override
@@ -240,6 +247,7 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to receive stream width
+     *
      * @return returns width of the stream
      */
     @Override
@@ -249,6 +257,7 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to set subscribe callback
+     *
      * @param jniInterface JniInterface object
      */
     public void setJNIInterface(JniInterface jniInterface) {
@@ -297,7 +306,7 @@ public class RTSPStream implements AittStream {
 
             if (serverState == StreamState.READY) {
                 if (clientState == StreamState.READY) {
-                    startRtspClient();
+                    startRtspClient(discoveryInfo.id, discoveryInfo.password);
                 }
             } else if (serverState == StreamState.INIT) {
                 if (clientState == StreamState.PLAYING) {
@@ -326,10 +335,14 @@ public class RTSPStream implements AittStream {
     }
 
     private void startRtspClient() {
+        startRtspClient("", "");
+    }
+
+    private void startRtspClient(String id, String password) {
         RTSPClient.SocketConnectCallback cb = socketSuccess -> {
             if (socketSuccess) {
                 updateState(streamRole, StreamState.PLAYING);
-                rtspClient.initRtspClient();
+                rtspClient.initRtspClient(id, password);
                 rtspClient.start();
             } else {
                 Log.e(TAG, "Error creating socket");

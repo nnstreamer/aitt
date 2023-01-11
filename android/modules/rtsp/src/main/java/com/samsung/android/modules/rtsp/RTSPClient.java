@@ -35,7 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RTSPClient {
     private static final String TAG = "RTSPClient";
     private static volatile Socket clientSocket;
-    private static final int sdpInfoSize = 30;
+    // TODO: Set sdpInfoSize properly without a hard-coded value.
+    private static final int sdpInfoSize = 35;
     private static final int socketTimeout = 10000;
     private String rtspUrl = null;
     private int height;
@@ -63,8 +64,9 @@ public class RTSPClient {
 
     /**
      * RTSPClient class constructor
+     *
      * @param exitFlag AtomicBoolean flag to exit execution
-     * @param cb callback object to send data to upper layer
+     * @param cb       callback object to send data to upper layer
      */
     public RTSPClient(AtomicBoolean exitFlag, ReceiveDataCallback cb) {
         this.exitFlag = exitFlag;
@@ -73,9 +75,10 @@ public class RTSPClient {
 
     /**
      * Method to create a client socket for RTSP connection with RTSP server
+     *
      * @param socketCB socket connection callback to notify success/failure of socket creation
      */
-    public void createClientSocket(SocketConnectCallback socketCB){
+    public void createClientSocket(SocketConnectCallback socketCB) {
         if (rtspUrl == null || rtspUrl.isEmpty()) {
             Log.e(TAG, "Failed create client socket: Invalid RTSP URL");
             return;
@@ -84,13 +87,13 @@ public class RTSPClient {
         Uri uri = Uri.parse(rtspUrl);
         try {
             Thread thread = new Thread(() -> {
-                try  {
+                try {
                     clientSocket = NetUtils.createSocketAndConnect(uri.getHost(), uri.getPort(), socketTimeout);
-                    if(clientSocket != null)
+                    if (clientSocket != null)
                         socketCB.socketConnect(true);
                 } catch (Exception e) {
                     socketCB.socketConnect(false);
-                    Log.d(TAG, "Exception in RTSP client socket creation");
+                    Log.e(TAG, "Exception in RTSP client socket creation");
                 }
             });
 
@@ -104,7 +107,7 @@ public class RTSPClient {
     /**
      * Method to create RtspClient object to access RTSP lib from dependency
      */
-    public void initRtspClient() {
+    public void initRtspClient(String id, String password) {
 
         RtspClient.RtspClientListener clientListener = new RtspClient.RtspClientListener() {
             @Override
@@ -115,7 +118,7 @@ public class RTSPClient {
             @Override
             public void onRtspConnected(@NonNull @NotNull RtspClient.SdpInfo sdpInfo) {
                 Log.d(TAG, "Connected to RTSP server");
-                if(sdpInfo.videoTrack != null) {
+                if (sdpInfo.videoTrack != null) {
                     sps = sdpInfo.videoTrack.sps;
                     pps = sdpInfo.videoTrack.pps;
                 }
@@ -123,7 +126,7 @@ public class RTSPClient {
 
             @Override
             public void onRtspVideoNalUnitReceived(@NonNull @NotNull byte[] bytes, int i, int i1, long l) {
-                Log.d(TAG, "RTSP video stream callback -- video NAL units received");
+                Log.i(TAG, "RTSP video stream callback -- video NAL units received.  bytes.length = " + bytes.length + ",  sdpInfoSize = " + sdpInfoSize);
                 if (bytes.length < sdpInfoSize)
                     decoder.initH264Decoder(sps, pps);
                 else
@@ -156,12 +159,22 @@ public class RTSPClient {
         Uri uri = Uri.parse(rtspUrl);
 
         decoder = new H264Decoder(streamCb, height, width);
-        mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
-                .requestAudio(false)
-                .requestVideo(true)
-                .withDebug(true)
-                .withUserAgent("RTSP sample Client")
-                .build();
+        if ("".equalsIgnoreCase(id)) {
+            mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
+                    .requestAudio(false)
+                    .requestVideo(true)
+                    .withDebug(true)
+                    .withUserAgent("RTSP sample Client")
+                    .build();
+        } else {
+            mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
+                    .requestAudio(false)
+                    .requestVideo(true)
+                    .withCredentials(id, password)
+                    .withDebug(true)
+                    .withUserAgent("RTSP sample Client")
+                    .build();
+        }
     }
 
     /**
@@ -175,7 +188,7 @@ public class RTSPClient {
      * Method to stop RTSP streaming
      */
     public void stop() {
-        try{
+        try {
             NetUtils.closeSocket(clientSocket);
             decoder.stopDecoder();
         } catch (Exception E) {
@@ -185,6 +198,7 @@ public class RTSPClient {
 
     /**
      * Method to set RTSP URL
+     *
      * @param url String for RTSP URL
      */
     public void setRtspUrl(String url) {
@@ -193,8 +207,9 @@ public class RTSPClient {
 
     /**
      * Method to set RTSP frame resolution
+     *
      * @param height Height of the RTSP stream
-     * @param width Width of the RTSP stream
+     * @param width  Width of the RTSP stream
      */
     public void setResolution(int height, int width) {
         this.height = height;
