@@ -212,7 +212,7 @@ void MosquittoMQ::InvokeCallback(SubscribeData *subscriber, const mosquitto_mess
 {
     RET_IF(nullptr == subscriber);
 
-    MSG mq_msg;
+    AittMsg mq_msg;
     mq_msg.SetTopic(msg->topic);
     if (props) {
         const mosquitto_property *prop;
@@ -296,7 +296,7 @@ void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, c
     }
 }
 
-void MosquittoMQ::SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain)
+void MosquittoMQ::SendReply(AittMsg *msg, const void *data, const int datalen, int qos, bool retain)
 {
     RET_IF(msg == nullptr);
 

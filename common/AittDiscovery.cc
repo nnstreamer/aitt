@@ -109,7 +109,7 @@ bool AittDiscovery::CompareTopic(const std::string &left, const std::string &rig
     return discovery_mq->CompareTopic(left, right);
 }
 
-void AittDiscovery::DiscoveryMessageCallback(MSG *mq, const std::string &topic, const void *msg,
+void AittDiscovery::DiscoveryMessageCallback(AittMsg *mq, const std::string &topic, const void *msg,
       const int szmsg, void *user_data)
 {
     RET_IF(user_data == nullptr);

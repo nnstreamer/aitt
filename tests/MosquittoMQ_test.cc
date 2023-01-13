@@ -35,19 +35,19 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         mq.Connect(LOCAL_IP, 1883, "", "");
         mq.Subscribe(
               "MQ_TEST_TOPIC1",
-              [&](aitt::MSG *handle, const std::string &topic, const void *data, const int datalen,
+              [&](AittMsg *handle, const std::string &topic, const void *data, const int datalen,
                     void *user_data) {
                   DBG("Subscribe invoked: %s %d", static_cast<const char *>(data), datalen);
 
                   mq.Subscribe(
                         "topic1InCallback",
-                        [](aitt::MSG *handle, const std::string &topic, const void *msg,
+                        [](AittMsg *handle, const std::string &topic, const void *msg,
                               const int szmsg, void *cbdata) {},
                         user_data);
 
                   mq.Subscribe(
                         "topic2InCallback",
-                        [](aitt::MSG *handle, const std::string &topic, const void *msg,
+                        [](AittMsg *handle, const std::string &topic, const void *msg,
                               const int szmsg, void *cbdata) {},
                         user_data);
 

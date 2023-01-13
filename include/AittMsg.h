@@ -15,14 +15,13 @@
  */
 #pragma once
 
-#include <string>
-
 #include <AittTypes.h>
 
-namespace aitt {
-class API MSG {
+#include <string>
+
+class API AittMsg {
   public:
-    MSG();
+    AittMsg();
 
     void SetID(AittSubscribeID id);
     AittSubscribeID GetID();
@@ -49,4 +48,3 @@ class API MSG {
     AittSubscribeID id_;
     AittProtocol protocols_;
 };
-}  // namespace aitt

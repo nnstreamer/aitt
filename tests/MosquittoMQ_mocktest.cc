@@ -119,7 +119,7 @@ TEST_F(MQMockTest, Subscribe_P_Anytime)
         mq.Connect(TEST_HOST, TEST_PORT, "", "");
         mq.Subscribe(
               TEST_TOPIC,
-              [](aitt::MSG *info, const std::string &topic, const void *msg, const int szmsg,
+              [](AittMsg *info, const std::string &topic, const void *msg, const int szmsg,
                     const void *cbdata) -> void {},
               nullptr, AITT_QOS_AT_MOST_ONCE);
     } catch (std::exception &e) {
@@ -150,7 +150,7 @@ TEST_F(MQMockTest, Unsubscribe_P_Anytime)
         mq.Connect(TEST_HOST, TEST_PORT, "", "");
         void *handle = mq.Subscribe(
               TEST_TOPIC,
-              [](aitt::MSG *info, const std::string &topic, const void *msg, const int szmsg,
+              [](AittMsg *info, const std::string &topic, const void *msg, const int szmsg,
                     const void *cbdata) -> void {},
               nullptr, AITT_QOS_AT_MOST_ONCE);
         mq.Unsubscribe(handle);

@@ -138,7 +138,7 @@ void *AITT::Unsubscribe(AittSubscribeID handle)
     return pImpl->Unsubscribe(handle);
 }
 
-void AITT::SendReply(MSG *msg, const void *data, int datalen, bool end)
+void AITT::SendReply(AittMsg *msg, const void *data, int datalen, bool end)
 {
     if (datalen < 0 || AITT_PAYLOAD_MAX < datalen) {
         ERR("Invalid Size(%d)", datalen);

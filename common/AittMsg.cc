@@ -13,86 +13,83 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "MSG.h"
+#include "AittMsg.h"
 
-namespace aitt {
-MSG::MSG() : sequence(0), end_sequence(true), id_(nullptr), protocols_(AITT_TYPE_MQTT)
+AittMsg::AittMsg() : sequence(0), end_sequence(true), id_(nullptr), protocols_(AITT_TYPE_MQTT)
 {
 }
 
-void MSG::SetID(AittSubscribeID id)
+void AittMsg::SetID(AittSubscribeID id)
 {
     id_ = id;
 }
 
-AittSubscribeID MSG::GetID()
+AittSubscribeID AittMsg::GetID()
 {
     return id_;
 }
 
-void MSG::SetTopic(const std::string& topic)
+void AittMsg::SetTopic(const std::string& topic)
 {
     topic_ = topic;
 }
 
-const std::string& MSG::GetTopic()
+const std::string& AittMsg::GetTopic()
 {
     return topic_;
 }
 
-void MSG::SetCorrelation(const std::string& correlation)
+void AittMsg::SetCorrelation(const std::string& correlation)
 {
     correlation_ = correlation;
 }
 
-const std::string& MSG::GetCorrelation()
+const std::string& AittMsg::GetCorrelation()
 {
     return correlation_;
 }
 
-void MSG::SetResponseTopic(const std::string& replyTopic)
+void AittMsg::SetResponseTopic(const std::string& replyTopic)
 {
     reply_topic_ = replyTopic;
 }
 
-const std::string& MSG::GetResponseTopic()
+const std::string& AittMsg::GetResponseTopic()
 {
     return reply_topic_;
 }
 
-void MSG::SetSequence(int num)
+void AittMsg::SetSequence(int num)
 {
     sequence = num;
 }
 
-void MSG::IncreaseSequence()
+void AittMsg::IncreaseSequence()
 {
     sequence++;
 }
 
-int MSG::GetSequence()
+int AittMsg::GetSequence()
 {
     return sequence;
 }
 
-void MSG::SetEndSequence(bool end)
+void AittMsg::SetEndSequence(bool end)
 {
     end_sequence = end;
 }
 
-bool MSG::IsEndSequence()
+bool AittMsg::IsEndSequence()
 {
     return end_sequence;
 }
 
-void MSG::SetProtocols(AittProtocol protocols)
+void AittMsg::SetProtocols(AittProtocol protocols)
 {
     protocols_ = protocols;
 }
 
-AittProtocol MSG::GetProtocols()
+AittProtocol AittMsg::GetProtocols()
 {
     return protocols_;
 }
-
-}  // namespace aitt

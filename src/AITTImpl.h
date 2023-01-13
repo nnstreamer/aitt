@@ -59,7 +59,7 @@ class AITT::Impl {
           void *cbdata, AittProtocol protocols, AittQoS qos);
     void *Unsubscribe(AittSubscribeID handle);
 
-    void SendReply(MSG *msg, const void *data, const int datalen, bool end);
+    void SendReply(AittMsg *msg, const void *data, const int datalen, bool end);
 
     AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
           AittStreamRole role);
@@ -73,7 +73,7 @@ class AITT::Impl {
           MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
     AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
           const std::string &topic, const SubscribeCallback &cb, void *cbdata, AittQoS qos);
-    int DetachedCB(SubscribeCallback cb, MSG mq_msg, void *data, const int datalen, void *cbdata,
+    int DetachedCB(SubscribeCallback cb, AittMsg mq_msg, void *data, const int datalen, void *cbdata,
           MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);

@@ -297,7 +297,7 @@ API int aitt_send_reply(aitt_h handle, aitt_msg_h msg_handle, const void *reply,
       const int reply_len, bool end)
 {
     try {
-        aitt::MSG *msg = static_cast<aitt::MSG *>(msg_handle);
+        AittMsg *msg = static_cast<AittMsg *>(msg_handle);
 
         handle->aitt->SendReply(msg, reply, reply_len, end);
     } catch (std::exception &e) {
@@ -355,6 +355,6 @@ API const char *aitt_msg_get_topic(aitt_msg_h handle)
 {
     RETV_IF(handle == nullptr, nullptr);
 
-    MSG *msg = reinterpret_cast<MSG *>(handle);
+    AittMsg *msg = reinterpret_cast<AittMsg *>(handle);
     return msg->GetTopic().c_str();
 }

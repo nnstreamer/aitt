@@ -242,7 +242,7 @@ jlong AittNativeInterface::Subscribe(JNIEnv *env, jobject jni_interface_object, 
     try {
         _id = instance->aitt.Subscribe(
               customTopic,
-              [&](aitt::MSG *handle, const void *msg, const int msg_size, void *cbdata) -> void {
+              [&](AittMsg *handle, const void *msg, const int msg_size, void *cbdata) -> void {
                   auto *instance = reinterpret_cast<AittNativeInterface *>(cbdata);
                   JNIEnv *env;
                   int JNIStatus =

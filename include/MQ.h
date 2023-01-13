@@ -15,8 +15,8 @@
  */
 #pragma once
 
+#include <AittMsg.h>
 #include <AittOption.h>
-#include <MSG.h>
 
 #include <functional>
 #include <string>
@@ -31,7 +31,7 @@ class MQ {
   public:
     typedef void *(*ModuleEntry)(const char *id, const AittOption &option);
 
-    using SubscribeCallback = std::function<void(MSG *msg, const std::string &topic,
+    using SubscribeCallback = std::function<void(AittMsg *msg, const std::string &topic,
           const void *data, const int datalen, void *user_data)>;
     using MQConnectionCallback = std::function<void(int)>;
 
@@ -50,7 +50,8 @@ class MQ {
           bool retain = false) = 0;
     virtual void PublishWithReply(const std::string &topic, const void *data, const int datalen,
           int qos, bool retain, const std::string &reply_topic, const std::string &correlation) = 0;
-    virtual void SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain) = 0;
+    virtual void SendReply(AittMsg *msg, const void *data, const int datalen, int qos,
+          bool retain) = 0;
     virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0) = 0;
     virtual void *Unsubscribe(void *handle) = 0;

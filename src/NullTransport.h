@@ -16,6 +16,7 @@
 #pragma once
 
 #include <AittTransport.h>
+
 using AittTransport = aitt::AittTransport;
 using AittDiscovery = aitt::AittDiscovery;
 

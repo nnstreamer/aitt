@@ -208,7 +208,7 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
 {
     return mq->Subscribe(
           topic,
-          [this, handle, loop_handle, cb](MSG *msg, const std::string &topic, const void *data,
+          [this, handle, loop_handle, cb](AittMsg *msg, const std::string &topic, const void *data,
                 const int datalen, void *mq_user_data) {
               void *delivery = malloc(datalen);
               if (delivery)
@@ -223,7 +223,7 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
           user_data, qos);
 }
 
-int AITT::Impl::DetachedCB(SubscribeCallback cb, MSG msg, void *data, const int datalen,
+int AITT::Impl::DetachedCB(SubscribeCallback cb, AittMsg msg, void *data, const int datalen,
       void *user_data, MainLoopHandler::MainLoopResult result, int fd,
       MainLoopHandler::MainLoopData *loop_data)
 {
@@ -281,7 +281,8 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
 
     Subscribe(
           replyTopic,
-          [this, cb](MSG *sub_msg, const void *sub_data, const int sub_datalen, void *sub_cbdata) {
+          [this, cb](AittMsg *sub_msg, const void *sub_data, const int sub_datalen,
+                void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
@@ -316,7 +317,7 @@ int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data,
 
     subscribe_handle = SubscribeMQ(
           info, &sync_loop, replyTopic,
-          [&](MSG *sub_msg, const void *sub_data, const int sub_datalen, void *sub_cbdata) {
+          [&](AittMsg *sub_msg, const void *sub_data, const int sub_datalen, void *sub_cbdata) {
               if (sub_msg->IsEndSequence()) {
                   try {
                       Unsubscribe(sub_msg->GetID());
@@ -365,7 +366,7 @@ void AITT::Impl::HandleTimeout(int timeout_ms, unsigned int &timeout_id,
           nullptr);
 }
 
-void AITT::Impl::SendReply(MSG *msg, const void *data, const int datalen, bool end)
+void AITT::Impl::SendReply(AittMsg *msg, const void *data, const int datalen, bool end)
 {
     RET_IF(msg == nullptr);
 
@@ -387,7 +388,7 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
                 topic,
                 [handle, cb](const std::string &topic, const void *data, const int datalen,
                       void *user_data, const std::string &correlation) -> void {
-                    MSG msg;
+                    AittMsg msg;
                     msg.SetID(handle);
                     msg.SetTopic(topic);
                     msg.SetCorrelation(correlation);

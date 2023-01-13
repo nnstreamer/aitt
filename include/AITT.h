@@ -16,10 +16,10 @@
 #pragma once
 
 #include <AittException.h>
+#include <AittMsg.h>
 #include <AittOption.h>
 #include <AittStream.h>
 #include <AittTypes.h>
-#include <MSG.h>
 
 #include <functional>
 #include <memory>
@@ -34,7 +34,7 @@ namespace aitt {
 class API AITT {
   public:
     using SubscribeCallback =
-          std::function<void(MSG *msg, const void *data, const int datalen, void *user_data)>;
+          std::function<void(AittMsg *msg, const void *data, const int datalen, void *user_data)>;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
     explicit AITT(const std::string notice);
@@ -67,7 +67,7 @@ class API AITT {
           AittQoS qos = AITT_QOS_AT_MOST_ONCE);
     void *Unsubscribe(AittSubscribeID handle);
 
-    void SendReply(MSG *msg, const void *data, const int datalen, bool end = true);
+    void SendReply(AittMsg *msg, const void *data, const int datalen, bool end = true);
 
     AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
           AittStreamRole role);

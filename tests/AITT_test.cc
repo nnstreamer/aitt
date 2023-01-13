@@ -33,7 +33,7 @@ class AITTTest : public testing::Test, public AittTests {
     {
         aitt.Subscribe(
               testTopic,
-              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+              [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
                   if (msg)
                       DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
@@ -92,7 +92,7 @@ class AITTTest : public testing::Test, public AittTests {
             int cnt = 0;
             aitt.Subscribe(
                   TEST_STRESS_TOPIC,
-                  [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
                       ++cnt;
                       if (szmsg == 0 && cnt != 12) {
@@ -168,7 +168,7 @@ class AITTTest : public testing::Test, public AittTests {
             int cnt = 0;
             aitt.Subscribe(
                   testTopic,
-                  [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
                       // NOTE:
                       // Subscribe callback will be invoked 2 times
@@ -219,7 +219,7 @@ class AITTTest : public testing::Test, public AittTests {
             int cnt = 0;
             aitt.Subscribe(
                   testTopic,
-                  [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                       AITTTest *test = static_cast<AITTTest *>(cbdata);
                       ++cnt;
                       if (cnt == 1)
@@ -497,7 +497,7 @@ TEST_F(AITTTest, Unsubscribe_MQTT_P_Anytime)
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
-              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
+              [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
               nullptr, AITT_TYPE_MQTT);
         DBG(">>> Handle: %p", reinterpret_cast<void *>(subscribeHandle));
         aitt.Unsubscribe(subscribeHandle);
@@ -513,7 +513,7 @@ TEST_F(AITTTest, Unsubscribe_TCP_P_Anytime)
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
-              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
+              [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
               nullptr, AITT_TYPE_TCP);
         DBG("Subscribe handle: %p", reinterpret_cast<void *>(subscribeHandle));
         aitt.Unsubscribe(subscribeHandle);
@@ -529,7 +529,7 @@ TEST_F(AITTTest, Unsubscribe_SECURE_TCP_P_Anytime)
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
-              [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
+              [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {},
               nullptr, AITT_TYPE_TCP_SECURE);
         DBG("Subscribe handle: %p", reinterpret_cast<void *>(subscribeHandle));
         aitt.Unsubscribe(subscribeHandle);
@@ -555,7 +555,7 @@ TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
-              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+              [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
                   DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
 
@@ -594,7 +594,7 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         aitt.Connect();
         subscribeHandle = aitt.Subscribe(
               testTopic,
-              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+              [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
 
                   static int cnt = 0;
@@ -604,12 +604,12 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
 
                   aitt.Subscribe(
                         "topic1InCallback",
-                        [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) {},
+                        [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) {},
                         cbdata);
 
                   aitt.Subscribe(
                         "topic2InCallback",
-                        [](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) {},
+                        [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) {},
                         cbdata);
                   DBG("Ready flag is toggled");
 
@@ -667,7 +667,7 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
         aitt.Connect();
         aitt.Subscribe(
               testTopic,
-              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+              [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
                   DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
                   test->ToggleReady();
@@ -676,7 +676,7 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
 
         aitt.Subscribe(
               testTopic,
-              [&](aitt::MSG *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+              [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
                   DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
                   test->ToggleReady2();

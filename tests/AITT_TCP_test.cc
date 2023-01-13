@@ -44,7 +44,7 @@ class AITTTCPTest : public testing::Test, public AittTests {
                     return;
                 aitt.Subscribe(
                       sub_topic,
-                      [&](aitt::MSG *handle, const void *msg, const int szmsg,
+                      [&](AittMsg *handle, const void *msg, const int szmsg,
                             void *cbdata) -> void {
                           AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
                           INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
@@ -122,7 +122,7 @@ TEST_F(AITTTCPTest, SECURE_TCP_various_msg_Anytime)
                   }
                   aitt.Subscribe(
                         testTopic,
-                        [&](aitt::MSG *handle, const void *msg, const int szmsg,
+                        [&](AittMsg *handle, const void *msg, const int szmsg,
                               void *cbdata) -> void {
                             AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
 

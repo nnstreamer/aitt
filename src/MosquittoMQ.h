@@ -22,8 +22,8 @@
 #include <string>
 #include <vector>
 
+#include "AittMsg.h"
 #include "MQ.h"
-#include "MSG.h"
 
 #define MQTT_LOCALHOST "127.0.0.1"
 #define MQTT_PORT 1883
@@ -44,7 +44,7 @@ class MosquittoMQ : public MQ {
           bool retain = false);
     void PublishWithReply(const std::string &topic, const void *data, const int datalen, int qos,
           bool retain, const std::string &reply_topic, const std::string &correlation);
-    void SendReply(MSG *msg, const void *data, const int datalen, int qos, bool retain);
+    void SendReply(AittMsg *msg, const void *data, const int datalen, int qos, bool retain);
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *user_data = nullptr, int qos = 0);
     void *Unsubscribe(void *handle);
