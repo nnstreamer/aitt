@@ -320,6 +320,7 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     int32_t szmsg = 0;
     char *msg = nullptr;
     std::string topic;
+    AittMsg msg_info;
 
     try {
         topic = impl->GetTopicName(tcp_data);
@@ -327,6 +328,7 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
             ERR("A topic is empty.");
             return AITT_LOOP_EVENT_CONTINUE;
         }
+		msg_info.SetTopic(topic);
 
         szmsg = tcp_data->client->RecvSizedData((void **)&msg);
         if (szmsg < 0) {
@@ -339,10 +341,8 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
         return AITT_LOOP_EVENT_CONTINUE;
     }
 
-    std::string correlation;
-    // TODO: Correlation data (string) should be filled
-
-    parent_info->cb(topic, msg, szmsg, parent_info->cbdata, correlation);
+    auto callback = parent_info->cb;
+    callback(&msg_info, msg, szmsg, parent_info->cbdata);
     free(msg);
 
     return AITT_LOOP_EVENT_CONTINUE;

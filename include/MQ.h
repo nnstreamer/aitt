@@ -31,8 +31,7 @@ class MQ {
   public:
     typedef void *(*ModuleEntry)(const char *id, const AittOption &option);
 
-    using SubscribeCallback = std::function<void(AittMsg *msg, const std::string &topic,
-          const void *data, const int datalen, void *user_data)>;
+    using SubscribeCallback = AittMsgCB;
     using MQConnectionCallback = std::function<void(int)>;
 
     static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_MQ_NEW);

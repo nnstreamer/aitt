@@ -208,8 +208,8 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
 {
     return mq->Subscribe(
           topic,
-          [this, handle, loop_handle, cb](AittMsg *msg, const std::string &topic, const void *data,
-                const int datalen, void *mq_user_data) {
+          [this, handle, loop_handle, cb](AittMsg *msg, const void *data, const int datalen,
+                void *mq_user_data) {
               void *delivery = malloc(datalen);
               if (delivery)
                   memcpy(delivery, data, datalen);
@@ -370,7 +370,7 @@ void AITT::Impl::SendReply(AittMsg *msg, const void *data, const int datalen, bo
 {
     RET_IF(msg == nullptr);
 
-    if ((msg->GetProtocols() & AITT_TYPE_MQTT) != AITT_TYPE_MQTT)
+    if ((msg->GetProtocol() & AITT_TYPE_MQTT) != AITT_TYPE_MQTT)
         return;  // not yet support
 
     if (end == false || msg->GetSequence())
@@ -383,20 +383,17 @@ void AITT::Impl::SendReply(AittMsg *msg, const void *data, const int datalen, bo
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
       const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    return modules.Get(handle->first)
-          .Subscribe(
-                topic,
-                [handle, cb](const std::string &topic, const void *data, const int datalen,
-                      void *user_data, const std::string &correlation) -> void {
-                    AittMsg msg;
-                    msg.SetID(handle);
-                    msg.SetTopic(topic);
-                    msg.SetCorrelation(correlation);
-                    msg.SetProtocols(handle->first);
+    auto protocol = handle->first;
+    return modules.Get(protocol).Subscribe(
+          topic,
+          [handle, cb, protocol](AittMsg *msg, const void *data, const int datalen,
+                void *user_data) {
+              msg->SetID(handle);
+              msg->SetProtocol(protocol);
 
-                    return cb(&msg, data, datalen, user_data);
-                },
-                user_data, qos);
+              return cb(msg, data, datalen, user_data);
+          },
+          user_data, qos);
 }
 
 AittStream *AITT::Impl::CreateStream(AittStreamProtocol type, const std::string &topic,

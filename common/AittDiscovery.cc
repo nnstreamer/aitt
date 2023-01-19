@@ -109,15 +109,16 @@ bool AittDiscovery::CompareTopic(const std::string &left, const std::string &rig
     return discovery_mq->CompareTopic(left, right);
 }
 
-void AittDiscovery::DiscoveryMessageCallback(AittMsg *mq, const std::string &topic, const void *msg,
-      const int szmsg, void *user_data)
+void AittDiscovery::DiscoveryMessageCallback(AittMsg *info, const void *msg, const int szmsg,
+      void *user_data)
 {
     RET_IF(user_data == nullptr);
+    RET_IF(info == nullptr);
 
     AittDiscovery *discovery = static_cast<AittDiscovery *>(user_data);
 
-    size_t end = topic.find("/", DISCOVERY_TOPIC_BASE.length());
-    std::string clientId = topic.substr(DISCOVERY_TOPIC_BASE.length(), end);
+    size_t end = info->GetTopic().find("/", DISCOVERY_TOPIC_BASE.length());
+    std::string clientId = info->GetTopic().substr(DISCOVERY_TOPIC_BASE.length(), end);
     if (clientId.empty()) {
         ERR("ClientId is empty");
         return;

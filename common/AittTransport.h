@@ -16,9 +16,9 @@
 #pragma once
 
 #include <AittDiscovery.h>
+#include <AittMsg.h>
 #include <AittTypes.h>
 
-#include <functional>
 #include <string>
 
 #define AITT_TRANSPORT_NEW aitt_transport_new
@@ -31,8 +31,7 @@ class AittTransport {
   public:
     typedef void *(
           *ModuleEntry)(AittProtocol type, AittDiscovery &discovery, const std::string &my_ip);
-    using SubscribeCallback = std::function<void(const std::string &topic, const void *msg,
-          const int szmsg, void *cbdata, const std::string &correlation)>;
+    using SubscribeCallback = AittMsgCB;
 
     static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_TRANSPORT_NEW);
 

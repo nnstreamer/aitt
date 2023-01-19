@@ -17,6 +17,7 @@
 
 #include <AittTypes.h>
 
+#include <functional>
 #include <string>
 
 class API AittMsg {
@@ -24,27 +25,30 @@ class API AittMsg {
     AittMsg();
 
     void SetID(AittSubscribeID id);
-    AittSubscribeID GetID();
+    AittSubscribeID GetID() const;
     void SetTopic(const std::string &topic);
-    const std::string &GetTopic();
+    const std::string &GetTopic() const;
     void SetCorrelation(const std::string &correlation);
-    const std::string &GetCorrelation();
+    const std::string &GetCorrelation() const;
     void SetResponseTopic(const std::string &reply_topic);
-    const std::string &GetResponseTopic();
+    const std::string &GetResponseTopic() const;
     void SetSequence(int num);
     void IncreaseSequence();
-    int GetSequence();
+    int GetSequence() const;
     void SetEndSequence(bool end);
-    bool IsEndSequence();
-    void SetProtocols(AittProtocol protocols);
-    AittProtocol GetProtocols();
+    bool IsEndSequence() const;
+    void SetProtocol(AittProtocol protocol);
+    AittProtocol GetProtocol() const;
 
-  protected:
+  private:
     std::string topic_;
     std::string correlation_;
     std::string reply_topic_;
     int sequence;
     bool end_sequence;
     AittSubscribeID id_;
-    AittProtocol protocols_;
+    AittProtocol protocol_;
 };
+
+using AittMsgCB =
+      std::function<void(AittMsg *msg, const void *data, const int data_len, void *user_data)>;

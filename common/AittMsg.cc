@@ -15,7 +15,7 @@
  */
 #include "AittMsg.h"
 
-AittMsg::AittMsg() : sequence(0), end_sequence(true), id_(nullptr), protocols_(AITT_TYPE_MQTT)
+AittMsg::AittMsg() : sequence(0), end_sequence(true), id_(nullptr), protocol_(AITT_TYPE_MQTT)
 {
 }
 
@@ -24,7 +24,7 @@ void AittMsg::SetID(AittSubscribeID id)
     id_ = id;
 }
 
-AittSubscribeID AittMsg::GetID()
+AittSubscribeID AittMsg::GetID() const
 {
     return id_;
 }
@@ -34,7 +34,7 @@ void AittMsg::SetTopic(const std::string& topic)
     topic_ = topic;
 }
 
-const std::string& AittMsg::GetTopic()
+const std::string& AittMsg::GetTopic() const
 {
     return topic_;
 }
@@ -44,7 +44,7 @@ void AittMsg::SetCorrelation(const std::string& correlation)
     correlation_ = correlation;
 }
 
-const std::string& AittMsg::GetCorrelation()
+const std::string& AittMsg::GetCorrelation() const
 {
     return correlation_;
 }
@@ -54,7 +54,7 @@ void AittMsg::SetResponseTopic(const std::string& replyTopic)
     reply_topic_ = replyTopic;
 }
 
-const std::string& AittMsg::GetResponseTopic()
+const std::string& AittMsg::GetResponseTopic() const
 {
     return reply_topic_;
 }
@@ -69,7 +69,7 @@ void AittMsg::IncreaseSequence()
     sequence++;
 }
 
-int AittMsg::GetSequence()
+int AittMsg::GetSequence() const
 {
     return sequence;
 }
@@ -79,17 +79,17 @@ void AittMsg::SetEndSequence(bool end)
     end_sequence = end;
 }
 
-bool AittMsg::IsEndSequence()
+bool AittMsg::IsEndSequence() const
 {
     return end_sequence;
 }
 
-void AittMsg::SetProtocols(AittProtocol protocols)
+void AittMsg::SetProtocol(AittProtocol protocol)
 {
-    protocols_ = protocols;
+    protocol_ = protocol;
 }
 
-AittProtocol AittMsg::GetProtocols()
+AittProtocol AittMsg::GetProtocol() const
 {
-    return protocols_;
+    return protocol_;
 }

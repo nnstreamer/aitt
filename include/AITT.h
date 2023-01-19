@@ -33,8 +33,7 @@ namespace aitt {
 
 class API AITT {
   public:
-    using SubscribeCallback =
-          std::function<void(AittMsg *msg, const void *data, const int datalen, void *user_data)>;
+    using SubscribeCallback = AittMsgCB;
     using ConnectionCallback = std::function<void(AITT &, int, void *user_data)>;
 
     explicit AITT(const std::string notice);

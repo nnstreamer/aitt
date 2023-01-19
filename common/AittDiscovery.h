@@ -55,8 +55,8 @@ class AittDiscovery {
         std::shared_ptr<char> data;
     };
 
-    static void DiscoveryMessageCallback(AittMsg *mq, const std::string &topic, const void *msg,
-          const int szmsg, void *user_data);
+    static void DiscoveryMessageCallback(AittMsg *info, const void *msg, const int szmsg,
+          void *user_data);
     void PublishDiscoveryMsg();
 
     std::string id_;

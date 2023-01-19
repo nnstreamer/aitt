@@ -256,7 +256,7 @@ void MosquittoMQ::InvokeCallback(SubscribeData *subscriber, const mosquitto_mess
         }
     }
 
-    subscriber->cb(&mq_msg, msg->topic, msg->payload, msg->payloadlen, subscriber->user_data);
+    subscriber->cb(&mq_msg, msg->payload, msg->payloadlen, subscriber->user_data);
 }
 
 void MosquittoMQ::Publish(const std::string &topic, const void *data, const int datalen, int qos,
