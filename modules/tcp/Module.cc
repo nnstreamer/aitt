@@ -61,8 +61,8 @@ void Module::ThreadMain(void)
     main_loop.Run();
 }
 
-void Module::Publish(const std::string &topic, const void *data, const int datalen,
-      const std::string &correlation, AittQoS qos, bool retain)
+void Module::PublishFull(const AittMsg &msg, const void *data, const int datalen, AittQoS qos,
+      bool retain, bool is_reply)
 {
     RET_IF(datalen < 0);
 
@@ -81,7 +81,7 @@ void Module::Publish(const std::string &topic, const void *data, const int datal
     std::lock_guard<std::mutex> auto_lock_publish(publishTableLock);
     for (PublishMap::iterator it = publishTable.begin(); it != publishTable.end(); ++it) {
         // NOTE: Find entries that have matched with the given topic
-        if (!discovery.CompareTopic(it->first, topic))
+        if (!discovery.CompareTopic(it->first, is_reply ? msg.GetResponseTopic() : msg.GetTopic()))
             continue;
 
         for (HostMap::iterator hostIt = it->second.begin(); hostIt != it->second.end(); ++hostIt) {
@@ -122,10 +122,12 @@ void Module::Publish(const std::string &topic, const void *data, const int datal
                 }
 
                 try {
-                    int32_t length = topic.length();
-                    portIt->second->SendSizedData(topic.c_str(), length);
-                    length = datalen;
-                    portIt->second->SendSizedData(data, length);
+                    flexbuffers::Builder fbb;
+                    PackMsgInfo(fbb, msg, is_reply);
+                    auto buffer = fbb.GetBuffer();
+                    portIt->second->SendSizedData(buffer.data(), buffer.size());
+
+                    portIt->second->SendSizedData(data, datalen);
                 } catch (std::exception &e) {
                     ERR("An exception(%s) occurs during Send().", e.what());
                 }
@@ -134,10 +136,35 @@ void Module::Publish(const std::string &topic, const void *data, const int datal
     }      // publishTable
 }
 
+void Module::PackMsgInfo(flexbuffers::Builder &fbb, const AittMsg &msg, bool is_reply)
+{
+    fbb.Map([&]() {
+        if (is_reply) {
+            if (!msg.GetResponseTopic().empty())
+                fbb.String("topic", msg.GetResponseTopic().c_str());
+        } else {
+            if (!msg.GetTopic().empty())
+                fbb.String("topic", msg.GetTopic().c_str());
+            if (!msg.GetResponseTopic().empty())
+                fbb.String("reply_topic", msg.GetResponseTopic().c_str());
+        }
+        if (!msg.GetCorrelation().empty())
+            fbb.String("correlation", msg.GetCorrelation().c_str());
+        if (msg.GetSequence() != 0)
+            fbb.UInt("sequence", msg.GetSequence());
+        if (msg.IsEndSequence())
+            fbb.Bool("end_sequence", msg.IsEndSequence());
+    });
+
+    fbb.Finish();
+}
+
 void Module::Publish(const std::string &topic, const void *data, const int datalen, AittQoS qos,
       bool retain)
 {
-    Publish(topic, data, datalen, std::string(), qos, retain);
+    AittMsg msg;
+    msg.SetTopic(topic);
+    PublishFull(msg, data, datalen, qos, retain);
 }
 
 void *Module::Subscribe(const std::string &topic, const AittTransport::SubscribeCallback &cb,
@@ -191,6 +218,26 @@ void *Module::Unsubscribe(void *handlePtr)
     delete listen_info;
 
     return cbdata;
+}
+
+void Module::PublishWithReply(const std::string &topic, const void *data, const int datalen,
+      AittQoS qos, bool retain, const std::string &reply_topic, const std::string &correlation)
+{
+    AittMsg msg;
+    msg.SetTopic(topic);
+    msg.SetResponseTopic(reply_topic);
+    msg.SetCorrelation(correlation);
+    PublishFull(msg, data, datalen, qos, retain);
+}
+
+void Module::SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos, bool retain)
+{
+    if (msg == nullptr) {
+        ERR("Invalid message(msg is nullptr)");
+        throw std::runtime_error("Invalid message");
+    }
+
+    PublishFull(*msg, data, datalen, qos, retain, true);
 }
 
 void Module::DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
@@ -323,12 +370,11 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     AittMsg msg_info;
 
     try {
-        topic = impl->GetTopicName(tcp_data);
-        if (topic.empty()) {
+        impl->GetMsgInfo(msg_info, tcp_data);
+        if (msg_info.GetTopic().empty()) {
             ERR("A topic is empty.");
             return AITT_LOOP_EVENT_CONTINUE;
         }
-		msg_info.SetTopic(topic);
 
         szmsg = tcp_data->client->RecvSizedData((void **)&msg);
         if (szmsg < 0) {
@@ -364,26 +410,40 @@ int Module::HandleClientDisconnect(int handle)
     return AITT_LOOP_EVENT_REMOVE;
 }
 
-std::string Module::GetTopicName(Module::TCPData *tcp_data)
+void Module::GetMsgInfo(AittMsg &msg, Module::TCPData *tcp_data)
 {
-    int32_t topic_length = 0;
-    void *topic_data = nullptr;
-    topic_length = tcp_data->client->RecvSizedData(&topic_data);
-    if (topic_length < 0) {
+    int32_t info_length = 0;
+    void *msg_info = nullptr;
+    info_length = tcp_data->client->RecvSizedData(&msg_info);
+    if (info_length < 0) {
         ERR("Got a disconnection message.");
         HandleClientDisconnect(tcp_data->client->GetHandle());
-        return std::string();
+        return;
     }
-    if (nullptr == topic_data) {
+    if (nullptr == msg_info) {
         ERR("Unknown topic");
-        return std::string();
+        return;
     }
 
-    std::string topic = std::string(static_cast<char *>(topic_data), topic_length);
-    INFO("Complete topic = [%s], topic_len = %d", topic.c_str(), topic_length);
-    free(topic_data);
+    UnpackMsgInfo(msg, msg_info, info_length);
 
-    return topic;
+    free(msg_info);
+}
+
+void Module::UnpackMsgInfo(AittMsg &msg, const void *data, const size_t datalen)
+{
+    auto map = flexbuffers::GetRoot(static_cast<const uint8_t *>(data), datalen).AsMap();
+
+    if (map["topic"].IsString())
+        msg.SetTopic(map["topic"].AsString().str());
+    if (map["reply_topic"].IsString())
+        msg.SetResponseTopic(map["reply_topic"].AsString().str());
+    if (map["correlation"].IsString())
+        msg.SetCorrelation(map["correlation"].AsString().str());
+    if (map["sequence"].IsUInt())
+        msg.SetSequence(map["sequence"].AsUInt64());
+    if (map["end_sequence"].IsBool())
+        msg.SetEndSequence(map["end_sequence"].AsBool());
 }
 
 int Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,

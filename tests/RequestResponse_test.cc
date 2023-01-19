@@ -46,6 +46,7 @@ class AITTRRTest : public testing::Test, public AittTests {
     void CheckReplyCallback(bool toggle, bool *reply_ok, AittMsg *msg, const void *data,
           const int datalen, void *cbdata)
     {
+        DBG("CheckReplyCallback: topic(%s)", msg->GetTopic().c_str());
         CheckReply(msg, data, datalen);
         *reply_ok = true;
         if (toggle)
@@ -193,38 +194,51 @@ class AITTRRTest : public testing::Test, public AittTests {
 
 TEST_F(AITTRRTest, RequestResponse_P_Anytime)
 {
-    bool sub_ok, reply_ok;
-    sub_ok = reply_ok = false;
+    std::vector<AittProtocol> protocols = {AITT_TYPE_MQTT, AITT_TYPE_TCP, AITT_TYPE_TCP_SECURE};
 
-    try {
-        AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
-        aitt.Connect();
+    for (AittProtocol &protocol : protocols) {
+        bool sub_ok, reply_ok;
+        sub_ok = reply_ok = false;
+        ready = false;
 
-        aitt.Subscribe(rr_topic.c_str(),
-              [&](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
-                  CheckSubscribe(msg, data, datalen);
-                  aitt.SendReply(msg, reply.c_str(), reply.size());
-                  sub_ok = true;
-              });
+        try {
+            AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+            aitt.Connect();
 
-        aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), AITT_TYPE_MQTT,
-              AITT_QOS_AT_MOST_ONCE, false,
-              std::bind(&AITTRRTest::CheckReplyCallback, GetHandle(), true, &reply_ok,
-                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
-                    std::placeholders::_4),
-              nullptr, correlation);
+            aitt.Subscribe(
+                  rr_topic.c_str(),
+                  [&](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
+                      DBG("Subscribe Callback");
+                      CheckSubscribe(msg, data, datalen);
+                      usleep(100 * SLEEP_MS);
+                      aitt.SendReply(msg, reply.c_str(), reply.size());
+                      sub_ok = true;
+                  },
+                  nullptr, protocol);
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
-                  return ReadyCheck(static_cast<AittTests *>(this));
-              });
-        IterateEventLoop();
+            // Wait a few seconds until the AITT client gets a server list (discover devices)
+            usleep(100 * SLEEP_MS);
 
-        EXPECT_TRUE(sub_ok);
-        EXPECT_TRUE(reply_ok);
-    } catch (std::exception &e) {
-        FAIL() << e.what();
+            aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), protocol,
+                  AITT_QOS_AT_MOST_ONCE, false,
+                  std::bind(&AITTRRTest::CheckReplyCallback, GetHandle(), true, &reply_ok,
+                        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                        std::placeholders::_4),
+                  nullptr, correlation);
+
+            mainLoop.AddTimeout(CHECK_INTERVAL,
+                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                        MainLoopHandler::MainLoopData *data) -> int {
+                      DBG("Timeout Callback");
+                      return ReadyCheck(static_cast<AittTests *>(this));
+                  });
+            IterateEventLoop();
+
+            EXPECT_TRUE(sub_ok);
+            EXPECT_TRUE(reply_ok);
+        } catch (std::exception &e) {
+            FAIL() << e.what();
+        }
     }
 }
 

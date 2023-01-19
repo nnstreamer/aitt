@@ -19,9 +19,10 @@
 
 #include <iostream>
 
+#include "AittTypes.h"
 #include "aitt_internal.h"
 
-FlexbufPrinter::FlexbufPrinter() : tab(0)
+FlexbufPrinter::FlexbufPrinter() : tab(0), type(AITT_TYPE_UNKNOWN)
 {
 }
 
@@ -54,7 +55,10 @@ void FlexbufPrinter::PrettyMap(const flexbuffers::Reference &data, bool inline_v
     auto keys = map.Keys();
     for (size_t i = 0; i < keys.size(); i++) {
         std::cout << PrettyTab(false) << keys[i].AsKey() << " : ";
+        if (keys[i].AsString().str() == "TCP")
+            type = AITT_TYPE_TCP;
         PrettyParsing(map[keys[i].AsKey()], true);
+        type = AITT_TYPE_UNKNOWN;
     }
 
     tab--;
@@ -77,10 +81,16 @@ void FlexbufPrinter::PrettyVector(const flexbuffers::Reference &data, bool inlin
 void FlexbufPrinter::PrettyBlob(const flexbuffers::Reference &data, bool inline_value)
 {
     auto blob = data.AsBlob();
-    DBG_HEX_DUMP(blob.data(), blob.size());
-    // auto root = flexbuffers::GetRoot(static_cast<const uint8_t *>(blob.data()), blob.size());
-
-    // PrettyParsing(root, true);
+    if (type == AITT_TYPE_TCP) {
+        auto root = flexbuffers::GetRoot(static_cast<const uint8_t *>(blob.data()), blob.size());
+        PrettyParsing(root, true);
+    } else if (type == AITT_TYPE_TCP_SECURE) {
+        auto root = flexbuffers::GetRoot(static_cast<const uint8_t *>(blob.data()), blob.size());
+        PrettyParsing(root, true);
+        type = AITT_TYPE_UNKNOWN;
+    } else {
+        DBG_HEX_DUMP(blob.data(), blob.size());
+    }
 }
 
 void FlexbufPrinter::PrettyParsing(const flexbuffers::Reference &data, bool inline_value)

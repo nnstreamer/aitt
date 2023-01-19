@@ -31,4 +31,5 @@ class FlexbufPrinter {
     void PrettyParsing(const flexbuffers::Reference &data, bool inline_value);
 
     int tab;
+    int type;
 };

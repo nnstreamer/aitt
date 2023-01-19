@@ -270,14 +270,12 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     return user_data;
 }
 
+// It's not supported with multiple protocols
 int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *user_data,
       const std::string &correlation)
 {
     std::string replyTopic = topic + RESPONSE_POSTFIX + std::to_string(reply_id++);
-
-    if (protocol != AITT_TYPE_MQTT)
-        return -1;  // not yet support
 
     Subscribe(
           replyTopic,
@@ -294,7 +292,19 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
           },
           user_data, protocol, qos);
 
-    mq->PublishWithReply(topic, data, datalen, qos, false, replyTopic, correlation);
+    switch (protocol) {
+    case AITT_TYPE_MQTT:
+        mq->PublishWithReply(topic, data, datalen, qos, retain, replyTopic, correlation);
+        break;
+    case AITT_TYPE_TCP:
+    case AITT_TYPE_TCP_SECURE:
+        modules.Get(protocol).PublishWithReply(topic, data, datalen, qos, retain, replyTopic,
+              correlation);
+        break;
+    default:
+        ERR("Unknown AittProtocol(%d)", protocol);
+        return -1;
+    }
     return 0;
 }
 
@@ -370,14 +380,22 @@ void AITT::Impl::SendReply(AittMsg *msg, const void *data, const int datalen, bo
 {
     RET_IF(msg == nullptr);
 
-    if ((msg->GetProtocol() & AITT_TYPE_MQTT) != AITT_TYPE_MQTT)
-        return;  // not yet support
-
     if (end == false || msg->GetSequence())
         msg->IncreaseSequence();
     msg->SetEndSequence(end);
 
-    mq->SendReply(msg, data, datalen, AITT_QOS_AT_MOST_ONCE, false);
+    switch (msg->GetProtocol()) {
+    case AITT_TYPE_MQTT:
+        mq->SendReply(msg, data, datalen, AITT_QOS_AT_MOST_ONCE, false);
+        break;
+    case AITT_TYPE_TCP:
+    case AITT_TYPE_TCP_SECURE:
+        modules.Get(msg->GetProtocol()).SendReply(msg, data, datalen, AITT_QOS_AT_MOST_ONCE, false);
+        break;
+    default:
+        ERR("Unknown AittProtocol(%d)", msg->GetProtocol());
+        break;
+    }
 }
 
 void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,

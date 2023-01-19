@@ -26,14 +26,17 @@ class NullTransport : public AittTransport {
     virtual ~NullTransport(void) = default;
 
     void Publish(const std::string &topic, const void *data, const int datalen,
-          const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
-          bool retain = false) override;
-
-    void Publish(const std::string &topic, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
 
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata = nullptr,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
 
     void *Unsubscribe(void *handle) override;
+
+    void PublishWithReply(const std::string &topic, const void *data, const int datalen,
+          AittQoS qos, bool retain, const std::string &reply_topic,
+          const std::string &correlation) override;
+
+    void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos,
+          bool retain) override;
 };

@@ -17,6 +17,7 @@
 
 #include <AittTransport.h>
 #include <MainLoopHandler.h>
+#include <flatbuffers/flexbuffers.h>
 
 #include <map>
 #include <memory>
@@ -40,14 +41,14 @@ class Module : public AittTransport {
     virtual ~Module(void);
 
     void Publish(const std::string &topic, const void *data, const int datalen,
-          const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
-          bool retain = false) override;
-    void Publish(const std::string &topic, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) override;
 
     void *Subscribe(const std::string &topic, const SubscribeCallback &cb, void *cbdata = nullptr,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE) override;
     void *Unsubscribe(void *handle) override;
+    void PublishWithReply(const std::string &topic, const void *data, const int datalen,
+          AittQoS qos, bool retain, const std::string &reply_topic, const std::string &correlation);
+    void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos, bool retain);
 
   private:
     struct TCPServerData : public MainLoopHandler::MainLoopData {
@@ -105,16 +106,20 @@ class Module : public AittTransport {
 
     static int AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
           MainLoopHandler::MainLoopData *watchData);
+    void PublishFull(const AittMsg &msg, const void *data, const int datalen,
+          AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false, bool is_reply = false);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
     static int ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
           MainLoopHandler::MainLoopData *watchData);
     int HandleClientDisconnect(int handle);
-    std::string GetTopicName(TCPData *connect_info);
+    void GetMsgInfo(AittMsg &msg, TCPData *connect_info);
     void ThreadMain(void);
     void UpdatePublishTable(const std::string &topic, const std::string &host,
           const TCP::ConnectInfo &info);
+    void PackMsgInfo(flexbuffers::Builder &fbb, const AittMsg &msg, bool is_reply = false);
+    void UnpackMsgInfo(AittMsg &msg, const void *data, const size_t datalen);
 
     const char *const NAME[2] = {"TCP", "SECURE_TCP"};
     MainLoopHandler main_loop;

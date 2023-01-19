@@ -42,13 +42,15 @@ class AittTransport {
     virtual ~AittTransport(void) = default;
 
     virtual void Publish(const std::string &topic, const void *data, const int datalen,
-          const std::string &correlation, AittQoS qos = AITT_QOS_AT_MOST_ONCE,
-          bool retain = false) = 0;
-    virtual void Publish(const std::string &topic, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false) = 0;
     virtual void *Subscribe(const std::string &topic, const SubscribeCallback &cb,
           void *cbdata = nullptr, AittQoS qos = AITT_QOS_AT_MOST_ONCE) = 0;
     virtual void *Unsubscribe(void *handle) = 0;
+    virtual void PublishWithReply(const std::string &topic, const void *data, const int datalen,
+          AittQoS qos, bool retain, const std::string &reply_topic,
+          const std::string &correlation) = 0;
+    virtual void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos,
+          bool retain) = 0;
 
     AittProtocol GetProtocol() { return protocol; }
 
