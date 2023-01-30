@@ -32,12 +32,15 @@ public class TCPInstrumentedTest {
 
     private static Context appContext;
 
-    private static final String TAG = "AITT-ANDROID";
+    private static final String TAG = "TCPInstrumentedTest";
     private static final String AITT_ID = "AITT_ANDROID";
-    private static final int PORT = 1883;
     private static final String TEST_TOPIC = "android/test/tcp";
+    private static final String TEST_TOPIC_SECURE = "android/test/tcp_secure";
     private static final String TEST_MESSAGE = "This is a test message for TCP protocol.";
     private static final String ERROR_MESSAGE_AITT_NULL = "An AITT instance is null.";
+    private static final int PORT = 1883;
+    private static final int SLEEP_LIMIT = 2000;
+    private static final int SLEEP_INTERVAL = 100;
 
     private static String brokerIp;
 
@@ -62,7 +65,7 @@ public class TCPInstrumentedTest {
             byte[] payload = TEST_MESSAGE.getBytes();
             aitt.publish(TEST_TOPIC, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
         } catch (Exception e) {
-            fail("Failed to execute testPublishWithTCP, (" + e + ")");
+            fail("Failed to execute testPublishWithTCP_P, (" + e + ")");
         }
     }
 
@@ -70,7 +73,6 @@ public class TCPInstrumentedTest {
     public void testPublishWithTCPInvalidTopic_N() {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
-            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
             aitt.connect(brokerIp, PORT);
 
             String _topic = "";
@@ -80,7 +82,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testPublishWithTCPInvalidTopic, (" + e + ")");
+            fail("Failed testPublishWithTCPInvalidTopic_N, (" + e + ")");
         }
     }
 
@@ -95,7 +97,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed to execute testSubscribeWithTCP, (" + e + ")");
+            fail("Failed to execute testSubscribeWithTCP_P, (" + e + ")");
         }
     }
 
@@ -112,12 +114,12 @@ public class TCPInstrumentedTest {
             Aitt.SubscribeCallback callback2 = message -> {
             };
 
-            aitt.subscribe(TEST_TOPIC, callback1);
-            aitt.subscribe(TEST_TOPIC + "_Second", callback2);
+            aitt.subscribe(TEST_TOPIC, callback1, Aitt.Protocol.TCP);
+            aitt.subscribe(TEST_TOPIC + "_Second", callback2, Aitt.Protocol.TCP);
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPMultipleCallbacks, (" + e + ")");
+            fail("Failed testSubscribeWithTCPMultipleCallbacks_P, (" + e + ")");
         }
     }
 
@@ -125,7 +127,6 @@ public class TCPInstrumentedTest {
     public void testSubscribeWithTCPInvalidTopic_N() {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
-            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
             aitt.connect(brokerIp, PORT);
 
             String _topic = "";
@@ -134,7 +135,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPInvalidTopic, (" + e + ")");
+            fail("Failed testSubscribeWithTCPInvalidTopic_N, (" + e + ")");
         }
     }
 
@@ -142,7 +143,6 @@ public class TCPInstrumentedTest {
     public void testSubscribeWithTCPInvalidCallback_N() {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID);
-            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
             aitt.connect(brokerIp, PORT);
 
             String _topic = "topic";
@@ -150,7 +150,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testSubscribeWithTCPInvalidCallback, (" + e + ")");
+            fail("Failed testSubscribeWithTCPInvalidCallback_N, (" + e + ")");
         }
     }
 
@@ -167,7 +167,7 @@ public class TCPInstrumentedTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testUnsubscribe, (" + e + ")");
+            fail("Failed testUnsubscribeWithTCP_P, (" + e + ")");
         }
     }
 
@@ -193,15 +193,183 @@ public class TCPInstrumentedTest {
                 message_received.set(true);
             }, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE);
 
-            sleep(500);
+            int intervalSum = 0;
+            while (intervalSum < SLEEP_LIMIT) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
 
             aitt.publish(TEST_TOPIC, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
+            Log.i(TAG, "A message is sent through the publisher.");
 
-            sleep(500);
+            intervalSum = 0;
+            while (intervalSum < SLEEP_LIMIT) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
 
             Assert.assertTrue(message_received.get());
         } catch (Exception e) {
-            fail("Failed to execute testPublishSubscribeWithTCP, (" + e + ")");
+            fail("Failed to execute testPublishSubscribeWithTCP_P, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testPublishWithTCPSecure_P() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
+            aitt.connect(brokerIp, PORT);
+
+            byte[] payload = TEST_MESSAGE.getBytes();
+            aitt.publish(TEST_TOPIC, payload, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE, false);
+        } catch (Exception e) {
+            fail("Failed to execute testPublishWithTCPSecure_P, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testPublishWithTCPSecureInvalidTopic_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            aitt.connect(brokerIp, PORT);
+
+            String _topic = "";
+            byte[] payload = TEST_MESSAGE.getBytes();
+
+            Assert.assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE, false));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testPublishWithTCPSecureInvalidTopic_N, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testSubscribeWithTCPSecure_P() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
+            aitt.connect(brokerIp, PORT);
+
+            aitt.subscribe(TEST_TOPIC, message -> Log.i(TAG, "A subscription callback is called."), Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed to execute testSubscribeWithTCPSecure_P, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testSubscribeWithTCPSecureMultipleCallbacks_P() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
+            aitt.connect(brokerIp, PORT);
+
+            Aitt.SubscribeCallback callback1 = message -> {
+            };
+
+            Aitt.SubscribeCallback callback2 = message -> {
+            };
+
+            aitt.subscribe(TEST_TOPIC, callback1, Aitt.Protocol.TCP_SECURE);
+            aitt.subscribe(TEST_TOPIC + "_Second", callback2, Aitt.Protocol.TCP_SECURE);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWithTCPSecureMultipleCallbacks_P, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testSubscribeWithTCPSecureInvalidTopic_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            aitt.connect(brokerIp, PORT);
+
+            String _topic = "";
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, message -> {
+            }, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWithTCPSecureInvalidTopic_N, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testSubscribeWithTCPSecureInvalidCallback_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            aitt.connect(brokerIp, PORT);
+
+            String _topic = "topic";
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(_topic, null, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeWithTCPSecureInvalidCallback_N, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testUnsubscribeWithTCPSecure_P() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID);
+            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
+            aitt.connect(brokerIp, PORT);
+            aitt.subscribe(TEST_TOPIC, message -> {
+            }, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE);
+
+            aitt.unsubscribe(TEST_TOPIC);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testUnsubscribeWithTCPSecure_P, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testPublishSubscribeWithTCPSecure_P() {
+        try {
+            String wifiIp = wifiIpAddress();
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIp, false);
+            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
+            aitt.connect(brokerIp, PORT);
+
+            AtomicBoolean message_received = new AtomicBoolean(false);
+            byte[] payload = TEST_MESSAGE.getBytes();
+            aitt.subscribe(TEST_TOPIC_SECURE, message -> {
+                String _topic = message.getTopic();
+                byte[] _payload = message.getPayload();
+                Log.i(TAG, "Topic = " + _topic + ", Payload = " + Arrays.toString(_payload));
+                Assert.assertEquals(_topic, TEST_TOPIC_SECURE);
+                Assert.assertArrayEquals(_payload, payload);
+                String results = new String(_payload);
+                Assert.assertEquals(results, TEST_MESSAGE);
+                Log.i(TAG, "Received message = [" + results + "]");
+                message_received.set(true);
+            }, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE);
+
+            int intervalSum = 0;
+            while (intervalSum < SLEEP_LIMIT) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
+
+            aitt.publish(TEST_TOPIC_SECURE, payload, Aitt.Protocol.TCP_SECURE, Aitt.QoS.AT_LEAST_ONCE, false);
+            Log.i(TAG, "A message is sent through the publisher.");
+
+            intervalSum = 0;
+            while (intervalSum < 5000) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
+
+            Assert.assertTrue(message_received.get());
+        } catch (Exception e) {
+            fail("Failed to execute testPublishSubscribeWithTCPSecure_P, (" + e + ")");
         }
     }
 
@@ -211,9 +379,9 @@ public class TCPInstrumentedTest {
         LinkProperties linkProperties = connectivityManager.getLinkProperties(currentNetwork);
         for (LinkAddress linkAddress : linkProperties.getLinkAddresses()) {
             String targetIp = linkAddress.toString();
-            if (targetIp.contains("192.168") == true) {
+            if (targetIp.contains("192.168")) {
                 StringTokenizer tokenizer = new StringTokenizer(targetIp, "/");
-                if (tokenizer.hasMoreTokens() == true)
+                if (tokenizer.hasMoreTokens())
                     return tokenizer.nextToken();
             }
         }
