@@ -37,7 +37,6 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
-import com.samsung.android.aitt.stream.WebRTCStream;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -147,11 +146,9 @@ public class WebRTCInstrumentedTest {
                 intervalSum += SLEEP_INTERVAL;
             }
 
-            int serverPort = ((WebRTCStream) serverSubscriberStream).getServerPort();
-            Log.d(TAG, "Server port = " + serverPort);
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_MESSAGE_TOPIC, message.getBytes(), Aitt.Protocol.WEBRTC);
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_MESSAGE_TOPIC, message.getBytes());
                 if (isPublished)
                     break;
             }
@@ -204,11 +201,9 @@ public class WebRTCInstrumentedTest {
                 intervalSum += SLEEP_INTERVAL;
             }
 
-            int serverPort = ((WebRTCStream) serverSubscriberStream).getServerPort();
-            Log.d(TAG, "Server port = " + serverPort);
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_LARGE_MESSAGE_TOPIC, largeBytes, Aitt.Protocol.WEBRTC);
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_LARGE_MESSAGE_TOPIC, largeBytes);
                 if (isPublished)
                     break;
                 Thread.sleep(SLEEP_INTERVAL);
@@ -259,12 +254,9 @@ public class WebRTCInstrumentedTest {
                 intervalSum += SLEEP_INTERVAL;
             }
 
-            int serverPort = ((WebRTCStream) serverSubscriberStream).getServerPort();
-            Log.d(TAG, "Server port = " + serverPort);
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_VIDEO_TOPIC, frameImageBytes
-                        , Aitt.Protocol.WEBRTC);
+                boolean isPublished = clientPublisher.publish(clientPublisherStream, TEST_VIDEO_TOPIC, frameImageBytes);
                 if (isPublished)
                     break;
             }

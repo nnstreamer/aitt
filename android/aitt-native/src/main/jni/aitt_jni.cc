@@ -453,6 +453,13 @@ void AittNativeInterface::DiscoveryMessageCallback(const std::string &topic, con
             return;
         }
 
+        jstring _clientId = env->NewStringUTF(clientId.c_str());
+        if (env->ExceptionCheck() == true) {
+            JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
+            cbContext.jvm->DetachCurrentThread();
+            return;
+        }
+
         jstring _status = env->NewStringUTF(status.c_str());
         if (env->ExceptionCheck() == true) {
             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to create new UTF string");
@@ -469,7 +476,7 @@ void AittNativeInterface::DiscoveryMessageCallback(const std::string &topic, con
             return;
         }
 
-        env->CallVoidMethod(cbObject, cbContext.discoveryCallbackMethodID, _topic, _status, array);
+        env->CallVoidMethod(cbObject, cbContext.discoveryCallbackMethodID, _topic, _clientId, _status, array);
         if (env->ExceptionCheck() == true) {
             JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to call void method");
             cbContext.jvm->DetachCurrentThread();
@@ -532,7 +539,7 @@ jlong AittNativeInterface::Init(JNIEnv *env, jobject jni_interface_object, jstri
         cbContext.connectionCallbackMethodID =
                 env->GetMethodID(callbackClass, "connectionStatusCallback", "(I)V");
         cbContext.discoveryCallbackMethodID =
-                env->GetMethodID(callbackClass, "discoveryMessageCallback", "(Ljava/lang/String;Ljava/lang/String;[B)V");
+                env->GetMethodID(callbackClass, "discoveryMessageCallback", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[B)V");
         env->DeleteLocalRef(callbackClass);
     } catch (std::exception &e) {
         JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());

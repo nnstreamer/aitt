@@ -59,7 +59,7 @@ public class RTSPClient {
      * Interface to implement DataCallback from RTSP module to RTSP stream
      */
     public interface ReceiveDataCallback {
-        void pushData(byte[] frame);
+        void pushData(byte[] data);
     }
 
     /**

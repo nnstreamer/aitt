@@ -350,41 +350,13 @@ public class Aitt {
     }
 
     // TODO: Update publish with proper stream interface.
-    public boolean publish(AittStream stream, String topic, byte[] message, Protocol protocol) {
+    public boolean publish(AittStream stream, String topic, byte[] message) {
         if (stream == null) {
             Log.e(TAG, "Stream is null.");
             return false;
         }
 
-        try {
-            synchronized (this) {
-                HostTable hostTable = getHostTable(topic);
-                for (String hostIp : hostTable.hostMap.keySet()) {
-                    PortTable portTable = hostTable.hostMap.get(hostIp);
-                    if (portTable == null) {
-                        Log.e(TAG, "Port table for host [" + hostIp + "] is null.");
-                        continue;
-                    }
-                    for (Integer port : portTable.portMap.keySet()) {
-                        Pair<Protocol, Object> protocolPair = portTable.portMap.get(port);
-                        if (protocolPair == null) {
-                            Log.e(TAG, "Pair for port: " + port + "is null.");
-                            continue;
-                        }
-                        if (protocolPair.first != protocol) {
-                            Log.d(TAG, "protocol is not matched.");
-                            continue;
-                        }
-
-                        return stream.publish(topic, hostIp, port, message);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error during publish", e);
-        }
-
-        return false;
+        return stream.publish(topic, message);
     }
 
     /**
@@ -820,10 +792,8 @@ public class Aitt {
         switch (protocol) {
             case WEBRTC:
                 WebRTCStream webRTCStream = (WebRTCStream) ((WebRTCHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
-                if (webRTCStream != null && streamRole == AittStream.StreamRole.SUBSCRIBER) {
-                    webRTCStream.setSelfIP(ip);
+                if (webRTCStream != null)
                     webRTCStream.setJNIInterface(mJniInterface);
-                }
                 return webRTCStream;
             case RTSP:
                 RTSPStream rtspStream = (RTSPStream) ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);

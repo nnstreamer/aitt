@@ -65,9 +65,9 @@ public class RTSPStream implements AittStream {
         this.streamRole = streamRole;
 
         if (streamRole == StreamRole.SUBSCRIBER) {
-            RTSPClient.ReceiveDataCallback dataCallback = frame -> {
+            RTSPClient.ReceiveDataCallback dataCallback = data -> {
                 if (streamCallback != null)
-                    streamCallback.pushStreamData(frame);
+                    streamCallback.pushStreamData(data);
             };
 
             rtspClient = new RTSPClient(new AtomicBoolean(false), dataCallback);
@@ -164,13 +164,11 @@ public class RTSPStream implements AittStream {
      * Method to publish to a topic
      *
      * @param topic   String topic to which data is published
-     * @param ip      Ip of the receiver
-     * @param port    Port of the receiver
      * @param message Data to be published
      * @return returns status
      */
     @Override
-    public boolean publish(String topic, String ip, int port, byte[] message) {
+    public boolean publish(String topic, byte[] message) {
         // TODO: implement this function.
         return true;
     }
@@ -263,7 +261,7 @@ public class RTSPStream implements AittStream {
     public void setJNIInterface(JniInterface jniInterface) {
         this.jniInterface = jniInterface;
 
-        jniInterface.setDiscoveryCallback(topic, (status, data) -> {
+        jniInterface.setDiscoveryCallback(topic, (clientId, status, data) -> {
             Log.d(TAG, "Received discovery callback");
             if (streamRole == StreamRole.PUBLISHER)
                 return;

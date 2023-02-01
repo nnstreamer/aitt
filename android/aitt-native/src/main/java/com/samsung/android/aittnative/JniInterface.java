@@ -62,7 +62,7 @@ public class JniInterface {
      * JNI callback interface to receive discovery messages
      */
     public interface JniDiscoveryCallback {
-        void onDiscoveryMessageReceived(String status, byte[] data);
+        void onDiscoveryMessageReceived(String clientId, String status, byte[] data);
     }
 
     /**
@@ -209,11 +209,11 @@ public class JniInterface {
         }
     }
 
-    void discoveryMessageCallback(String topic, String status, byte[] message) {
+    void discoveryMessageCallback(String topic, String clientId, String status, byte[] message) {
         synchronized (this) {
             Pair<Integer, JniDiscoveryCallback> pair = discoveryCallbacks.get(topic);
             if (pair != null) {
-                pair.second.onDiscoveryMessageReceived(status, message);
+                pair.second.onDiscoveryMessageReceived(clientId, status, message);
             }
         }
     }
