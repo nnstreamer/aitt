@@ -159,17 +159,16 @@ void MosquittoMQ::SetWillInfo(const std::string &topic, const void *msg, int szm
 
 void MosquittoMQ::Disconnect(void)
 {
-    int ret = mosquitto_disconnect(handle);
-    if (ret != MOSQ_ERR_SUCCESS) {
+    int ret;
+    ret = mosquitto_disconnect(handle);
+    if (ret != MOSQ_ERR_SUCCESS)
         ERR("mosquitto_disconnect() Fail(%s)", mosquitto_strerror(ret));
-        throw AittException(AittException::MQTT_ERR);
-    }
+    else
+        mosquitto_will_clear(handle);
 
     ret = mosquitto_loop_stop(handle, false);
     if (ret != MOSQ_ERR_SUCCESS)
         ERR("mosquitto_loop_stop() Fail(%s)", mosquitto_strerror(ret));
-
-    mosquitto_will_clear(handle);
 }
 
 void MosquittoMQ::MessageCallback(mosquitto *handle, void *obj, const mosquitto_message *msg,

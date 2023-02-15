@@ -107,9 +107,15 @@ int AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status,
 void AITT::Impl::Connect(const std::string &host, int port, const std::string &username,
       const std::string &password)
 {
-    discovery.Start(host, port, username, password);
-    mq->Connect(host, port, username, password);
-
+    try {
+        discovery.Start(host, port, username, password);
+        mq->Connect(host, port, username, password);
+    } catch (std::exception &e) {
+        ERR("Connect() Fail(%s)", e.what());
+        mq->Disconnect();
+        discovery.Stop();
+        throw;
+    }
     mqtt_broker_ip_ = host;
     mqtt_broker_port_ = port;
 }
