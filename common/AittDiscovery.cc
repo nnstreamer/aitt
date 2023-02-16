@@ -173,7 +173,7 @@ void AittDiscovery::PublishDiscoveryMsg()
 }
 
 AittDiscovery::DiscoveryBlob::DiscoveryBlob(const void *msg, int length)
-      : len(length), data(new char[len])
+      : len(length), data(new char[len], [](char *p) { delete[] p; })
 {
     memcpy(data.get(), msg, length);
 }
