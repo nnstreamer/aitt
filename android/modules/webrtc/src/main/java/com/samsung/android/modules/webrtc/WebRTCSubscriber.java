@@ -48,7 +48,7 @@ public final class WebRTCSubscriber extends WebRTC {
 
    private static final String TAG = "WebRTCSubscriber";
 
-   private ByteArrayOutputStream baos;
+   private final ByteArrayOutputStream baos;
    private boolean recvLargeChunk = false;
 
    public WebRTCSubscriber(Context appContext) throws InstantiationException {

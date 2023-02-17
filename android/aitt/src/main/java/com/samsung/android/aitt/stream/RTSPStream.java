@@ -24,8 +24,6 @@ import com.samsung.android.aittnative.JniInterface;
 import com.samsung.android.modules.rtsp.RTSPClient;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**

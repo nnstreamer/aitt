@@ -122,7 +122,7 @@ public class WebRTCInstrumentedTest {
             AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_MESSAGE_TOPIC, SUBSCRIBER);
             serverSubscriberStream.setReceiveCallback(data -> {
                 Log.i(TAG, "A callback is received in testWebRTCBasicMessageStreaming. Message size = " + data.length);
-                if (Arrays.equals(data, message.getBytes()) == false)
+                if (!Arrays.equals(data, message.getBytes()))
                     throw new RuntimeException("A wrong test message(" + new String(data) + ") is received.");
 
                 Log.i(TAG, "The correct test message(" + new String(data) + ") is received.");
@@ -176,7 +176,7 @@ public class WebRTCInstrumentedTest {
             AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_LARGE_MESSAGE_TOPIC, SUBSCRIBER);
             serverSubscriberStream.setReceiveCallback(data -> {
                 Log.i(TAG, "A callback is received in testWebRTCSendLargeMessage. Message size = " + data.length);
-                if (Arrays.equals(data, largeBytes) == false) {
+                if (!Arrays.equals(data, largeBytes)) {
                     throw new RuntimeException("A wrong large message is received.");
                 }
                 Log.i(TAG, "The correct large message is received. size = " + data.length);
@@ -229,7 +229,7 @@ public class WebRTCInstrumentedTest {
             AittStream serverSubscriberStream = serverSubscriber.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, SUBSCRIBER);
             serverSubscriberStream.setReceiveCallback(data -> {
                 Log.i(TAG, "A callback is received in testWebRTCBasicVideoStreaming.");
-                if (Arrays.equals(data, frameImageBytes) == false)
+                if (!Arrays.equals(data, frameImageBytes))
                     throw new RuntimeException("A wrong test image is received.");
 
                 Log.i(TAG, "The correct test image is received.");

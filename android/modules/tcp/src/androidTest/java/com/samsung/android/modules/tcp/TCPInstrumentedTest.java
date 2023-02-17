@@ -4,8 +4,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
-import static java.lang.Thread.sleep;
-
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
