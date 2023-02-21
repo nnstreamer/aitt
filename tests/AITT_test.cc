@@ -422,15 +422,16 @@ TEST_F(AITTTest, Ready_N_Anytime)
           aitt::AittException);
 }
 
-TEST_F(AITTTest, Not_READY_STATUS_N)
+TEST_F(AITTTest, Not_READY_STATUS_N_Anytime)
 {
-    EXPECT_THROW(
+    EXPECT_DEATH(
           {
               AITT aitt(AITT_MUST_CALL_READY);
-              FAIL() << "MUST NOT use the aitt before calling Ready()";
+              // If it is called whithout aitt.Ready(), it crashes.
               aitt.Connect();
+              FAIL() << "MUST NOT use the aitt before calling Ready()";
           },
-          std::exception);
+          "");
 }
 
 TEST_F(AITTTest, Publish_MQTT_P_Anytime)
