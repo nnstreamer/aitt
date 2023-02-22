@@ -39,13 +39,18 @@ public class RTSPClient {
     private String rtspUrl = null;
     private int height;
     private int width;
+    private int audioSampleRate;
+    private int audioChannelCount;
+    private byte[] audioCodecConfig;
     private final AtomicBoolean exitFlag;
     private final ReceiveDataCallback streamCb;
     private RtspClient mRtspClient;
     private H264Decoder decoder;
+    private AudioDecoder audioDecoder;
     private byte[] sps;
     private byte[] pps;
     private DecoderState decoderState = DecoderState.INIT;
+    private DecoderState audioDecoderState = DecoderState.INIT;
 
     /**
      * State of decoder
@@ -129,6 +134,12 @@ public class RTSPClient {
                     sps = sdpInfo.videoTrack.sps;
                     pps = sdpInfo.videoTrack.pps;
                 }
+                if (sdpInfo.audioTrack != null) {
+                    audioSampleRate = sdpInfo.audioTrack.sampleRateHz;
+                    audioChannelCount = sdpInfo.audioTrack.channels;
+                    audioCodecConfig = sdpInfo.audioTrack.config;
+                    audioDecoder = new AudioDecoder(audioSampleRate, audioChannelCount, audioCodecConfig);
+                }
             }
 
             @Override
@@ -144,13 +155,18 @@ public class RTSPClient {
 
             @Override
             public void onRtspAudioSampleReceived(@NonNull @NotNull byte[] bytes, int i, int i1, long l) {
-                //TODO : Decode the Audio Nal units (AAC encoded) received using audio decoder
-                Log.d(TAG, "RTSP audio stream callback");
+                Log.i(TAG, "RTSP audio stream callback -- Audio NAL units received.  bytes.length = " + bytes.length);
+                if (audioDecoderState == DecoderState.INIT) {
+                    audioDecoder.initAudioDecoder();
+                    audioDecoderState = DecoderState.READY;
+                } else if (audioDecoderState == DecoderState.READY)
+                    audioDecoder.setRawAudioData(bytes);
             }
 
             @Override
             public void onRtspDisconnected() {
                 decoder.stopDecoder();
+                audioDecoder.stopDecoder();
                 Log.d(TAG, "Disconnected from RTSP server");
             }
 
@@ -168,16 +184,17 @@ public class RTSPClient {
         Uri uri = Uri.parse(rtspUrl);
 
         decoder = new H264Decoder(streamCb, height, width);
+
         if ("".equalsIgnoreCase(id)) {
             mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
-                    .requestAudio(false)
+                    .requestAudio(true)
                     .requestVideo(true)
                     .withDebug(true)
                     .withUserAgent("RTSP sample Client")
                     .build();
         } else {
             mRtspClient = new RtspClient.Builder(clientSocket, uri.toString(), exitFlag, clientListener)
-                    .requestAudio(false)
+                    .requestAudio(true)
                     .requestVideo(true)
                     .withCredentials(id, password)
                     .withDebug(true)
@@ -200,6 +217,7 @@ public class RTSPClient {
         try {
             NetUtils.closeSocket(clientSocket);
             decoder.stopDecoder();
+            audioDecoder.stopDecoder();
         } catch (Exception E) {
             Log.e(TAG, "Error closing socket");
         }
