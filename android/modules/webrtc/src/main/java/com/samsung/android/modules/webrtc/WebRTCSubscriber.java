@@ -278,16 +278,21 @@ public final class WebRTCSubscriber extends WebRTC {
          final int ySize = width * height;
          final ByteBuffer nv21Buffer = ByteBuffer.allocateDirect(ySize + width * chromaHeight);
          final byte[] nv21Data = nv21Buffer.array();
-         for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-               final byte yValue = i420Buffer.getDataY().get(y * i420Buffer.getStrideY() + x);
-               nv21Data[y * width + x] = yValue;
-            }
-         }
+         byte[] i420ByteArrayU = new byte[i420Buffer.getDataU().remaining()];
+         byte[] i420ByteArrayV = new byte[i420Buffer.getDataV().remaining()];
+         //Copy i420 Y bytebuffer to nv21Data.
+         i420Buffer.getDataY().get(nv21Data, 0, i420Buffer.getDataY().remaining());
+         //Copy i420 U bytebuffer to bytearrayU.
+         i420Buffer.getDataU().get(i420ByteArrayU, 0, i420ByteArrayU.length);
+         //Copy i420 V bytebuffer to bytearrayV.
+         i420Buffer.getDataV().get(i420ByteArrayV, 0, i420ByteArrayV.length);
+         int strideU = i420Buffer.getStrideU();
+         int strideV = i420Buffer.getStrideV();
+         //Y pixels are copied, just copy UV pixels to nv21data
          for (int y = 0; y < chromaHeight; ++y) {
             for (int x = 0; x < chromaWidth; ++x) {
-               final byte uValue = i420Buffer.getDataU().get(y * i420Buffer.getStrideU() + x);
-               final byte vValue = i420Buffer.getDataV().get(y * i420Buffer.getStrideV() + x);
+               final byte uValue = i420ByteArrayU[y * strideU + x];
+               final byte vValue = i420ByteArrayV[y * strideV + x];
                nv21Data[ySize + y * width + 2 * x] = vValue;
                nv21Data[ySize + y * width + 2 * x + 1] = uValue;
             }
