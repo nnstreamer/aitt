@@ -399,7 +399,12 @@ void AittNativeInterface::RemoveDiscoveryCallback(JNIEnv *env, jobject jni_inter
     }
 
     auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
-    instance->discovery->RemoveDiscoveryCB(cbHandle);
+    try {
+        instance->discovery->RemoveDiscoveryCB(cbHandle);
+    } catch (std::exception &e) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to remove discovery callback");
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
+    }
 }
 
 /**
@@ -431,8 +436,12 @@ void AittNativeInterface::UpdateDiscoveryMessage(JNIEnv *env, jobject jni_interf
         return;
     }
     const void *_data = reinterpret_cast<const void *>(cdata);
-
-    instance->discovery->UpdateDiscoveryMsg(_topic, _data, num_bytes);
+    try {
+        instance->discovery->UpdateDiscoveryMsg(_topic, _data, num_bytes);
+    } catch (std::exception &e) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to update discovery message");
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
+    }
 }
 
 void AittNativeInterface::DiscoveryMessageCallback(const std::string &topic, const std::string &clientId,
