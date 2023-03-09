@@ -16,7 +16,8 @@
 
 #include "RTSPClient.h"
 
-RTSPClient::RTSPClient(void) : is_start(false), display_(nullptr)
+RTSPClient::RTSPClient(void)
+      : is_start(false), player_(nullptr), display_(nullptr), mm_display_(nullptr)
 {
     int ret;
 

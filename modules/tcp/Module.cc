@@ -366,7 +366,6 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
 
     int32_t szmsg = 0;
     char *msg = nullptr;
-    std::string topic;
     AittMsg msg_info;
 
     try {
