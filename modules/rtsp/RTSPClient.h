@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include <mm_display_interface.h>
+#include <glib.h>
 #include <player.h>
 
 #include <functional>
@@ -34,20 +34,24 @@ class RTSPClient {
     void SetReceiveCallback(const ReceiveCallback &cb, void *user_data);
     void UnsetReceiveCallback(void);
     bool IsStart(void);
-
     void SetDisplay(void *display);
-    void SetUrl(const std::string &url);
+    void SetUri(const std::string &uri);
+    void SetCaptureInterval(int interval);
     void Start(void);
     void Stop(void);
 
   private:
-    static void PlayerPreparedCB(void *data);
-    static void VideoStreamDecodedCB(media_packet_h packet, void *user_data);
+    static void PlayerPreparedCB(void *user_data);
+    static void VideoCapturedCB(unsigned char *frame, int width, int height, unsigned int size,
+          void *user_data);
+    static gboolean TimeoutCB(gpointer user_data);
+    player_h GetPlayer(void);
 
     bool is_start;
     player_h player_;
     void *display_;
-    mm_display_interface_h mm_display_;
+    int capture_interval_;
+    guint capture_source_id_;
 
     std::pair<ReceiveCallback, void *> receive_cb;
 

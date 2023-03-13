@@ -4,7 +4,7 @@ IF(PLATFORM STREQUAL "tizen")
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
     PKG_CHECK_MODULES(AITT_RTSP_NEEDS REQUIRED
         capi-media-player
-        mm-display-interface
+        capi-media-image-util
     )
     INCLUDE_DIRECTORIES(${AITT_RTSP_NEEDS_INCLUDE_DIRS})
     LINK_DIRECTORIES(${AITT_RTSP_NEEDS_LIBRARY_DIRS})

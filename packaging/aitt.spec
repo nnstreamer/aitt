@@ -23,14 +23,14 @@ BuildRequires: pkgconfig(openssl1.1)
 %if %{use_glib}
 BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(capi-media-player)
+BuildRequires: pkgconfig(capi-media-image-util)
 BuildRequires: pkgconfig(capi-media-sound-manager)
 BuildRequires: pkgconfig(capi-media-tool)
 BuildRequires: pkgconfig(capi-media-webrtc)
-BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(gstreamer-video-1.0)
 BuildRequires: pkgconfig(glib-2.0)
 BuildRequires: pkgconfig(json-glib-1.0)
-BuildRequires: pkgconfig(mm-display-interface)
+
 %endif
 %if %{gcov}
 BuildRequires: lcov

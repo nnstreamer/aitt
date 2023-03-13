@@ -78,7 +78,7 @@ class AITTRTSPTest : public testing::Test {
 TEST_F(AITTRTSPTest, Publisher_First_P)
 {
     try {
-        publisher->SetConfig("url",
+        publisher->SetConfig("uri",
               "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
         publisher->SetConfig("id", "admin");
         publisher->SetConfig("password", "admin");
@@ -114,7 +114,7 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
               nullptr);
         subscriber->Start();
 
-        publisher->SetConfig("url",
+        publisher->SetConfig("uri",
               "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
         publisher->SetConfig("id", "admin");
         publisher->SetConfig("password", "admin");

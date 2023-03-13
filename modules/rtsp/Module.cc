@@ -70,13 +70,13 @@ Module::~Module(void)
 void Module::SetConfig(const std::string &key, const std::string &value)
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_PUBLISHER) {
-        if (key == "url") {
+        if (key == "uri") {
             if (value.find("rtsp://") != 0) {
-                RTSP_ERR("rtsp url validation check failed");
+                RTSP_ERR("rtsp uri validation check failed");
                 return;
             }
 
-            info.SetUrl(value);
+            info.SetUri(value);
         } else if (key == "id") {
             info.SetID(value);
         } else if (key == "password") {
@@ -154,7 +154,7 @@ void Module::UpdateDiscoveryMsg()
     flexbuffers::Builder fbb;
     fbb.Map([this, &fbb]() {
         fbb.Int(RTSP_INFO_SERVER_STATE, static_cast<int>(server_state));
-        fbb.String(RTSP_INFO_URL, info.GetUrl());
+        fbb.String(RTSP_INFO_URI, info.GetUri());
         fbb.String(RTSP_INFO_ID, info.GetID());
         fbb.String(RTSP_INFO_PASSWORD, info.GetPassword());
     });
@@ -196,7 +196,8 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         return;
     }
 
-    //ToDo : Update discovery callback to accommodate new parameters (streamHeight, streamWidth) in discovery message
+    // ToDo : Update discovery callback to accommodate new parameters (streamHeight, streamWidth) in
+    // discovery message
     auto map = flexbuffers::GetRoot(static_cast<const uint8_t *>(msg), szmsg).AsMap();
     if (map.size() != 4) {
         RTSP_ERR("RTSP Info validation check failed");
@@ -205,14 +206,14 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
 
     UpdateState(AittStreamRole::AITT_STREAM_ROLE_PUBLISHER,
           static_cast<AittStreamState>(map[RTSP_INFO_SERVER_STATE].AsInt64()));
-    info.SetUrl(map[RTSP_INFO_URL].AsString().c_str());
+    info.SetUri(map[RTSP_INFO_URI].AsString().c_str());
     info.SetID(map[RTSP_INFO_ID].AsString().c_str());
     info.SetPassword(map[RTSP_INFO_PASSWORD].AsString().c_str());
 
-    RTSP_DBG("server_state : %d, url : %s, id : %s, passwd : %s", server_state,
-          info.GetUrl().c_str(), info.GetID().c_str(), info.GetPassword().c_str());
+    RTSP_DBG("server_state : %d, uri : %s, id : %s, passwd : %s", server_state,
+          info.GetUri().c_str(), info.GetID().c_str(), info.GetPassword().c_str());
 
-    client.SetUrl(info.GetCompleteUrl());
+    client.SetUri(info.GetCompleteUri());
 
     if (server_state == AittStreamState::AITT_STREAM_STATE_READY) {
         if (client_state == AittStreamState::AITT_STREAM_STATE_READY) {

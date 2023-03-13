@@ -18,7 +18,7 @@
 
 #include "aitt_internal.h"
 
-RTSPInfo::RTSPInfo() : url_(""), id_(""), password_("")
+RTSPInfo::RTSPInfo() : uri_(""), id_(""), password_("")
 {
 }
 
@@ -26,14 +26,14 @@ RTSPInfo::~RTSPInfo()
 {
 }
 
-void RTSPInfo::SetUrl(const std::string &url)
+void RTSPInfo::SetUri(const std::string &uri)
 {
-    url_ = url;
+    uri_ = uri;
 }
 
-std::string RTSPInfo::GetUrl()
+std::string RTSPInfo::GetUri()
 {
-    return url_;
+    return uri_;
 }
 
 void RTSPInfo::SetID(const std::string &id)
@@ -56,13 +56,13 @@ std::string RTSPInfo::GetPassword()
     return password_;
 }
 
-std::string RTSPInfo::GetCompleteUrl()
+std::string RTSPInfo::GetCompleteUri()
 {
-    std::string complete_url = url_;
+    std::string complete_uri = uri_;
 
     if (id_.empty() != true && password_.empty() != true) {
-        complete_url.insert(7, id_ + ":" + password_ + "@");
+        complete_uri.insert(7, id_ + ":" + password_ + "@");
     }
 
-    return complete_url;
+    return complete_uri;
 }
