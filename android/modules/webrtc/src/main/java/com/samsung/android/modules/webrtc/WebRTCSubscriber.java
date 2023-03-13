@@ -50,6 +50,8 @@ public final class WebRTCSubscriber extends WebRTC {
 
    private final ByteArrayOutputStream baos;
    private boolean recvLargeChunk = false;
+   private int frameHeight = 0;
+   private int frameWidth = 0;
 
    public WebRTCSubscriber(Context appContext) throws InstantiationException {
       super(appContext);
@@ -75,6 +77,16 @@ public final class WebRTCSubscriber extends WebRTC {
       this.peerDiscoveryId = id;
       createOffer();
       return true;
+   }
+
+   @Override
+   public int getFrameHeight() {
+      return frameHeight;
+   }
+
+   @Override
+   public int getFrameWidth() {
+      return frameWidth;
    }
 
    @Override
@@ -261,6 +273,8 @@ public final class WebRTCSubscriber extends WebRTC {
       @Override
       synchronized public void onFrame(VideoFrame frame) {
          byte[] rawFrame = createNV21Data(frame.getBuffer().toI420());
+         frameHeight = frame.getBuffer().getHeight();
+         frameWidth = frame.getBuffer().getWidth();
          dataCallback.pushData(rawFrame);
       }
 

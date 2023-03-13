@@ -308,4 +308,22 @@ public abstract class WebRTC {
             Log.d(TAG, "onSetFailure: Reason = " + s);
         }
     }
+
+    /**
+     * Method to get received Frame height
+     *
+     * @return Received frame height
+     */
+    public int getFrameHeight() {
+        return 0;
+    }
+
+    /**
+     * Method to get received Frame width
+     *
+     * @return Received frame width
+     */
+    public int getFrameWidth() {
+        return 0;
+    }
 }
