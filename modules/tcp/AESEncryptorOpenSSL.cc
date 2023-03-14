@@ -38,22 +38,22 @@ int AESEncryptorOpenSSL::Encrypt(const unsigned char *plaintext, int plaintext_l
           [](EVP_CIPHER_CTX *c) { EVP_CIPHER_CTX_free(c); });
     if (ctx.get() == nullptr) {
         ERR("EVP_CIPHER_CTX_new() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_cbc(), NULL, key_.data(), iv_.data())) {
         ERR("EVP_EncryptInit_ex() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_EncryptUpdate(ctx.get(), ciphertext, &ciphertext_len, plaintext, plaintext_len)) {
         ERR("EVP_EncryptUpdate() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_EncryptFinal_ex(ctx.get(), ciphertext + ciphertext_len, &len)) {
         ERR("EVP_EncryptFinal_ex() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     return ciphertext_len + len;
@@ -72,22 +72,22 @@ int AESEncryptorOpenSSL::Decrypt(const unsigned char *ciphertext, int ciphertext
           [](EVP_CIPHER_CTX *c) { EVP_CIPHER_CTX_free(c); });
     if (ctx.get() == nullptr) {
         ERR("EVP_CIPHER_CTX_new() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_cbc(), NULL, key_.data(), iv_.data())) {
         ERR("EVP_DecryptInit_ex() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_DecryptUpdate(ctx.get(), plaintext, &plaintext_len, ciphertext, ciphertext_len)) {
         ERR("EVP_DecryptUpdate() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
 
     if (1 != EVP_DecryptFinal_ex(ctx.get(), plaintext + plaintext_len, &len)) {
         ERR("EVP_DecryptFinal_ex() Fail(%d)", errno);
-        throw std::runtime_error("Encrypt() Fail");
+        return -1;
     }
     plaintext_len += len;
 

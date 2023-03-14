@@ -368,21 +368,18 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     char *msg = nullptr;
     AittMsg msg_info;
 
-    try {
-        impl->GetMsgInfo(msg_info, tcp_data);
-        if (msg_info.GetTopic().empty()) {
-            ERR("A topic is empty.");
-            return AITT_LOOP_EVENT_CONTINUE;
-        }
+    impl->GetMsgInfo(msg_info, tcp_data);
+    if (msg_info.GetTopic().empty()) {
+        ERR("A topic is empty.");
+        return AITT_LOOP_EVENT_CONTINUE;
+    }
 
-        szmsg = tcp_data->client->RecvSizedData((void **)&msg);
-        if (szmsg < 0) {
-            ERR("Got a disconnection message(%d)", szmsg);
-            return impl->HandleClientDisconnect(handle);
-        }
-    } catch (std::exception &e) {
-        ERR("An exception(%s) occurs", e.what());
-        free(msg);
+    szmsg = tcp_data->client->RecvSizedData((void **)&msg);
+    if (-ENOTCONN == szmsg) {
+        ERR("Got a disconnection message(%d)", szmsg);
+        return impl->HandleClientDisconnect(handle);
+    } else if (szmsg < 0) {
+        ERR("Failed to receive data(%d)", szmsg);
         return AITT_LOOP_EVENT_CONTINUE;
     }
 
@@ -414,7 +411,7 @@ void Module::GetMsgInfo(AittMsg &msg, Module::TCPData *tcp_data)
     int32_t info_length = 0;
     void *msg_info = nullptr;
     info_length = tcp_data->client->RecvSizedData(&msg_info);
-    if (info_length < 0) {
+    if (-ENOTCONN == info_length) {
         ERR("Got a disconnection message.");
         HandleClientDisconnect(tcp_data->client->GetHandle());
         return;

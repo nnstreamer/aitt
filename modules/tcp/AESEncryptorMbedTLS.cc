@@ -25,7 +25,7 @@ int AESEncryptorMbedTLS::Encrypt(const unsigned char *plaintext, int plaintext_l
       unsigned char *ciphertext)
 {
     if (key_.size() == 0)
-        return 0;
+        return -1;
 
     const int BLOCKSIZE = AITT_TCP_ENCRYPTOR_BLOCK_SIZE;
     int padding_len = BLOCKSIZE - (plaintext_len % BLOCKSIZE);
@@ -50,7 +50,7 @@ int AESEncryptorMbedTLS::Decrypt(const unsigned char *ciphertext, int ciphertext
       unsigned char *plaintext)
 {
     if (key_.size() == 0)
-        return 0;
+        return -1;
 
     unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];
     std::copy(iv_.begin(), iv_.end(), iv);

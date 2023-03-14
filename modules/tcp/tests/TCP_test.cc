@@ -87,7 +87,7 @@ TEST(TCP, Create_InvalidPort_N_Anytime)
         std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, info));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), strerror(EINVAL));
+        ASSERT_STREQ(e.what(), "TCP::TCP() Fail");
     }
 }
 
@@ -99,7 +99,7 @@ TEST(TCP, Create_InvalidAddress_N_Anytime)
         std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_INVALID_ADDRESS, info));
         ASSERT_EQ(tcp, nullptr);
     } catch (std::exception &e) {
-        ASSERT_STREQ(e.what(), strerror(EINVAL));
+        ASSERT_STREQ(e.what(), "TCP::TCP() Fail");
     }
 }
 

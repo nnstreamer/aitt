@@ -80,7 +80,7 @@ TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
     free(addr);
     if (handle >= 0 && close(handle) < 0)
         ERR_CODE(errno, "close");
-    throw std::runtime_error(strerror(ret));
+    throw std::runtime_error("TCP::TCP() Fail");
 }
 
 TCP::TCP(int handle, sockaddr *addr, socklen_t szAddr, const ConnectInfo &connect_info)
@@ -120,8 +120,8 @@ int32_t TCP::Send(const void *data, int32_t data_size)
     while (sent < data_size) {
         int ret = send(handle, static_cast<const char *>(data) + sent, data_size - sent, 0);
         if (ret < 0) {
-            ERR("Fail to send data, handle = %d, size = %d", handle, data_size);
-            throw std::runtime_error(strerror(errno));
+            ERR("send(%d, %d) Fail(%d)", handle, data_size, errno);
+            throw std::runtime_error("send() Fail");
         }
 
         sent += ret;
@@ -145,12 +145,12 @@ int32_t TCP::Recv(void *data, int32_t data_size)
     while (received < data_size) {
         int ret = recv(handle, static_cast<char *>(data) + received, data_size - received, 0);
         if (ret < 0) {
-            ERR("Fail to recv data, handle = %d, size = %d", handle, data_size);
-            throw std::runtime_error(strerror(errno));
+            ERR("recv(%d, %d) Fail(%d)", handle, data_size, errno);
+            return -1;
         }
         if (ret == 0) {
             ERR("disconnected");
-            return -1;
+            return -ENOTCONN;
         }
 
         received += ret;
@@ -188,7 +188,7 @@ void TCP::GetPeerInfo(std::string &host, unsigned short &port)
 
     if (!inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in *>(this->addr)->sin_addr, address,
               sizeof(address)))
-        throw std::runtime_error(strerror(errno));
+        throw std::runtime_error("inet_ntop() Fail");
 
     port = ntohs(reinterpret_cast<sockaddr_in *>(this->addr)->sin_port);
     host = address;
@@ -200,7 +200,7 @@ unsigned short TCP::GetPort(void)
     socklen_t addrlen = sizeof(addr);
 
     if (getsockname(handle, reinterpret_cast<sockaddr *>(&addr), &addrlen) < 0)
-        throw std::runtime_error(strerror(errno));
+        throw std::runtime_error("getsockname() Fail");
 
     return ntohs(addr.sin_port);
 }
@@ -240,7 +240,12 @@ int32_t TCP::RecvSizedDataNormal(void **data)
     }
     void *data_buf = malloc(data_len);
     Recv(data_buf, data_len);
-    *data = data_buf;
+    if (data_len < 0) {
+        ERR("Recv() Fail(%d)", data_len);
+        free(data_buf);
+    } else {
+        *data = data_buf;
+    }
 
     return data_len;
 }
@@ -298,7 +303,12 @@ int32_t TCP::RecvSizedDataSecure(void **data)
     Recv(cipher_data_buf, cipher_data_len);
     unsigned char *data_buf = static_cast<unsigned char *>(malloc(cipher_data_len));
     result = crypto.Decrypt(cipher_data_buf, cipher_data_len, data_buf);
-    *data = data_buf;
+    if (result < 0) {
+        ERR("Decrypt() Fail(%d)", result);
+        free(data_buf);
+    } else {
+        *data = data_buf;
+    }
     return result;
 }
 
