@@ -18,10 +18,12 @@
 
 #include <gst/gst.h>
 
-#include <map>
+#include <atomic>
+#include <mutex>
+#include <thread>
 
 #include "StreamManager.h"
-
+#include "RequestServer.h"
 namespace AittWebRTCNamespace {
 
 class SinkStreamManager : public StreamManager {
@@ -30,6 +32,7 @@ class SinkStreamManager : public StreamManager {
           const std::string &thread_id);
     virtual ~SinkStreamManager();
     std::vector<uint8_t> GetDiscoveryMessage(void) override;
+    void SetOnFrameCallback(OnFrameCallback cb) override;
 
   private:
     void SetWebRtcStreamCallbacks(WebRtcStream &stream) override;
@@ -37,7 +40,7 @@ class SinkStreamManager : public StreamManager {
     void OnOfferCreated(std::string sdp, WebRtcStream &stream);
     void OnIceCandidate(void);
     void OnEncodedFrame(media_packet_h packet);
-    void OnTrackAdded(void);
+    void OnTrackAdded(unsigned int id);
     void BuildDecodePipeline(void);
     void HandleStreamState(const std::string &discovery_id,
           const std::vector<uint8_t> &message) override;
@@ -50,8 +53,10 @@ class SinkStreamManager : public StreamManager {
           const std::vector<std::string> &ice_candidates);
     static void OnSignalHandOff(GstElement *object, GstBuffer *buffer, GstPad *pad,
           void *user_data);
-
-    GstElement *decode_pipeline_;
+    void HandleFrame(GstBuffer *buffer);
+    int frame_received_;
     GstElement *video_appsrc_;
+    GstElement *decode_pipeline_;
+    RequestServer request_server_;
 };
 }  // namespace AittWebRTCNamespace

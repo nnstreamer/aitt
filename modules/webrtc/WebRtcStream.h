@@ -66,6 +66,8 @@ class WebRtcStream {
 
     std::string GetLocalDescription(void) const { return local_description_; };
 
+    void PrintStats(void);
+
   private:
     static void OnOfferCreated(webrtc_h webrtc, const char *description, void *user_data);
     static void OnAnswerCreated(webrtc_h webrtc, const char *description, void *user_data);

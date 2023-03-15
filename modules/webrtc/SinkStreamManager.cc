@@ -26,8 +26,9 @@ namespace AittWebRTCNamespace {
 SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string &aitt_id,
       const std::string &thread_id)
       : StreamManager(topic + "/SINK", topic + "/SRC", aitt_id, thread_id),
-        decode_pipeline_(nullptr),
-        video_appsrc_(nullptr)
+        frame_received_(0),
+        video_appsrc_(nullptr),
+        decode_pipeline_(nullptr)
 {
 }
 
@@ -48,7 +49,8 @@ void SinkStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
     stream.GetEventHandler().SetOnEncodedFrameCb(
           std::bind(&SinkStreamManager::OnEncodedFrame, this, std::placeholders::_1));
 
-    stream.GetEventHandler().SetOnTrackAddedCb(std::bind(&SinkStreamManager::OnTrackAdded, this));
+    stream.GetEventHandler().SetOnTrackAddedCb(
+          std::bind(&SinkStreamManager::OnTrackAdded, this, std::placeholders::_1));
 }
 
 void SinkStreamManager::OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream)
@@ -81,18 +83,21 @@ void SinkStreamManager::OnEncodedFrame(media_packet_h packet)
         ERR("Failed to get gst buffer");
         return;
     }
+
     GstFlowReturn gst_ret = GST_FLOW_OK;
     g_signal_emit_by_name(G_OBJECT(video_appsrc_), "push-buffer", buffer, &gst_ret, nullptr);
     if (gst_ret != GST_FLOW_OK)
         ERR("failed to push buffer");
 
     media_packet_destroy(packet);
+    if (++frame_received_ % 100 == 0)
+        stream_.PrintStats();
 }
 
-void SinkStreamManager::OnTrackAdded(void)
+void SinkStreamManager::OnTrackAdded(unsigned int id)
 {
     DBG("%s", __func__);
-    BuildDecodePipeline();
+    frame_received_ = 0;
 }
 
 void SinkStreamManager::BuildDecodePipeline(void)
@@ -109,25 +114,20 @@ void SinkStreamManager::BuildDecodePipeline(void)
     GstElement *dec = gst_element_factory_make("vp8dec", nullptr);
     GstElement *convert = gst_element_factory_make("videoconvert", nullptr);
     GstElement *filter = gst_element_factory_make("capsfilter", "I420toRGBCapsfilter");
-    GstCaps *filter_caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", NULL);
+    GstCaps *filter_caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "BGR", NULL);
     g_object_set(G_OBJECT(filter), "caps", filter_caps, NULL);
     gst_caps_unref(filter_caps);
-    GstElement *tee = gst_element_factory_make("tee", "tee");
     GstElement *queue_fake_sink = gst_element_factory_make("queue2", "queue_fake_sink");
     GstElement *fake_sink = gst_element_factory_make("fakesink", "user_sink");
-    GstElement *queue_display = gst_element_factory_make("queue2", "queue_display");
-    GstElement *display_sink_converter = gst_element_factory_make("videoconvert", "sink_converter");
-    GstElement *display_sink = gst_element_factory_make("autovideosink", "display_sink");
 
     g_object_set(G_OBJECT(fake_sink), "signal-handoffs", true, nullptr);
     g_signal_connect(fake_sink, "handoff", G_CALLBACK(OnSignalHandOff),
           static_cast<gpointer>(this));
 
-    gst_bin_add_many(GST_BIN(pipeline), src, dec, convert, filter, tee, queue_fake_sink, fake_sink, queue_display, display_sink_converter, display_sink, nullptr);
+    gst_bin_add_many(GST_BIN(pipeline), src, dec, convert, filter, queue_fake_sink, fake_sink,
+          nullptr);
 
-    if (!gst_element_link_many(src, dec, convert, tee, nullptr)
-          || !gst_element_link_many(tee, filter, queue_fake_sink, fake_sink, nullptr)
-          || !gst_element_link_many(tee, queue_display, display_sink_converter, display_sink, nullptr))
+    if (!gst_element_link_many(src, dec, convert, filter, queue_fake_sink, fake_sink, nullptr))
         ERR("Failed to gst_element_link_many");
 
     auto state_change_ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
@@ -154,12 +154,19 @@ void SinkStreamManager::OnSignalHandOff(GstElement *object, GstBuffer *buffer, G
     }
     RET_IF(vinfo.width == 0 || vinfo.height == 0 || vinfo.finfo == nullptr);
     manager->SetFormat(vinfo.finfo->name, vinfo.width, vinfo.height);
+    manager->HandleFrame(buffer);
+}
+
+void SinkStreamManager::HandleFrame(GstBuffer *buffer)
+{
+    if (!buffer)
+        return;
 
     GstMapInfo map;
     gst_buffer_map(buffer, &map, GST_MAP_READ);
-    if (manager->on_frame_cb_ != nullptr)
-        manager->on_frame_cb_(map.data);
+    request_server_.PushBuffer(map.data, map.size);
 }
+
 void SinkStreamManager::HandleStreamState(const std::string &discovery_id,
       const std::vector<uint8_t> &message)
 {
@@ -182,8 +189,10 @@ void SinkStreamManager::HandleStartStream(const std::string &discovery_id)
         return;
     }
 
-    DBG("Src Stream Started");
+    DBG("Sink Stream Started");
     AddStream(discovery_id);
+    BuildDecodePipeline();
+    request_server_.Start();
 }
 
 void SinkStreamManager::AddStream(const std::string &discovery_id)
@@ -261,6 +270,11 @@ std::vector<uint8_t> SinkStreamManager::GetDiscoveryMessage(void)
 
     message = fbb.GetBuffer();
     return message;
+}
+
+void SinkStreamManager::SetOnFrameCallback(OnFrameCallback cb)
+{
+    request_server_.SetOnFrameCallback(cb);
 }
 
 }  // namespace AittWebRTCNamespace

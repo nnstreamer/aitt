@@ -48,7 +48,7 @@ class StreamManager {
     void SetIceCandidateAddedCallback(IceCandidateAddedCallback cb);
     void SetStreamStartCallback(StreamStartCallback cb);
     void SetStreamStopCallback(StreamStopCallback cb);
-    void SetOnFrameCallback(OnFrameCallback cb);
+    virtual void SetOnFrameCallback(OnFrameCallback cb);
 
     std::string GetTopic(void) const;
     std::string GetWatchingTopic(void) const;

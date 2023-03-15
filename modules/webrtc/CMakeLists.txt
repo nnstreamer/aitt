@@ -18,6 +18,7 @@ ADD_LIBRARY(WEBRTC_OBJ OBJECT
     WebRtcMessage.cc
     WebRtcState.cc
     WebRtcStream.cc
+    RequestServer.cc
 )
 ADD_LIBRARY(${AITT_WEBRTC} SHARED $<TARGET_OBJECTS:WEBRTC_OBJ> Module.cc ../stream_entry.cc )
 TARGET_LINK_LIBRARIES(${AITT_WEBRTC} ${AITT_WEBRTC_NEEDS_LIBRARIES} ${AITT_COMMON})

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <inttypes.h>
+#include <webrtc_internal.h>
 #include "WebRtcStream.h"
 
 #include "WebRtcMessage.h"
@@ -369,6 +370,53 @@ bool WebRtcStream::IsRedundantCandidate(const std::string &candidate)
             return true;
     }
     return false;
+}
+
+static bool __stats_cb(webrtc_stats_type_e type, const webrtc_stats_prop_info_s *prop_info,
+      void *user_data)
+{
+    switch (prop_info->type) {
+    case WEBRTC_STATS_PROP_TYPE_BOOL:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%d]", type, prop_info->name, prop_info->prop,
+              prop_info->v_bool);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_INT:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%d]", type, prop_info->name, prop_info->prop,
+              prop_info->v_int);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_INT64:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%" PRId64 "]", type, prop_info->name,
+              prop_info->prop, prop_info->v_int64);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_UINT:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%u]", type, prop_info->name, prop_info->prop,
+              prop_info->v_uint);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_UINT64:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%" PRIu64 "]", type, prop_info->name,
+              prop_info->prop, prop_info->v_uint64);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_FLOAT:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%f]", type, prop_info->name, prop_info->prop,
+              prop_info->v_float);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_DOUBLE:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%lf]", type, prop_info->name, prop_info->prop,
+              prop_info->v_double);
+        break;
+    case WEBRTC_STATS_PROP_TYPE_STRING:
+        DBG("type[0x%x] prop[%s, 0x%08x, value:%s]", type, prop_info->name, prop_info->prop,
+              prop_info->v_string);
+        break;
+    }
+    return true;
+}
+
+void WebRtcStream::PrintStats(void)
+{
+    if (webrtc_foreach_stats(webrtc_handle_, WEBRTC_STATS_TYPE_INBOUND_RTP, __stats_cb, nullptr)
+          != WEBRTC_ERROR_NONE)
+        DBG("webrtc_foreach_stats failed");
 }
 
 void WebRtcStream::AttachSignals(bool is_source, bool need_display)
