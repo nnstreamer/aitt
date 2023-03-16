@@ -51,6 +51,7 @@ class MainLoopTest : public testing::Test {
     {
         my_thread.join();
         close(server_fd);
+        remove(addr.sun_path);
     }
 
     int server_fd;
@@ -249,6 +250,29 @@ TEST_F(MainLoopTest, AddTimeout_Anytime)
               handler.Quit();
               ret = true;
               return AITT_LOOP_EVENT_REMOVE;
+          },
+          &test_data);
+
+    handler.Run();
+
+    EXPECT_TRUE(ret);
+}
+
+TEST_F(MainLoopTest, Quit_Without_RemoveTimeout_Anytime)
+{
+    bool ret = false;
+    int interval = 1;
+    MainLoopHandler handler;
+    MainLoopHandler::MainLoopData test_data;
+
+    handler.AddTimeout(
+          interval,
+          [&](MainLoopHandler::MainLoopResult result, int fd,
+                MainLoopHandler::MainLoopData *data) -> int {
+              handler.Quit();
+              EXPECT_FALSE(ret);
+              ret = true;
+              return AITT_LOOP_EVENT_CONTINUE;
           },
           &test_data);
 

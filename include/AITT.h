@@ -38,11 +38,11 @@ class API AITT {
 
     explicit AITT(const std::string notice);
     explicit AITT(const std::string &id, const std::string &ip_addr,
-          AittOption option = AittOption(false, false));
+          const AittOption &option = AittOption(false, false));
     virtual ~AITT(void);
 
     void Ready(const std::string &id, const std::string &ip_addr,
-          AittOption option = AittOption(false, false));
+          const AittOption &option = AittOption(false, false));
     void SetWillInfo(const std::string &topic, const void *data, const int datalen, AittQoS qos,
           bool retain);
     void SetConnectionCallback(ConnectionCallback cb, void *user_data = nullptr);

@@ -45,6 +45,7 @@ class MainLoopIface {
     virtual void AddIdle(const mainLoopCB &cb, MainLoopData *user_data) = 0;
     virtual void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data) = 0;
     virtual MainLoopData *RemoveWatch(int fd) = 0;
+    // @param interval milliseconds(1/1000ths of a second)
     virtual unsigned int AddTimeout(int interval, const mainLoopCB &cb,
           MainLoopData *user_data) = 0;
     virtual void RemoveTimeout(unsigned int id) = 0;

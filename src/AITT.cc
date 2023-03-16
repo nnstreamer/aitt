@@ -30,7 +30,7 @@ AITT::AITT(const std::string notice)
     }
 }
 
-AITT::AITT(const std::string &id, const std::string &ip_addr, AittOption option)
+AITT::AITT(const std::string &id, const std::string &ip_addr, const AittOption &option)
 {
     Ready(id, ip_addr, option);
 }
@@ -39,7 +39,7 @@ AITT::~AITT(void)
 {
 }
 
-void AITT::Ready(const std::string &id, const std::string &ip_addr, AittOption option)
+void AITT::Ready(const std::string &id, const std::string &ip_addr, const AittOption &option)
 {
     if (pImpl) {
         ERR("Already Ready");

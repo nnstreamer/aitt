@@ -203,33 +203,36 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
 
         try {
             AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+
+            aitt.SetConnectionCallback([&](AITT &handle, int status, void *user_data) {
+                if (status != AITT_CONNECTED)
+                    return;
+                aitt.Subscribe(
+                      rr_topic.c_str(),
+                      [&](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
+                          DBG("Subscribe Callback");
+                          CheckSubscribe(msg, data, datalen);
+                          usleep(100 * SLEEP_MS);
+                          aitt.SendReply(msg, reply.c_str(), reply.size());
+                          sub_ok = true;
+                      },
+                      nullptr, protocol);
+
+                // Wait a few seconds until the AITT client gets a server list (discover devices)
+                usleep(100 * SLEEP_MS);
+
+                aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), protocol,
+                      AITT_QOS_AT_MOST_ONCE, false,
+                      std::bind(&AITTRRTest::CheckReplyCallback, GetHandle(), true, &reply_ok,
+                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                            std::placeholders::_4),
+                      nullptr, correlation);
+            });
             aitt.Connect();
-
-            aitt.Subscribe(
-                  rr_topic.c_str(),
-                  [&](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
-                      DBG("Subscribe Callback");
-                      CheckSubscribe(msg, data, datalen);
-                      usleep(100 * SLEEP_MS);
-                      aitt.SendReply(msg, reply.c_str(), reply.size());
-                      sub_ok = true;
-                  },
-                  nullptr, protocol);
-
-            // Wait a few seconds until the AITT client gets a server list (discover devices)
-            usleep(100 * SLEEP_MS);
-
-            aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), protocol,
-                  AITT_QOS_AT_MOST_ONCE, false,
-                  std::bind(&AITTRRTest::CheckReplyCallback, GetHandle(), true, &reply_ok,
-                        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
-                        std::placeholders::_4),
-                  nullptr, correlation);
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
                   [&](MainLoopHandler::MainLoopResult result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
-                      DBG("Timeout Callback");
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
             IterateEventLoop();

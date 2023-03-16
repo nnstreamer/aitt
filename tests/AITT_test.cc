@@ -214,30 +214,31 @@ class AITTTest : public testing::Test, public AittTests {
     {
         try {
             AITT aitt(clientId, LOCAL_IP);
-            aitt.Connect();
 
-            int cnt = 0;
-            aitt.Subscribe(
-                  testTopic,
-                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                      AITTTest *test = static_cast<AITTTest *>(cbdata);
-                      ++cnt;
-                      if (cnt == 1)
+            aitt.SetConnectionCallback([&](AITT &handle, int status, void *user_data) {
+                if (status != AITT_CONNECTED)
+                    return;
+
+                // Subscribers who subscribe after publishing will not receive this message
+                aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_MQTT,
+                      AITT_QOS_AT_MOST_ONCE, true);
+
+                aitt.Subscribe(
+                      testTopic,
+                      [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                          AITTTest *test = static_cast<AITTTest *>(cbdata);
+                          std::string receivedMsg(static_cast<const char *>(msg), szmsg);
+                          EXPECT_STREQ(receivedMsg.c_str(), TEST_MSG2);
                           test->ToggleReady();
-                      DBG("Subscribe callback called: %d", cnt);
-                  },
-                  static_cast<void *>(this), protocol);
+                      },
+                      static_cast<void *>(this), protocol);
 
-            // Wait a few seconds to the AITT client gets server list (discover devices)
-            usleep(100 * SLEEP_MS);
+                // Wait a few seconds to the AITT client gets server list (discover devices)
+                usleep(100 * SLEEP_MS);
 
-            // NOTE:
-            // Publish a message with the retained flag
-            // This message will not be delivered, subscriber subscribes TCP protocol
-            aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), AITT_TYPE_MQTT,
-                  AITT_QOS_AT_MOST_ONCE, true);
-
-            aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
+                aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
+            });
+            aitt.Connect();
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
                   [&](MainLoopHandler::MainLoopResult result, int fd,
@@ -246,9 +247,6 @@ class AITTTest : public testing::Test, public AittTests {
                   });
 
             IterateEventLoop();
-
-            aitt.Publish(testTopic, nullptr, 0, AITT_TYPE_MQTT, AITT_QOS_AT_LEAST_ONCE, true);
-
             ASSERT_TRUE(ready);
         } catch (std::exception &e) {
             FAIL() << "Unexpected exception: " << e.what();
