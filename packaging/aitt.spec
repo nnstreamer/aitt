@@ -4,7 +4,7 @@ Release: 0
 Summary: AI Telemetry Transport based on MQTT
 
 Group: Machine Learning / ML Framework
-License: Apache-2.0
+License: Apache-2.0 and BSD-2-Clause
 Source0: %{name}-%{version}.tar.gz
 Source1001: %{name}.manifest
 
