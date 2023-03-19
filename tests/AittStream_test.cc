@@ -78,10 +78,10 @@ class AITTRTSPTest : public testing::Test {
 TEST_F(AITTRTSPTest, Publisher_First_P)
 {
     try {
-        publisher->SetConfig("uri",
+        publisher->SetConfig("URI",
               "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
-        publisher->SetConfig("id", "admin");
-        publisher->SetConfig("password", "admin");
+        publisher->SetConfig("ID", "admin");
+        publisher->SetConfig("Password", "admin");
         publisher->Start();
 
         subscriber->SetReceiveCallback(
@@ -112,12 +112,13 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
                   main_loop.Quit();
               },
               nullptr);
+        subscriber->SetConfig("FPS", "1");
         subscriber->Start();
 
-        publisher->SetConfig("uri",
+        publisher->SetConfig("URI",
               "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
-        publisher->SetConfig("id", "admin");
-        publisher->SetConfig("password", "admin");
+        publisher->SetConfig("ID", "admin");
+        publisher->SetConfig("Password", "admin");
         publisher->Start();
 
         main_loop.Run();

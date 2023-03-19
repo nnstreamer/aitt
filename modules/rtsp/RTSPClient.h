@@ -35,8 +35,8 @@ class RTSPClient {
     void UnsetReceiveCallback(void);
     bool IsStart(void);
     void SetDisplay(void *display);
-    void SetUri(const std::string &uri);
-    void SetCaptureInterval(int interval);
+    void SetURI(const std::string &uri);
+    void SetFPS(int fps);
     void Start(void);
     void Stop(void);
 
@@ -45,12 +45,11 @@ class RTSPClient {
     static void VideoCapturedCB(unsigned char *frame, int width, int height, unsigned int size,
           void *user_data);
     static gboolean TimeoutCB(gpointer user_data);
-    player_h GetPlayer(void);
 
     bool is_start;
     player_h player_;
     void *display_;
-    int capture_interval_;
+    int fps_;
     guint capture_source_id_;
 
     std::pair<ReceiveCallback, void *> receive_cb;

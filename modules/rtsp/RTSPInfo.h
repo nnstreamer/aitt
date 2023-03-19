@@ -17,23 +17,23 @@
 #include <string>
 
 #define RTSP_INFO_SERVER_STATE "server_state"
-#define RTSP_INFO_URI "uri"
-#define RTSP_INFO_ID "id"
-#define RTSP_INFO_PASSWORD "password"
+#define RTSP_INFO_URI "URI"
+#define RTSP_INFO_ID "ID"
+#define RTSP_INFO_PASSWORD "Password"
 
 class RTSPInfo {
   public:
     RTSPInfo(void);
     ~RTSPInfo(void);
 
-    void SetUri(const std::string &uri);
-    std::string GetUri();
+    void SetURI(const std::string &uri);
+    std::string GetURI();
     void SetID(const std::string &id);
     std::string GetID();
     void SetPassword(const std::string &password);
     std::string GetPassword();
 
-    std::string GetCompleteUri();
+    std::string GetCompleteURI();
 
   private:
     std::string uri_;

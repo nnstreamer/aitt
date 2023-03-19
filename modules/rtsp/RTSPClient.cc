@@ -16,24 +16,29 @@
 
 #include "RTSPClient.h"
 
-RTSPClient::RTSPClient(void)
-      : is_start(false), display_(nullptr), capture_interval_(2), capture_source_id_(0)
+#define MSEC_PER_SECOND 1000
+
+RTSPClient::RTSPClient(void) : is_start(false), display_(nullptr), fps_(2), capture_source_id_(0)
 {
-    player_create(&player_);
+    int ret = PLAYER_ERROR_NONE;
+
+    ret = player_create(&player_);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_create() Fail(%d)", ret);
+        throw std::runtime_error("player_create() Fail");
+    }
 }
 
 RTSPClient::~RTSPClient(void)
 {
-    player_state_e state = PLAYER_STATE_NONE;
+    int ret = PLAYER_ERROR_NONE;
 
     g_source_remove(capture_source_id_);
 
-    player_get_state(player_, &state);
-    if (state != PLAYER_STATE_IDLE) {
-        player_unprepare(player_);
+    ret = player_destroy(player_);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_destroy() Fail(%d)", ret);
     }
-
-    player_destroy(player_);
 }
 
 bool RTSPClient::IsStart(void)
@@ -41,14 +46,9 @@ bool RTSPClient::IsStart(void)
     return is_start;
 }
 
-player_h RTSPClient::GetPlayer(void)
+void RTSPClient::SetFPS(int fps)
 {
-    return player_;
-}
-
-void RTSPClient::SetCaptureInterval(int interval)
-{
-    capture_interval_ = interval;
+    fps_ = fps;
 }
 
 void RTSPClient::SetDisplay(void *display)
@@ -70,7 +70,7 @@ void RTSPClient::SetDisplay(void *display)
     display_ = display;
 }
 
-void RTSPClient::SetUri(const std::string &uri)
+void RTSPClient::SetURI(const std::string &uri)
 {
     int ret = PLAYER_ERROR_NONE;
 
@@ -108,9 +108,12 @@ gboolean RTSPClient::TimeoutCB(gpointer user_data)
     }
 
     RTSPClient *client = static_cast<RTSPClient *>(user_data);
-    player_h player = client->GetPlayer();
+    if (client->player_ == nullptr) {
+        ERR("player handle is nullptr");
+        return FALSE;
+    }
 
-    int ret = player_capture_video(player, VideoCapturedCB, user_data);
+    int ret = player_capture_video(client->player_, VideoCapturedCB, user_data);
     if (ret != PLAYER_ERROR_NONE) {
         ERR("player_capture_video() Fail(%d)", ret);
         return FALSE;
@@ -124,15 +127,18 @@ void RTSPClient::PlayerPreparedCB(void *data)
     int ret = PLAYER_ERROR_NONE;
 
     RTSPClient *client = static_cast<RTSPClient *>(data);
-    player_h player = client->GetPlayer();
+    if (client->player_ == nullptr) {
+        ERR("player handle is nullptr");
+        return;
+    }
 
-    ret = player_start(player);
+    ret = player_start(client->player_);
     if (ret != PLAYER_ERROR_NONE) {
         ERR("player_start() Fail(%d)", ret);
         return;
     }
 
-    client->capture_source_id_ = g_timeout_add_seconds(client->capture_interval_, TimeoutCB, data);
+    client->capture_source_id_ = g_timeout_add(MSEC_PER_SECOND / client->fps_, TimeoutCB, data);
 }
 
 void RTSPClient::Start(void)
@@ -165,7 +171,7 @@ void RTSPClient::Start(void)
             ERR("player_start() Fail(%d)", ret);
             return;
         }
-        capture_source_id_ = g_timeout_add_seconds(capture_interval_, TimeoutCB, this);
+        capture_source_id_ = g_timeout_add(MSEC_PER_SECOND / fps_, TimeoutCB, this);
         break;
     default:
         ERR("Invalid State : %d", state);

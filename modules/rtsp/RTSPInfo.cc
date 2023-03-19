@@ -26,12 +26,12 @@ RTSPInfo::~RTSPInfo()
 {
 }
 
-void RTSPInfo::SetUri(const std::string &uri)
+void RTSPInfo::SetURI(const std::string &uri)
 {
     uri_ = uri;
 }
 
-std::string RTSPInfo::GetUri()
+std::string RTSPInfo::GetURI()
 {
     return uri_;
 }
@@ -56,7 +56,7 @@ std::string RTSPInfo::GetPassword()
     return password_;
 }
 
-std::string RTSPInfo::GetCompleteUri()
+std::string RTSPInfo::GetCompleteURI()
 {
     std::string complete_uri = uri_;
 

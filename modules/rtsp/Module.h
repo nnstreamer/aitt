@@ -33,8 +33,8 @@ class Module : public AittStreamModule {
     explicit Module(AittDiscovery &discovery, const std::string &topic, AittStreamRole role);
     virtual ~Module(void);
 
-    void SetConfig(const std::string &key, const std::string &value) override;
-    void SetConfig(const std::string &key, void *obj) override;
+    int SetConfig(const std::string &key, const std::string &value) override;
+    int SetConfig(const std::string &key, void *obj) override;
     std::string GetFormat(void) override;
     int GetWidth(void) override;
     int GetHeight(void) override;

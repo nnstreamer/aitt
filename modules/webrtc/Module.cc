@@ -54,12 +54,14 @@ Module::~Module(void)
         delete stream_manager_;
 }
 
-void Module::SetConfig(const std::string &key, const std::string &value)
+int Module::SetConfig(const std::string &key, const std::string &value)
 {
+    return AITT_ERROR_NONE;
 }
 
-void Module::SetConfig(const std::string &key, void *obj)
+int Module::SetConfig(const std::string &key, void *obj)
 {
+    return AITT_ERROR_NONE;
 }
 
 std::string Module::GetFormat(void)

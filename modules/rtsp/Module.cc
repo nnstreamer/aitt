@@ -67,25 +67,37 @@ Module::~Module(void)
     discovery_.RemoveDiscoveryCB(discovery_cb_);
 }
 
-void Module::SetConfig(const std::string &key, const std::string &value)
+int Module::SetConfig(const std::string &key, const std::string &value)
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_PUBLISHER) {
-        if (key == "uri") {
+        if (key == "URI") {
             if (value.find("rtsp://") != 0) {
                 RTSP_ERR("rtsp uri validation check failed");
-                return;
+                return AITT_ERROR_INVALID_PARAMETER;
             }
 
-            info.SetUri(value);
-        } else if (key == "id") {
+            info.SetURI(value);
+        } else if (key == "ID") {
             info.SetID(value);
-        } else if (key == "password") {
+        } else if (key == "Password") {
             info.SetPassword(value);
         }
+    } else {
+        if (key == "FPS") {
+            int fps;
+            try {
+                fps = std::stoi(value);
+            } catch (std::exception &e) {
+                RTSP_ERR("An exception(%s) occurs during SetFPS().", e.what());
+                return AITT_ERROR_INVALID_PARAMETER;
+            }
+            client.SetFPS(fps);
+        }
     }
+    return AITT_ERROR_NONE;
 }
 
-void Module::SetConfig(const std::string &key, void *obj)
+int Module::SetConfig(const std::string &key, void *obj)
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER) {
         if (key == "display") {
@@ -93,6 +105,8 @@ void Module::SetConfig(const std::string &key, void *obj)
             client.SetDisplay(obj);
         }
     }
+
+    return AITT_ERROR_NONE;
 }
 
 std::string Module::GetFormat(void)
@@ -154,7 +168,7 @@ void Module::UpdateDiscoveryMsg()
     flexbuffers::Builder fbb;
     fbb.Map([this, &fbb]() {
         fbb.Int(RTSP_INFO_SERVER_STATE, static_cast<int>(server_state));
-        fbb.String(RTSP_INFO_URI, info.GetUri());
+        fbb.String(RTSP_INFO_URI, info.GetURI());
         fbb.String(RTSP_INFO_ID, info.GetID());
         fbb.String(RTSP_INFO_PASSWORD, info.GetPassword());
     });
@@ -206,14 +220,14 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
 
     UpdateState(AittStreamRole::AITT_STREAM_ROLE_PUBLISHER,
           static_cast<AittStreamState>(map[RTSP_INFO_SERVER_STATE].AsInt64()));
-    info.SetUri(map[RTSP_INFO_URI].AsString().c_str());
+    info.SetURI(map[RTSP_INFO_URI].AsString().c_str());
     info.SetID(map[RTSP_INFO_ID].AsString().c_str());
     info.SetPassword(map[RTSP_INFO_PASSWORD].AsString().c_str());
 
     RTSP_DBG("server_state : %d, uri : %s, id : %s, passwd : %s", server_state,
-          info.GetUri().c_str(), info.GetID().c_str(), info.GetPassword().c_str());
+          info.GetURI().c_str(), info.GetID().c_str(), info.GetPassword().c_str());
 
-    client.SetUri(info.GetCompleteUri());
+    client.SetURI(info.GetCompleteURI());
 
     if (server_state == AittStreamState::AITT_STREAM_STATE_READY) {
         if (client_state == AittStreamState::AITT_STREAM_STATE_READY) {
