@@ -411,11 +411,11 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
     return modules.Get(protocol).Subscribe(
           topic,
           [handle, cb, protocol](AittMsg *msg, const void *data, const int datalen,
-                void *user_data) {
+                void *userdata) {
               msg->SetID(handle);
               msg->SetProtocol(protocol);
 
-              return cb(msg, data, datalen, user_data);
+              return cb(msg, data, datalen, userdata);
           },
           user_data, qos);
 }

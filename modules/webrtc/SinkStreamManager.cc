@@ -178,7 +178,7 @@ void SinkStreamManager::HandleStreamState(const std::string &discovery_id,
     else if (src_state.compare("STOP") == 0)
         HandleRemovedClient(discovery_id);
     else
-        ERR("Invalid message %s", src_state);
+        ERR("Invalid message %s", src_state.c_str());
 }
 
 void SinkStreamManager::HandleStartStream(const std::string &discovery_id)

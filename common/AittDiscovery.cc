@@ -99,7 +99,7 @@ void AittDiscovery::RemoveDiscoveryCB(int callback_id)
     auto it = callbacks.find(callback_id);
     if (it == callbacks.end()) {
         ERR("Unknown callback_id(%d)", callback_id);
-        throw AittException(AittException::INVALID_ARG);
+        return;
     }
     callbacks.erase(it);
 }
