@@ -115,8 +115,9 @@ gboolean RTSPClient::TimeoutCB(gpointer user_data)
 
     int ret = player_capture_video(client->player_, VideoCapturedCB, user_data);
     if (ret != PLAYER_ERROR_NONE) {
-        ERR("player_capture_video() Fail(%d)", ret);
-        return FALSE;
+        /* The player_capture_video API returns an error until VideoCapturedCB is called and then
+           terminated. Depending on the fps value, an error return may be normal behavior. */
+        DBG("player_capture_video() Return(%d)", ret);
     }
 
     return TRUE;
