@@ -35,8 +35,9 @@ class AITTTest : public testing::Test, public AittTests {
               testTopic,
               [](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
+                  std::string receivedMsg(static_cast<const char *>(msg), szmsg);
                   if (msg)
-                      DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                      DBG("Subscribe invoked: %s %d", receivedMsg.c_str(), szmsg);
                   else
                       DBG("Subscribe invoked: zero size msg(%d)", szmsg);
                   test->StopEventLoop();
@@ -173,13 +174,13 @@ class AITTTest : public testing::Test, public AittTests {
                       // NOTE:
                       // Subscribe callback will be invoked 2 times
                       ++cnt;
-                      const char *receivedMsg = static_cast<const char *>(msg);
+                      std::string receivedMsg(static_cast<const char *>(msg), szmsg);
                       DBG("Subscribe callback called: %d, szmsg = %d, msg = [%s]", cnt, szmsg,
-                            receivedMsg);
+                            receivedMsg.c_str());
                       if (cnt == 1) {
-                          ASSERT_TRUE(!strcmp(receivedMsg, TEST_MSG));
+                          ASSERT_TRUE(!strcmp(receivedMsg.c_str(), TEST_MSG));
                       } else if (cnt == 2) {
-                          ASSERT_TRUE(!strcmp(receivedMsg, TEST_MSG2));
+                          ASSERT_TRUE(!strcmp(receivedMsg.c_str(), TEST_MSG2));
                           test->ToggleReady();
                       }
                   },
@@ -556,7 +557,8 @@ TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
               testTopic,
               [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                  std::string receivedMsg(static_cast<const char *>(msg), szmsg);
+                  DBG("Subscribe invoked: %s %d", receivedMsg.c_str(), szmsg);
 
                   static int cnt = 0;
                   ++cnt;
@@ -594,7 +596,8 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         subscribeHandle = aitt.Subscribe(
               testTopic,
               [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
-                  DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                  std::string receivedMsg(static_cast<const char *>(msg), szmsg);
+                  DBG("Subscribe invoked: %s %d", receivedMsg.c_str(), szmsg);
 
                   static int cnt = 0;
                   ++cnt;
@@ -615,7 +618,7 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
                   mainLoop.AddTimeout(CHECK_INTERVAL,
                         [&](MainLoopHandler::MainLoopResult result, int fd,
                               MainLoopHandler::MainLoopData *data) -> int {
-                            AITTTest *test = static_cast<AITTTest *>(cbdata);
+                            AITTTest *test = static_cast<AITTTest *>(this);
                             test->ToggleReady();
                             return AITT_LOOP_EVENT_REMOVE;
                         });
@@ -668,7 +671,8 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
               testTopic,
               [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                  std::string receivedMsg(static_cast<const char *>(msg), szmsg);
+                  DBG("Subscribe invoked: %s %d", receivedMsg.c_str(), szmsg);
                   test->ToggleReady();
               },
               static_cast<void *>(this), AITT_TYPE_TCP);
@@ -677,7 +681,8 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
               testTopic,
               [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                   AITTTest *test = static_cast<AITTTest *>(cbdata);
-                  DBG("Subscribe invoked: %s %d", static_cast<const char *>(msg), szmsg);
+                  std::string receivedMsg(static_cast<const char *>(msg), szmsg);
+                  DBG("Subscribe invoked: %s %d", receivedMsg.c_str(), szmsg);
                   test->ToggleReady2();
               },
               static_cast<void *>(this), AITT_TYPE_MQTT);

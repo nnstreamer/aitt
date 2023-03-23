@@ -145,6 +145,8 @@ PosixMainLoop::MainLoopData *PosixMainLoop::RemoveWatch(int fd)
     }
     MainLoopData *user_data = iter->second->data;
     watch_table.erase(iter);
+    WriteToPipe(idle_pipe[1], PING);
+    usleep(1000);
 
     return user_data;
 }
@@ -158,13 +160,13 @@ unsigned int PosixMainLoop::AddTimeout(int interval, const mainLoopCB &cb, MainL
         return 0;
     }
 
-    timer_t timerid = SetTimer(interval, identifier);
-    if (timerid) {
+    TimeoutData *timeout_data = SetTimer(interval, identifier);
+    if (nullptr != timeout_data) {
         MainLoopCbData *cb_data = new MainLoopCbData();
         cb_data->cb = cb;
         cb_data->data = data;
         cb_data->timeout_interval = interval;
-        cb_data->timerid = timerid;
+        cb_data->timeout_data = timeout_data;
         TimeoutTableInsert(identifier, cb_data);
     } else {
         ERR("SetTimer() Fail");
@@ -177,7 +179,7 @@ unsigned int PosixMainLoop::AddTimeout(int interval, const mainLoopCB &cb, MainL
 void PosixMainLoop::RemoveTimeout(unsigned int id)
 {
     std::lock_guard<std::mutex> lock(table_lock);
-    TimeoutMap::iterator iter = timeout_table.find(id);
+    auto iter = timeout_table.find(id);
     if (iter != timeout_table.end()) {
         delete iter->second;
         timeout_table.erase(iter);
@@ -194,14 +196,12 @@ void PosixMainLoop::WriteToPipe(int pipe_fd, unsigned int identifier)
 
 void PosixMainLoop::TimerHandler(int sig, siginfo_t *si, void *uc)
 {
-    TimeoutData *data = static_cast<TimeoutData *>(si->si_value.sival_ptr);
-    if (data == NULL) {
-        ERR("sival_ptr is NULL");
+    TimeoutData *timeout_data = static_cast<TimeoutData *>(si->si_value.sival_ptr);
+    if (timeout_data == NULL) {
+        ERR("timeout_data is NULL");
         return;
     }
-
-    WriteToPipe(data->pipe_fd, data->timeout_id);
-    delete data;
+    WriteToPipe(timeout_data->pipe_fd, timeout_data->timeout_id);
 }
 
 void PosixMainLoop::TimeoutTableInsert(unsigned int identifier, MainLoopCbData *cb_data)
@@ -261,12 +261,11 @@ int PosixMainLoop::CheckTimeout(pollfd pfd, short int event)
             if (AITT_LOOP_EVENT_REMOVE == ret)
                 RemoveTimeout(identifier);
             else {
-                if (timer_delete(cb_data->timerid)) {
-                    ERR("timer_delete() Fail(%d)", errno);
-                    return -1;
+                if (nullptr != cb_data->timeout_data) {
+                    delete cb_data->timeout_data;
                 }
-                cb_data->timerid = SetTimer(cb_data->timeout_interval, identifier);
-                if (nullptr == cb_data->timerid) {
+                cb_data->timeout_data = SetTimer(cb_data->timeout_interval, identifier);
+                if (nullptr == cb_data->timeout_data) {
                     ERR("SetTimer() Fail");
                     return -1;
                 }
@@ -302,13 +301,14 @@ void PosixMainLoop::CheckIdle(pollfd pfd, short int event)
     }
 }
 
-timer_t PosixMainLoop::SetTimer(int interval, unsigned int identifier)
+PosixMainLoop::TimeoutData *PosixMainLoop::SetTimer(int interval, unsigned int identifier)
 {
     TimeoutData *data = new TimeoutData;
     data->pipe_fd = timeout_pipe[1];
     data->timeout_id = identifier;
 
     struct sigevent se;
+    memset(&se, 0, sizeof(se));
     se.sigev_notify = SIGEV_SIGNAL;
     se.sigev_signo = SIGUSR1;
     se.sigev_value.sival_ptr = static_cast<void *>(data);
@@ -316,8 +316,10 @@ timer_t PosixMainLoop::SetTimer(int interval, unsigned int identifier)
     timer_t timerid;
     if (timer_create(CLOCK_MONOTONIC, &se, &timerid) == -1) {
         ERR("timer_create() Fail(%d)", errno);
+        delete data;
         return nullptr;
     }
+    data->timerid = timerid;
 
     struct itimerspec its;
     memset(&its, 0, sizeof(its));
@@ -329,23 +331,31 @@ timer_t PosixMainLoop::SetTimer(int interval, unsigned int identifier)
     its.it_value.tv_nsec = msec * 1000 * 1000;
     if (timer_settime(timerid, 0, &its, NULL) == -1) {
         ERR("timer_settime() Fail(%d)", errno);
-        timer_delete(timerid);
+        delete data;
         return nullptr;
     }
-    return timerid;
+    return data;
 }
 
+PosixMainLoop::TimeoutData::TimeoutData() : timerid(nullptr), timeout_id(0), pipe_fd(-1){};
+PosixMainLoop::TimeoutData::~TimeoutData()
+{
+    if (nullptr != timerid) {
+        if (timer_delete(timerid) == -1) {
+            ERR("timer_delete() Fail(%d)", errno);
+        }
+    }
+};
+
 PosixMainLoop::MainLoopCbData::MainLoopCbData()
-      : data(nullptr), result(OK), fd(IDLE), timeout_interval(0), timerid(nullptr)
+      : data(nullptr), result(OK), fd(IDLE), timeout_interval(0), timeout_data(nullptr)
 {
 }
 
 PosixMainLoop::MainLoopCbData::~MainLoopCbData()
 {
-    if (timerid) {
-        if (timer_delete(timerid) == -1) {
-            ERR("timer_delete() Fail(%d)", errno);
-        }
+    if (nullptr != timeout_data) {
+        delete timeout_data;
     }
 }
 

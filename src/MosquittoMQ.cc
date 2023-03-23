@@ -293,6 +293,7 @@ void MosquittoMQ::PublishWithReply(const std::string &topic, const void *data, c
         ERR("mosquitto_publish_v5(%s) Fail(%s)", topic.c_str(), mosquitto_strerror(ret));
         throw AittException(AittException::MQTT_ERR);
     }
+    mosquitto_property_free_all(&props);
 }
 
 void MosquittoMQ::SendReply(AittMsg *msg, const void *data, const int datalen, int qos, bool retain)
@@ -331,6 +332,7 @@ void MosquittoMQ::SendReply(AittMsg *msg, const void *data, const int datalen, i
               mosquitto_strerror(ret));
         throw AittException(AittException::MQTT_ERR);
     }
+    mosquitto_property_free_all(&props);
 }
 
 void *MosquittoMQ::Subscribe(const std::string &topic, const SubscribeCallback &cb, void *user_data,

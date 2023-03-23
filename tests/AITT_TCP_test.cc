@@ -33,7 +33,14 @@ class AITTTCPTest : public testing::Test, public AittTests {
     void TCPWildcardsTopicTemplate(AittProtocol protocol, bool single_level)
     {
         try {
-            char dump_msg[204800];
+            std::mt19937 random_gen{std::random_device{}()};
+            std::uniform_int_distribution<std::string::size_type> gen(0, 255);
+
+            char dump_msg[204800] = {};
+            for (size_t i = 0; i < sizeof(dump_msg); i++) {
+                dump_msg[i] = gen(random_gen);
+            }
+
             std::string sub_topic = "test/" + std::string(single_level ? "+" : "#");
 
             AITT aitt(clientId, LOCAL_IP);
@@ -44,8 +51,7 @@ class AITTTCPTest : public testing::Test, public AittTests {
                     return;
                 aitt.Subscribe(
                       sub_topic,
-                      [&](AittMsg *handle, const void *msg, const int szmsg,
-                            void *cbdata) -> void {
+                      [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
                           AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
                           INFO("Got Message(Topic:%s, size:%d)", handle->GetTopic().c_str(), szmsg);
                           ++cnt;

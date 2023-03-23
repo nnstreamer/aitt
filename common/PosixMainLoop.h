@@ -41,7 +41,6 @@ class PosixMainLoop : public MainLoopIface {
     unsigned int AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *user_data) override;
     void RemoveTimeout(unsigned int id) override;
 
-  private:
     enum PipeValue {
         QUIT = -1,
         PING = 0,
@@ -50,6 +49,9 @@ class PosixMainLoop : public MainLoopIface {
     };
 
     struct TimeoutData {
+        TimeoutData();
+        ~TimeoutData();
+        timer_t timerid;
         unsigned int timeout_id;
         int pipe_fd;
     };
@@ -62,7 +64,7 @@ class PosixMainLoop : public MainLoopIface {
         MainLoopResult result;
         int fd;
         int timeout_interval;
-        timer_t timerid;
+        TimeoutData *timeout_data;
     };
 
     using WatchMap = std::map<int, std::shared_ptr<MainLoopCbData>>;
@@ -72,11 +74,12 @@ class PosixMainLoop : public MainLoopIface {
     static void WriteToPipe(int pipe_fd, unsigned int identifier);
     static void TimerHandler(int sig, siginfo_t *si, void *uc);
 
+  private:
     void TimeoutTableInsert(unsigned int identifier, MainLoopCbData *cb_data);
     bool CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
     int CheckTimeout(pollfd pfd, short int event);
     void CheckIdle(pollfd pfd, short int event);
-    timer_t SetTimer(int interval, unsigned int identifier);
+    TimeoutData *SetTimer(int interval, unsigned int identifier);
 
     WatchMap watch_table;
     TimeoutMap timeout_table;
