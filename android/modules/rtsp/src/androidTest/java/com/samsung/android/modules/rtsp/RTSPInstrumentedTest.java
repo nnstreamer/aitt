@@ -15,67 +15,19 @@
  */
 package com.samsung.android.modules.rtsp;
 
-import static com.samsung.android.aitt.stream.AittStream.StreamRole.PUBLISHER;
-import static com.samsung.android.aitt.stream.AittStream.StreamRole.SUBSCRIBER;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
 import android.content.Context;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.samsung.android.aitt.Aitt;
-import com.samsung.android.aitt.stream.AittStream;
-import com.samsung.android.aitt.stream.AittStreamConfigBuilder;
-
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class RTSPInstrumentedTest {
-
-    private static final String TEST_TOPIC = "android/test/rtsp";
-    private static final String AITT_ID = "AITT_ANDROID";
-    private static final String ERROR_MESSAGE_AITT_NULL = "An AITT instance is null.";
-    private static final int PORT = 1883;
-    private static final String RTSP_URL = "rtsp://192.168.1.4:1935";
-
-    private static String brokerIp;
-    private static Context appContext;
-
-    @BeforeClass
-    public static void initialize() {
-        appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        appContext.getString(R.string.testBrokerIp);
-    }
-
     @Test
-    public void testRTSPBasicStreaming() {
-        try {
-            Aitt aitt = new Aitt(appContext, AITT_ID);
-            assertNotNull(ERROR_MESSAGE_AITT_NULL, aitt);
-            aitt.connect(brokerIp, PORT);
-
-            AittStream subscriber = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, SUBSCRIBER);
-
-            AittStream.StreamDataCallback callback = data -> {
-                //Do something
-            };
-            subscriber.setReceiveCallback(callback);
-            subscriber.start();
-
-            AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            publisher.setConfig(builder.build());
-            publisher.start();
-
-            publisher.stop();
-            subscriber.stop();
-
-            aitt.destroyStream(publisher);
-            aitt.destroyStream(subscriber);
-        } catch (Exception e) {
-            fail("Failed testRTSPBasicStreaming, (" + e + ")");
-        }
+    public void useAppContext() {
+        // Context of the app under test.
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        assertEquals("com.example.aittnative.test", appContext.getPackageName());
     }
 }

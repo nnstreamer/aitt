@@ -39,6 +39,9 @@ public class RTSPStream implements AittStream {
     private static final String URL_PREFIX = "rtsp://";
     private static final String HEIGHT = "height";
     private static final String WIDTH = "width";
+    private static final String EMPTY_STRING = "";
+    private static final int DEFAULT_WIDTH = 640;
+    private static final int DEFAULT_HEIGHT = 480;
 
     private final StreamRole streamRole;
     private final String topic;
@@ -121,23 +124,42 @@ public class RTSPStream implements AittStream {
         if (config == null)
             throw new IllegalArgumentException("Invalid configuration");
 
-        if (config.getUrl() != null) {
-            String url = config.getUrl();
-            if (!url.startsWith(URL_PREFIX))
-                throw new IllegalArgumentException("Invalid RTSP URL");
-
-            discoveryInfo.url = config.getUrl();
+        String url = config.getUrl();
+        if (url == null || !url.startsWith(URL_PREFIX)) {
+            throw new IllegalArgumentException("Invalid RTSP URL");
         }
+
+        discoveryInfo.url = url;
+
         if (config.getId() != null) {
             discoveryInfo.id = config.getId();
+        } else {
+            discoveryInfo.id = EMPTY_STRING;
         }
+
         if (config.getPassword() != null) {
             discoveryInfo.password = config.getPassword();
+        } else {
+            discoveryInfo.password = EMPTY_STRING;
         }
 
-        discoveryInfo.height = config.getHeight();
+        int height = config.getHeight();
+        if (height == 0) {
+            discoveryInfo.height = DEFAULT_HEIGHT;
+        } else if (height < 0) {
+            throw new IllegalArgumentException("Invalid stream height");
+        } else {
+            discoveryInfo.height = height;
+        }
 
-        discoveryInfo.width = config.getWidth();
+        int width = config.getWidth();
+        if (width == 0) {
+            discoveryInfo.width = DEFAULT_WIDTH;
+        } else if (width < 0) {
+            throw new IllegalArgumentException("Invalid stream width");
+        } else {
+            discoveryInfo.width = width;
+        }
     }
 
     /**

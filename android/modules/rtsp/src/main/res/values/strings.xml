@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="testBrokerIp">192.168.1.59</string>
+    <string name="testBrokerIp">192.168.1.3</string>
 </resources>

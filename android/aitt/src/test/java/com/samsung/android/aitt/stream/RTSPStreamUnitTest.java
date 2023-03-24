@@ -29,6 +29,8 @@ public class RTSPStreamUnitTest {
    private final String url = "rtsp://192.168.1.4:1935";
    private final String id = "id1";
    private final String password = "pwd1";
+   private final int height = 640;
+   private final int width = 480;
 
    @Test
    public void testCreatePublisherStream_P() {
@@ -61,6 +63,8 @@ public class RTSPStreamUnitTest {
       configBuilder.setUrl(url);
       configBuilder.setId(id);
       configBuilder.setPassword(password);
+      configBuilder.setHeight(height);
+      configBuilder.setWidth(width);
       rtspStream.setConfig(configBuilder.build());
    }
 
@@ -95,6 +99,8 @@ public class RTSPStreamUnitTest {
       configBuilder.setUrl(url);
       configBuilder.setId(id);
       configBuilder.setPassword(password);
+      configBuilder.setHeight(height);
+      configBuilder.setWidth(width);
       rtspStream.setConfig(configBuilder.build());
 
       rtspStream.setStateCallback(state -> assertEquals("Expected state is ready", state, AittStream.StreamState.READY));
@@ -110,6 +116,8 @@ public class RTSPStreamUnitTest {
       configBuilder.setUrl(url);
       configBuilder.setId(id);
       configBuilder.setPassword(password);
+      configBuilder.setHeight(height);
+      configBuilder.setWidth(width);
       rtspStream.setConfig(configBuilder.build());
 
       AtomicBoolean isStarted = new AtomicBoolean(false);
