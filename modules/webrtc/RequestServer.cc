@@ -35,6 +35,7 @@ void RequestServer::Start(void)
 void RequestServer::Stop(void)
 {
     stop_working_ = true;
+    sync_queue_.WakeUpAll();
     if (server_thread_.joinable())
         server_thread_.join();
 }

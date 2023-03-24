@@ -16,9 +16,9 @@
 
 #pragma once
 
+#include <functional>
 #include <thread>
 #include <vector>
-#include <functional>
 
 #include "SyncQueue.h"
 

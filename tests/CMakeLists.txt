@@ -24,6 +24,10 @@ ADD_TEST(
 )
 
 ###########################################################################
+
+IF(WITH_WEBRTC)
+ADD_DEFINITIONS(-DWITH_WEBRTC)
+ENDIF()
 SET(AITT_STREAM_UT ${PROJECT_NAME}_stream_ut)
 SET(AITT_STREAM_UT_SRC AittStream_test.cc)
 ADD_EXECUTABLE(${AITT_STREAM_UT} ${AITT_STREAM_UT_SRC})

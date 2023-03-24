@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "WebRtcStream.h"
+
 #include <inttypes.h>
 #include <webrtc_internal.h>
-#include "WebRtcStream.h"
 
 #include "WebRtcMessage.h"
 #include "aitt_internal.h"
@@ -133,7 +134,27 @@ bool WebRtcStream::AttachCameraSource(void)
     return ret == WEBRTC_ERROR_NONE;
 }
 
-bool WebRtcStream::DetachCameraSource(void)
+bool WebRtcStream::AttachMediaPacketSource(void)
+{
+    if (!webrtc_handle_) {
+        ERR("WebRTC handle is not created");
+        return false;
+    }
+
+    if (source_id_) {
+        ERR("source already attached");
+        return false;
+    }
+
+    auto ret = webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET,
+          &source_id_);
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to add media source");
+
+    return ret == WEBRTC_ERROR_NONE;
+}
+
+bool WebRtcStream::DetachSource(void)
 {
     if (!webrtc_handle_) {
         ERR("WebRTC handle is not created");
@@ -141,13 +162,51 @@ bool WebRtcStream::DetachCameraSource(void)
     }
 
     if (!source_id_) {
-        ERR("Camera source is not attached");
+        ERR("Media source is not attached");
         return false;
     }
 
     auto ret = webrtc_remove_media_source(webrtc_handle_, source_id_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to remove media source");
+
+    return ret == WEBRTC_ERROR_NONE;
+}
+
+bool WebRtcStream::SetVideoResolution(int width, int height)
+{
+    if (!webrtc_handle_) {
+        ERR("WebRTC handle is not created");
+        return false;
+    }
+
+    if (!source_id_) {
+        ERR("Media source is not attached");
+        return false;
+    }
+
+    auto ret = webrtc_media_source_set_video_resolution(webrtc_handle_, source_id_, width, height);
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to set video resolution");
+
+    return ret == WEBRTC_ERROR_NONE;
+}
+
+bool WebRtcStream::SetVideoFrameRate(int frame_rate)
+{
+    if (!webrtc_handle_) {
+        ERR("WebRTC handle is not created");
+        return false;
+    }
+
+    if (!source_id_) {
+        ERR("Media source is not attached");
+        return false;
+    }
+
+    auto ret = webrtc_media_source_set_video_framerate(webrtc_handle_, source_id_, frame_rate);
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to set video frame rate");
 
     return ret == WEBRTC_ERROR_NONE;
 }

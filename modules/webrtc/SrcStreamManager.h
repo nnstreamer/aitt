@@ -41,6 +41,7 @@ class SrcStreamManager : public StreamManager {
           const std::vector<uint8_t> &message) override;
     void AddStream(const std::string &discovery_id, const std::string &id, const std::string &sdp,
           const std::vector<std::string> &ice_candidates);
+    void CreateSrcStream(void);
     void UpdateStreamInfo(const std::string &discovery_id, const std::string &id,
           const std::string &peer_id, const std::string &sdp,
           const std::vector<std::string> &ice_candidates);

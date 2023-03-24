@@ -64,7 +64,13 @@ class SyncQueue {
         return data;
     };
 
-    void WakeUpAll(void) { condition_.notify_all(); };
+    void WakeUpAll(void)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        T data;
+        queue_.push(data);
+        condition_.notify_all();
+    };
 
   private:
     std::queue<T> queue_;

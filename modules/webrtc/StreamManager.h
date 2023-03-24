@@ -19,13 +19,12 @@
 #include <WebRtcStream.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
-#include <memory>
 
 namespace AittWebRTCNamespace {
-
 class StreamManager {
   public:
     using IceCandidateAddedCallback = std::function<void(void)>;
@@ -37,10 +36,15 @@ class StreamManager {
     virtual ~StreamManager() = default;
     virtual std::vector<uint8_t> GetDiscoveryMessage(void) = 0;
 
-    void SetFormat(const std::string &format, int width, int height);
+    bool IsStarted(void) const;
     std::string GetFormat(void);
     int GetWidth(void);
     int GetHeight(void);
+    void SetFormat(const std::string &format, int width, int height);
+    void SetWidth(int width);
+    void SetHeight(int height);
+    void SetFrameRate(int frame_rate);
+    void SetSourceType(const std::string &source_type);
     void Start(void);
     void Stop(void);
     void HandleRemovedClient(const std::string &discovery_id);
@@ -54,15 +58,19 @@ class StreamManager {
     std::string GetWatchingTopic(void) const;
 
   protected:
+    bool need_display_;
+    bool is_started_;
     int width_;
     int height_;
+    int frame_rate_;
+    std::string source_type_;
     std::string format_;
     std::string topic_;
     std::string watching_topic_;
     // TODO: why dont' we remove below
     std::string aitt_id_;
     std::string thread_id_;
-    //We assume Module class can't be copyable
+    // We assume Module class can't be copyable
     std::string peer_aitt_id_;
     WebRtcStream stream_;
     StreamStartCallback stream_start_cb_;

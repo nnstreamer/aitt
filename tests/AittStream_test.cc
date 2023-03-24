@@ -21,31 +21,127 @@
 #include "AittTests.h"
 
 using namespace aitt;
+#ifdef WITH_WEBRTC
+#include <glib.h>
+class AITTWEBRTCTest : public testing::Test {
+  protected:
+    void SetUp() override
+    {
+        main_loop = g_main_loop_new(NULL, FALSE);
+        aitt = new AITT("streamClientId", LOCAL_IP, AittOption(true, false));
+        aitt->Connect();
 
-TEST(AittStreamTest, Webrtc_Subscriber_Create_P)
+        publisher =
+              aitt->CreateStream(AITT_STREAM_TYPE_WEBRTC, "topic", AITT_STREAM_ROLE_PUBLISHER);
+        ASSERT_TRUE(publisher) << "CreateStream() Fail";
+
+        subscriber =
+              aitt->CreateStream(AITT_STREAM_TYPE_WEBRTC, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
+        ASSERT_TRUE(subscriber) << "CreateStream() Fail";
+    }
+    void TearDown() override
+    {
+        aitt->DestroyStream(publisher);
+        aitt->DestroyStream(subscriber);
+        aitt->Disconnect();
+        delete aitt;
+        g_main_loop_unref(main_loop);
+    }
+
+    AITT *aitt;
+    AittStream *publisher;
+    AittStream *subscriber;
+    GMainLoop *main_loop;
+};
+
+TEST_F(AITTWEBRTCTest, Default_P)
 {
     try {
-        AITT aitt("streamClientId", LOCAL_IP, AittOption(true, false));
-
-        aitt.Connect();
-
-        AittStream *subscriber =
-              aitt.CreateStream(AITT_STREAM_TYPE_WEBRTC, "topic", AITT_STREAM_ROLE_SUBSCRIBER);
-        ASSERT_TRUE(subscriber) << "CreateStream() Fail";
         subscriber->SetReceiveCallback(
-        [](aitt::AittStream *stream, void *data, void *user_data) {
-            if (stream == nullptr) {
-                printf("Invalid stream\n");
-                return;
-            }
-            printf("width %d height %d\n", stream->GetWidth(), stream->GetHeight());
-        },
-        nullptr);
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  if (stream == nullptr) {
+                      printf("Invalid stream\n");
+                      return;
+                  }
 
+                  DBG("ReceiveCallback Called");
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
+        subscriber->Start();
+        publisher->Start();
+
+        g_main_loop_run(main_loop);
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
+#define SD_WIDTH 640
+#define SD_HEIGHT 480
+
+TEST_F(AITTWEBRTCTest, Set_Resolution_P)
+{
+    try {
+        publisher->SetConfig("WIDTH", std::to_string(SD_WIDTH));
+        publisher->SetConfig("HEIGHT", std::to_string(SD_HEIGHT));
+
+        subscriber->SetReceiveCallback(
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  if (stream == nullptr) {
+                      printf("Invalid stream\n");
+                      return;
+                  }
+
+                  DBG("ReceiveCallback Called");
+                  EXPECT_EQ(stream->GetWidth(), SD_WIDTH);
+                  EXPECT_EQ(stream->GetHeight(), SD_HEIGHT);
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
+        subscriber->Start();
+        publisher->Start();
+
+        g_main_loop_run(main_loop);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+#define HD_WIDTH 1280
+#define HD_HEIGHT 720
+#define FRAME_RATE_10 10
+
+TEST_F(AITTWEBRTCTest, Set_Resolution_Frame_Rate_P)
+{
+    try {
+        publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH));
+        publisher->SetConfig("HEIGHT", std::to_string(HD_HEIGHT));
+        publisher->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10));
+
+        subscriber->SetReceiveCallback(
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  if (stream == nullptr) {
+                      printf("Invalid stream\n");
+                      return;
+                  }
+
+                  DBG("ReceiveCallback Called");
+                  EXPECT_EQ(stream->GetWidth(), HD_WIDTH);
+                  EXPECT_EQ(stream->GetHeight(), HD_HEIGHT);
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
+        subscriber->Start();
+        publisher->Start();
+
+        g_main_loop_run(main_loop);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+#endif
 
 class AITTRTSPTest : public testing::Test {
   protected:

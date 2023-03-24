@@ -34,6 +34,7 @@ SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string
 
 SinkStreamManager::~SinkStreamManager()
 {
+    request_server_.Stop();
     if (decode_pipeline_)
         gst_object_unref(decode_pipeline_);
 }
@@ -198,7 +199,7 @@ void SinkStreamManager::HandleStartStream(const std::string &discovery_id)
 void SinkStreamManager::AddStream(const std::string &discovery_id)
 {
     SetWebRtcStreamCallbacks(stream_);
-    stream_.Create(false, false);
+    stream_.Create(false, need_display_);
     stream_.Start();
 
     std::stringstream s_stream;

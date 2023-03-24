@@ -39,7 +39,10 @@ class WebRtcStream {
     bool Start(void);
     bool Stop(void);
     bool AttachCameraSource(void);
-    bool DetachCameraSource(void);
+    bool AttachMediaPacketSource(void);
+    bool DetachSource(void);
+    bool SetVideoResolution(int width, int height);
+    bool SetVideoFrameRate(int frame_rate);
     void AttachSignals(bool is_source, bool need_display);
     void DetachSignals(void);
     // Cautions : Event handler is not a pointer. So, change event_handle after Set Event handler

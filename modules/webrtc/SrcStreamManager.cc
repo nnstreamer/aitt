@@ -124,8 +124,7 @@ void SrcStreamManager::AddStream(const std::string &discovery_id, const std::str
       const std::string &sdp, const std::vector<std::string> &ice_candidates)
 {
     SetWebRtcStreamCallbacks(stream_);
-    stream_.Create(true, false);
-    stream_.AttachCameraSource();
+    CreateSrcStream();
     stream_.Start();
 
     std::stringstream s_stream;
@@ -137,6 +136,22 @@ void SrcStreamManager::AddStream(const std::string &discovery_id, const std::str
     stream_.AddPeerInformation(sdp, ice_candidates);
 
     return;
+}
+
+void SrcStreamManager::CreateSrcStream(void)
+{
+    SetWebRtcStreamCallbacks(stream_);
+    stream_.Create(true, false);
+    if (source_type_ == "MEDIA_PACKET")
+        stream_.AttachMediaPacketSource();
+    else if (source_type_ == "CAMERA") {
+        stream_.AttachCameraSource();
+        if (width_ && height_)
+            stream_.SetVideoResolution(width_, height_);
+        if (frame_rate_)
+            stream_.SetVideoFrameRate(frame_rate_);
+    } else
+        DBG("Source is not available");
 }
 
 std::vector<uint8_t> SrcStreamManager::GetDiscoveryMessage(void)

@@ -56,6 +56,22 @@ Module::~Module(void)
 
 int Module::SetConfig(const std::string &key, const std::string &value)
 {
+    if (stream_manager_->IsStarted())
+        return AITT_ERROR_RESOURCE_BUSY;
+
+    try {
+        if (key == "WIDTH" && std::stoi(value) > 0)
+            stream_manager_->SetWidth(std::stoi(value));
+        else if (key == "HEIGHT" && std::stoi(value) > 0)
+            stream_manager_->SetHeight(std::stoi(value));
+        else if (key == "FRAME_RATE")
+            stream_manager_->SetFrameRate(std::stoi(value));
+        else
+            return AITT_ERROR_INVALID_PARAMETER;
+    } catch (std::exception &e) {
+        DBG("exception while setting");
+        return AITT_ERROR_INVALID_PARAMETER;
+    }
     return AITT_ERROR_NONE;
 }
 

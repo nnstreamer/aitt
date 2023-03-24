@@ -22,8 +22,12 @@ namespace AittWebRTCNamespace {
 
 StreamManager::StreamManager(const std::string &topic, const std::string &watching_topic,
       const std::string &aitt_id, const std::string &thread_id)
-      : width_(0),
+      : need_display_(false),
+        is_started_(false),
+        width_(0),
         height_(0),
+        frame_rate_(0),
+        source_type_("CAMERA"),
         topic_(topic),
         watching_topic_(watching_topic),
         aitt_id_(aitt_id),
@@ -31,11 +35,9 @@ StreamManager::StreamManager(const std::string &topic, const std::string &watchi
 {
 }
 
-void StreamManager::SetFormat(const std::string &format, int width, int height)
+bool StreamManager::IsStarted(void) const
 {
-    format_ = format;
-    width_ = width;
-    height_ = height;
+    return is_started_;
 }
 
 std::string StreamManager::GetFormat(void)
@@ -53,11 +55,39 @@ int StreamManager::GetHeight(void)
     return height_;
 }
 
+void StreamManager::SetFormat(const std::string &format, int width, int height)
+{
+    format_ = format;
+    width_ = width;
+    height_ = height;
+}
+
+void StreamManager::SetWidth(int width)
+{
+    width_ = width;
+}
+
+void StreamManager::SetHeight(int height)
+{
+    height_ = height;
+}
+
+void StreamManager::SetFrameRate(int frame_rate)
+{
+    frame_rate_ = frame_rate;
+}
+
+void StreamManager::SetSourceType(const std::string &source_type)
+{
+    source_type_ = source_type;
+}
+
 void StreamManager::Start(void)
 {
     DBG("%s %s", __func__, GetTopic().c_str());
     if (stream_start_cb_)
         stream_start_cb_();
+    is_started_ = true;
 }
 
 void StreamManager::Stop(void)
@@ -68,6 +98,7 @@ void StreamManager::Stop(void)
 
     if (stream_stop_cb_)
         stream_stop_cb_();
+    is_started_ = false;
 }
 
 void StreamManager::HandleRemovedClient(const std::string &discovery_id)
