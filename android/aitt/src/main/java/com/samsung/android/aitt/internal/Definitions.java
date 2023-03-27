@@ -25,4 +25,6 @@ public class Definitions {
     public static final String RESPONSE_POSTFIX = "_AittRe_";
     public static final String STATUS = "status";
     public static final int DEFAULT_IPC_PORT = 0;
+    public static final int DEFAULT_STREAM_WIDTH = 640;
+    public static final int DEFAULT_STREAM_HEIGHT = 480;
 }

@@ -272,10 +272,10 @@ public final class WebRTCSubscriber extends WebRTC {
        */
       @Override
       synchronized public void onFrame(VideoFrame frame) {
-         byte[] rawFrame = createNV21Data(frame.getBuffer().toI420());
+         byte[] nv21Frame = createNV21Data(frame.getBuffer().toI420());
          frameHeight = frame.getBuffer().getHeight();
          frameWidth = frame.getBuffer().getWidth();
-         dataCallback.pushData(rawFrame);
+         dataCallback.pushData(nv21Frame);
       }
 
       /**
@@ -290,8 +290,7 @@ public final class WebRTCSubscriber extends WebRTC {
          final int chromaWidth = (width + 1) / 2;
          final int chromaHeight = (height + 1) / 2;
          final int ySize = width * height;
-         final ByteBuffer nv21Buffer = ByteBuffer.allocateDirect(ySize + width * chromaHeight);
-         final byte[] nv21Data = nv21Buffer.array();
+         final byte[] nv21Data = new byte[ySize + width * chromaHeight];
          byte[] i420ByteArrayU = new byte[i420Buffer.getDataU().remaining()];
          byte[] i420ByteArrayV = new byte[i420Buffer.getDataV().remaining()];
          //Copy i420 Y bytebuffer to nv21Data.

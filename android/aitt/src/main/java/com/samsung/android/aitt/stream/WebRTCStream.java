@@ -15,6 +15,9 @@
  */
 package com.samsung.android.aitt.stream;
 
+import static com.samsung.android.aitt.internal.Definitions.DEFAULT_STREAM_HEIGHT;
+import static com.samsung.android.aitt.internal.Definitions.DEFAULT_STREAM_WIDTH;
+
 import android.content.Context;
 import android.util.Log;
 
@@ -47,11 +50,17 @@ public final class WebRTCStream implements AittStream {
     private final String watchTopic;
     private final StreamRole streamRole;
     private final String id;
+    private final StreamInfo streamInfo;
 
     private WebRTC webrtc;
     private JniInterface jniInterface;
     private StreamState streamState = StreamState.INIT;
     private StreamStateChangeCallback stateChangeCallback = null;
+
+    private static class StreamInfo {
+        private int frameWidth = DEFAULT_STREAM_WIDTH;
+        private int frameHeight = DEFAULT_STREAM_HEIGHT;
+    }
 
     WebRTCStream(String topic, StreamRole streamRole, Context context) {
         this.streamRole = streamRole;
@@ -74,6 +83,8 @@ public final class WebRTCStream implements AittStream {
                 Log.e(TAG, "Failed to create WebRTC instance");
             }
         }
+
+        streamInfo = new StreamInfo();
     }
 
     public static WebRTCStream createSubscriberStream(String topic, StreamRole streamRole, Context context) {
@@ -92,7 +103,26 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public void setConfig(AittStreamConfig config) {
-        // ToDo : use this method to get frame width and height
+        if (config == null)
+            throw new IllegalArgumentException("Invalid configuration");
+
+        int width = config.getWidth();
+        if (width < 0) {
+            throw new IllegalArgumentException("Invalid frame width");
+        } else if (width == 0) {
+            streamInfo.frameWidth = DEFAULT_STREAM_WIDTH;
+        } else {
+            streamInfo.frameWidth = width;
+        }
+
+        int height = config.getHeight();
+        if (height < 0) {
+            throw new IllegalArgumentException("Invalid frame height");
+        } else if (height == 0) {
+            streamInfo.frameHeight = DEFAULT_STREAM_HEIGHT;
+        } else {
+            streamInfo.frameHeight = height;
+        }
     }
 
     @Override
@@ -157,12 +187,16 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public int getStreamHeight() {
-        return webrtc.getFrameHeight();
+        if (streamRole == StreamRole.SUBSCRIBER)
+            return webrtc.getFrameHeight();
+        return streamInfo.frameHeight;
     }
 
     @Override
     public int getStreamWidth() {
-        return webrtc.getFrameWidth();
+        if (streamRole == StreamRole.SUBSCRIBER)
+            return webrtc.getFrameWidth();
+        return streamInfo.frameWidth;
     }
 
     @Override
@@ -176,10 +210,7 @@ public final class WebRTCStream implements AittStream {
                 return webrtc.sendMessageData(message);
             } else {
                 Log.d(TAG, "Video data are sent through a WebRTC publisher stream.");
-                //ToDo - Fetch frameWidth & frameHeight from app
-                int frameWidth = 640;
-                int frameHeight = 480;
-                webrtc.sendVideoData(message, frameWidth, frameHeight);
+                webrtc.sendVideoData(message, streamInfo.frameWidth, streamInfo.frameHeight);
             }
         } else {
             Log.e(TAG, "publish() is not allowed to a subscriber stream.");
