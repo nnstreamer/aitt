@@ -1,21 +1,21 @@
-IF(PLATFORM STREQUAL "tizen")
-    SET(AITT_RTSP aitt-stream-rtsp)
+if(PLATFORM STREQUAL "tizen")
+    set(AITT_RTSP aitt-stream-rtsp)
 
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-    PKG_CHECK_MODULES(AITT_RTSP_NEEDS REQUIRED
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+    pkg_check_modules(AITT_RTSP_NEEDS REQUIRED
         capi-media-player
         capi-media-image-util
     )
-    INCLUDE_DIRECTORIES(${AITT_RTSP_NEEDS_INCLUDE_DIRS})
-    LINK_DIRECTORIES(${AITT_RTSP_NEEDS_LIBRARY_DIRS})
+    include_directories(${AITT_RTSP_NEEDS_INCLUDE_DIRS})
+    link_directories(${AITT_RTSP_NEEDS_LIBRARY_DIRS})
 
-    FILE(GLOB AITT_RTSP_SRC *.cc)
+    file(GLOB AITT_RTSP_SRC *.cc)
     list(REMOVE_ITEM AITT_RTSP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/Module.cc)
-    ADD_LIBRARY(RTSP_OBJ OBJECT ${AITT_RTSP_SRC})
-    ADD_LIBRARY(${AITT_RTSP} SHARED $<TARGET_OBJECTS:RTSP_OBJ> Module.cc ../stream_entry.cc)
-    TARGET_LINK_LIBRARIES(${AITT_RTSP} ${AITT_RTSP_NEEDS_LIBRARIES} ${AITT_COMMON})
-    TARGET_COMPILE_OPTIONS(${AITT_RTSP} PUBLIC ${AITT_RTSP_NEEDS_CFLAGS_OTHER})
-    INSTALL(TARGETS ${AITT_RTSP} DESTINATION ${CMAKE_INSTALL_LIBDIR})
-ELSE(PLATFORM STREQUAL "tizen")
-    MESSAGE ( WARNING "Required to write CMakefile for each Platform" )
-ENDIF(PLATFORM STREQUAL "tizen")
+    add_library(RTSP_OBJ OBJECT ${AITT_RTSP_SRC})
+    add_library(${AITT_RTSP} SHARED $<TARGET_OBJECTS:RTSP_OBJ> Module.cc ../stream_entry.cc)
+    target_link_libraries(${AITT_RTSP} ${AITT_RTSP_NEEDS_LIBRARIES} ${AITT_COMMON})
+    target_compile_options(${AITT_RTSP} PUBLIC ${AITT_RTSP_NEEDS_CFLAGS_OTHER})
+    install(TARGETS ${AITT_RTSP} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else(PLATFORM STREQUAL "tizen")
+    message ( WARNING "Required to write CMakefile for each Platform" )
+endif(PLATFORM STREQUAL "tizen")
