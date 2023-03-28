@@ -102,17 +102,19 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 %postun -p /sbin/ldconfig
 
 %files
+%license LICENSE.APLv2
 %manifest %{name}.manifest
 %{_libdir}/lib%{name}*.so*
-%license LICENSE.APLv2
 
 %files plugins
+%license LICENSE.APLv2
 %manifest %{name}.manifest
 %{_libdir}/lib%{name}-*.so*
-%license LICENSE.APLv2
 
 %if 0%{test}
 %files unittests
+%license LICENSE.APLv2 external/C-Mock/LICENSE.md
+%manifest %{name}.manifest
 %{_bindir}/*
 %endif
 
