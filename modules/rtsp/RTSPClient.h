@@ -30,9 +30,12 @@ class RTSPClient {
     ~RTSPClient(void);
 
     using ReceiveCallback = std::function<void(void *obj, void *user_data)>;
+    using StateCallback = std::function<void(int state, void *user_data)>;
 
     void SetReceiveCallback(const ReceiveCallback &cb, void *user_data);
     void UnsetReceiveCallback(void);
+    void SetStateCallback(const StateCallback &cb, void *user_data);
+    void UnsetStateCallback(void);
     bool IsStart(void);
     void SetDisplay(void *display);
     void SetURI(const std::string &uri);
@@ -44,6 +47,7 @@ class RTSPClient {
     static void PlayerPreparedCB(void *user_data);
     static void VideoCapturedCB(unsigned char *frame, int width, int height, unsigned int size,
           void *user_data);
+    static void PlayerInterruptedCB(player_interrupted_code_e interrupted_code, void *user_data);
     static gboolean TimeoutCB(gpointer user_data);
 
     bool is_start;
@@ -53,6 +57,5 @@ class RTSPClient {
     guint capture_source_id_;
 
     std::pair<ReceiveCallback, void *> receive_cb;
-
-    std::mutex receive_cb_lock;
+    std::pair<StateCallback, void *> state_cb;
 };

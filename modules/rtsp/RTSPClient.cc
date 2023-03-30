@@ -17,6 +17,7 @@
 #include "RTSPClient.h"
 
 #define MSEC_PER_SECOND 1000
+#define INIT_STATE 0
 
 RTSPClient::RTSPClient(void) : is_start(false), display_(nullptr), fps_(2), capture_source_id_(0)
 {
@@ -26,6 +27,12 @@ RTSPClient::RTSPClient(void) : is_start(false), display_(nullptr), fps_(2), capt
     if (ret != PLAYER_ERROR_NONE) {
         ERR("player_create() Fail(%d)", ret);
         throw std::runtime_error("player_create() Fail");
+    }
+
+    ret = player_set_interrupted_cb(player_, PlayerInterruptedCB, this);
+    if (ret != PLAYER_ERROR_NONE) {
+        ERR("player_set_interrupted_cb() Fail(%d)", ret);
+        throw std::runtime_error("player_set_interrupted_cb() Fail");
     }
 }
 
@@ -85,27 +92,35 @@ void RTSPClient::SetURI(const std::string &uri)
     }
 }
 
-void RTSPClient::VideoCapturedCB(unsigned char *frame, int width, int height, unsigned int size,
-      void *user_data)
+void RTSPClient::PlayerInterruptedCB(player_interrupted_code_e interrupted_code, void *user_data)
 {
-    if (!frame || !user_data) {
-        ERR("invalid param [frame:%p, user_data:%p]", frame, user_data);
-        return;
-    }
+    DBG("PlayerInterruptedCB() is called");
+
+    RET_IF(nullptr == user_data);
 
     RTSPClient *client = static_cast<RTSPClient *>(user_data);
 
-    if (client->receive_cb.first != nullptr) {
+    if (client->state_cb.first) {
+        client->state_cb.first(INIT_STATE, client->state_cb.second);
+    }
+}
+
+void RTSPClient::VideoCapturedCB(unsigned char *frame, int width, int height, unsigned int size,
+      void *user_data)
+{
+    RET_IF(nullptr == frame);
+    RET_IF(nullptr == user_data);
+
+    RTSPClient *client = static_cast<RTSPClient *>(user_data);
+
+    if (client->receive_cb.first) {
         client->receive_cb.first(frame, client->receive_cb.second);
     }
 }
 
 gboolean RTSPClient::TimeoutCB(gpointer user_data)
 {
-    if (!user_data) {
-        ERR("invalid param [user_data:%p]", user_data);
-        return FALSE;
-    }
+    RETV_IF(nullptr == user_data, FALSE);
 
     RTSPClient *client = static_cast<RTSPClient *>(user_data);
     if (client->player_ == nullptr) {
@@ -126,6 +141,8 @@ gboolean RTSPClient::TimeoutCB(gpointer user_data)
 void RTSPClient::PlayerPreparedCB(void *data)
 {
     int ret = PLAYER_ERROR_NONE;
+
+    DBG("PlayerPreparedCB() is called");
 
     RTSPClient *client = static_cast<RTSPClient *>(data);
     if (client->player_ == nullptr) {
@@ -164,6 +181,9 @@ void RTSPClient::Start(void)
             ERR("player_prepare_async() Fail(%d)", ret);
             return;
         }
+
+        DBG("preparing...");
+
         break;
     case PLAYER_STATE_READY:
     case PLAYER_STATE_PAUSED:
@@ -191,6 +211,9 @@ void RTSPClient::Stop(void)
 
     is_start = false;
 
+    g_source_remove(capture_source_id_);
+    capture_source_id_ = 0;
+
     ret = player_stop(player_);
     if (ret != PLAYER_ERROR_NONE) {
         ERR("player_stop() Fail(%d)", ret);
@@ -200,14 +223,20 @@ void RTSPClient::Stop(void)
 
 void RTSPClient::SetReceiveCallback(const ReceiveCallback &cb, void *user_data)
 {
-    std::lock_guard<std::mutex> auto_lock(receive_cb_lock);
-
     receive_cb = std::make_pair(cb, user_data);
 }
 
 void RTSPClient::UnsetReceiveCallback()
 {
-    std::lock_guard<std::mutex> auto_lock(receive_cb_lock);
-
     receive_cb = std::make_pair(nullptr, nullptr);
+}
+
+void RTSPClient::SetStateCallback(const StateCallback &cb, void *user_data)
+{
+    state_cb = std::make_pair(cb, user_data);
+}
+
+void RTSPClient::UnsetStateCallback()
+{
+    state_cb = std::make_pair(nullptr, nullptr);
 }

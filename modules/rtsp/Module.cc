@@ -55,6 +55,12 @@ Module::Module(AittDiscovery &discovery, const std::string &topic, AittStreamRol
           },
           nullptr);
 
+    client.SetStateCallback(
+          [&](int state, void *user_data) {
+              UpdateState(role_, static_cast<AittStreamState>(state));
+          },
+          nullptr);
+
     discovery_cb_ = discovery_.AddDiscoveryCB(topic,
           std::bind(&Module::DiscoveryMessageCallback, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
@@ -64,6 +70,8 @@ Module::~Module(void)
 {
     RTSP_DBG("RTSP Module destroyer : %s", topic_.c_str());
 
+    client.UnsetReceiveCallback();
+    client.UnsetStateCallback();
     discovery_.RemoveDiscoveryCB(discovery_cb_);
 }
 
