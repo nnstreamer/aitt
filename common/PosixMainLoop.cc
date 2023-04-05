@@ -146,7 +146,6 @@ PosixMainLoop::MainLoopData *PosixMainLoop::RemoveWatch(int fd)
     MainLoopData *user_data = iter->second->data;
     watch_table.erase(iter);
     WriteToPipe(idle_pipe[1], PING);
-    usleep(1000);
 
     return user_data;
 }
