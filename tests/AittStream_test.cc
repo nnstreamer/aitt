@@ -141,6 +141,37 @@ TEST_F(AITTWEBRTCTest, Set_Resolution_Frame_Rate_P)
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
+
+#define MEDIA_FORMAT_I420 "I420"
+TEST_F(AITTWEBRTCTest, Set_Source_Type_Media_Packet_P)
+{
+    try {
+        publisher->SetConfig("SOURCE_TYPE", "MEDIA_PACKET");
+        publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH));
+        publisher->SetConfig("HEIGHT", std::to_string(HD_HEIGHT));
+        publisher->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10));
+        publisher->SetConfig("MEDIA_FORMAT", MEDIA_FORMAT_I420);
+
+        subscriber->SetReceiveCallback(
+              [&](AittStream *stream, void *obj, void *user_data) {
+                  if (stream == nullptr) {
+                      printf("Invalid stream\n");
+                      return;
+                  }
+
+                  DBG("ReceiveCallback Called");
+                  if (g_main_loop_is_running(main_loop))
+                      g_main_loop_quit(main_loop);
+              },
+              nullptr);
+        subscriber->Start();
+        publisher->Start();
+
+        g_main_loop_run(main_loop);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
 #endif
 
 class AITTRTSPTest : public testing::Test {

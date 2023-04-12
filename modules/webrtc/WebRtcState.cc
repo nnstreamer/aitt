@@ -188,4 +188,30 @@ std::string WebRtcState::IceConnectionToStr(WebRtcState::IceConnection state)
     return std::string("");
 }
 
+WebRtcState::SourceBufferState WebRtcState::ToSourceBufferState(webrtc_media_packet_source_buffer_state_e state)
+{
+    switch (state) {
+    case WEBRTC_MEDIA_PACKET_SOURCE_BUFFER_STATE_UNDERFLOW: {
+        return SourceBufferState::UNDERFLOW;
+    }
+    case WEBRTC_MEDIA_PACKET_SOURCE_BUFFER_STATE_OVERFLOW: {
+        return SourceBufferState::OVERFLOW;
+    }
+    }
+    return SourceBufferState::OVERFLOW;
+}
+
+std::string WebRtcState::SourceBufferStateToStr(WebRtcState::SourceBufferState state)
+{
+    switch (state) {
+    case (WebRtcState::SourceBufferState::UNDERFLOW): {
+        return std::string("UNDERFLOW");
+    }
+    case (WebRtcState::SourceBufferState::OVERFLOW): {
+        return std::string("OVERFLOW");
+    }
+    }
+    return std::string("");
+}
+
 }  // namespace AittWebRTCNamespace

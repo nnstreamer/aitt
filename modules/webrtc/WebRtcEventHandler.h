@@ -105,6 +105,17 @@ class WebRtcEventHandler {
     };
     void UnsetTrackAddedCb(void) { on_track_added_cb_ = nullptr; };
 
+    void SetOnSourceBufferStateCb(std::function<void(WebRtcState::SourceBufferState)> on_source_buffer_state_notify_cb)
+    {
+        on_source_buffer_state_notify_cb_ = on_source_buffer_state_notify_cb;
+    }
+    void CallOnSourceBufferStateCb(WebRtcState::SourceBufferState state) const
+    {
+        if (on_source_buffer_state_notify_cb_)
+            on_source_buffer_state_notify_cb_(state);
+    };
+    void UnsetSourceBufferStateCb(void) { on_source_buffer_state_notify_cb_ = nullptr; };
+
   private:
     std::function<void(void)> on_negotiation_needed_cb_;
     std::function<void(WebRtcState::Stream)> on_state_changed_cb_;
@@ -114,6 +125,7 @@ class WebRtcEventHandler {
     std::function<void(WebRtcState::IceConnection)> on_ice_connection_state_notify_cb_;
     std::function<void(media_packet_h)> on_encoded_frame_cb_;
     std::function<void(unsigned int id)> on_track_added_cb_;
+    std::function<void(WebRtcState::SourceBufferState)> on_source_buffer_state_notify_cb_;
 };
 
 }  // namespace AittWebRTCNamespace

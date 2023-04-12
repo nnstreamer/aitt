@@ -3,7 +3,6 @@ set(AITT_WEBRTC aitt-stream-webrtc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 pkg_check_modules(AITT_WEBRTC_NEEDS REQUIRED
-    capi-media-camera
     capi-media-webrtc
     gstreamer-video-1.0
     json-glib-1.0

@@ -44,6 +44,7 @@ class Module : public AittStreamModule {
     int GetHeight(void) override;
     void Start(void) override;
     void Stop(void) override;
+    int Push(void *obj) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
 
@@ -52,6 +53,7 @@ class Module : public AittStreamModule {
     void OnIceCandidateAdded(void);
     void OnStreamStarted(void);
     void OnStreamStopped(void);
+    void OnStreamState(const std::string &state);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
 

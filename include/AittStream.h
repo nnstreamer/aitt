@@ -39,6 +39,7 @@ class AittStream {
     virtual int GetHeight(void) = 0;
     virtual void Start(void) = 0;
     virtual void Stop(void) = 0;
+    virtual int Push(void *obj) = 0;
     virtual void SetStateCallback(StateCallback cb, void *user_data) = 0;
 
     // Subscriber ONLY

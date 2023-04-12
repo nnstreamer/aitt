@@ -22,8 +22,8 @@
 #include <mutex>
 #include <thread>
 
-#include "StreamManager.h"
 #include "RequestServer.h"
+#include "StreamManager.h"
 namespace AittWebRTCNamespace {
 
 class SinkStreamManager : public StreamManager {
@@ -33,6 +33,7 @@ class SinkStreamManager : public StreamManager {
     virtual ~SinkStreamManager();
     std::vector<uint8_t> GetDiscoveryMessage(void) override;
     void SetOnFrameCallback(OnFrameCallback cb) override;
+    int Push(void *obj) override;
 
   private:
     void SetWebRtcStreamCallbacks(WebRtcStream &stream) override;

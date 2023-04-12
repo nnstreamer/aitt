@@ -28,6 +28,7 @@ class SrcStreamManager : public StreamManager {
           const std::string &thread_id);
     virtual ~SrcStreamManager();
     std::vector<uint8_t> GetDiscoveryMessage(void) override;
+    int Push(void *obj) override;
 
   private:
     void SetWebRtcStreamCallbacks(WebRtcStream &stream) override;
@@ -35,6 +36,7 @@ class SrcStreamManager : public StreamManager {
     void OnAnswerCreated(std::string sdp, WebRtcStream &stream);
     void OnIceCandidate(void);
     void OnSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream);
+    void OnSourceBufferStateNotify(WebRtcState::SourceBufferState state);
     void HandleStreamState(const std::string &discovery_id,
           const std::vector<uint8_t> &message) override;
     void HandleStreamInfo(const std::string &discovery_id,

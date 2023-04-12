@@ -36,7 +36,10 @@ enum AittStreamState {
     AITT_STREAM_STATE_INIT = 0,
     AITT_STREAM_STATE_READY = 1,
     AITT_STREAM_STATE_PLAYING = 2,
+    AITT_STREAM_STATE_UNDERFLOW = 3,
+    AITT_STREAM_STATE_OVERFLOW = 4
 };
+
 
 enum AittStreamRole {
     AITT_STREAM_ROLE_PUBLISHER = 0,   // Role of source media

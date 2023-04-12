@@ -27,12 +27,15 @@ StreamManager::StreamManager(const std::string &topic, const std::string &watchi
         width_(0),
         height_(0),
         frame_rate_(0),
-        source_type_("CAMERA"),
+        //Need to sync with source_type_ on stream
+        source_type_("NULL"),
+        decode_codec_("VP8"),
         topic_(topic),
         watching_topic_(watching_topic),
         aitt_id_(aitt_id),
         thread_id_(thread_id)
 {
+    stream_.AddDataChannel();
 }
 
 bool StreamManager::IsStarted(void) const
@@ -55,31 +58,87 @@ int StreamManager::GetHeight(void)
     return height_;
 }
 
-void StreamManager::SetFormat(const std::string &format, int width, int height)
-{
-    format_ = format;
-    width_ = width;
-    height_ = height;
-}
-
 void StreamManager::SetWidth(int width)
 {
+    if (width_ == width)
+        return;
+
+    if (source_type_ == "MEDIA_PACKET" && height_ && frame_rate_ && format_.size())
+        stream_.SetMediaFormat(width_, height_, frame_rate_, format_);
+    else if (source_type_ == "CAMERA" && height_)
+        stream_.SetVideoResolution(width, height_);
     width_ = width;
 }
 
 void StreamManager::SetHeight(int height)
 {
+    if (height_ == height)
+        return;
+
+    if (source_type_ == "MEDIA_PACKET" && width_ && frame_rate_ && format_.size())
+        stream_.SetMediaFormat(width_, height, frame_rate_, format_);
+    else if (source_type_ == "CAMERA" && width_)
+        stream_.SetVideoResolution(width_, height);
     height_ = height;
 }
 
 void StreamManager::SetFrameRate(int frame_rate)
 {
+    if (frame_rate_ == frame_rate)
+        return;
+
+    if (source_type_ == "MEDIA_PACKET" && width_ && height_ && format_.size())
+        stream_.SetMediaFormat(width_, height_, frame_rate, format_);
+    else if (source_type_ == "CAMERA")
+        stream_.SetVideoFrameRate(frame_rate);
     frame_rate_ = frame_rate;
 }
 
 void StreamManager::SetSourceType(const std::string &source_type)
 {
+    if (source_type_ == source_type)
+        return;
+
+    stream_.DeactivateSource();
+    if (source_type == "MEDIA_PACKET") {
+        stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET);
+        stream_.ActivateSource();
+        if (width_ && height_ && frame_rate_ && format_.size())
+            stream_.SetMediaFormat(width_, height_, frame_rate_, format_);
+    } else if (source_type == "CAMERA") {
+        stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
+        stream_.ActivateSource();
+        if (width_ && height_)
+            stream_.SetVideoResolution(width_, height_);
+        if (frame_rate_)
+            stream_.SetVideoFrameRate(frame_rate_);
+    } else if (source_type == "NULL") {
+        stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_NULL);
+        stream_.ActivateSource();
+    } else
+        DBG("%s is not available source type", source_type.c_str());
+
     source_type_ = source_type;
+}
+
+void StreamManager::SetMediaFormat(const std::string &format)
+{
+    if (format_ == format)
+        return;
+
+    if (source_type_ == "MEDIA_PACKET" && width_ && height_ && frame_rate_)
+        stream_.SetMediaFormat(width_, height_, frame_rate_, format);
+    format_ = format;
+}
+
+void StreamManager::SetDecodeCodec(const std::string &codec)
+{
+    if (decode_codec_ == codec)
+        return;
+
+    if (source_type_ == "NULL")
+        stream_.SetDecodeCodec(codec);
+    decode_codec_ = codec;
 }
 
 void StreamManager::Start(void)
@@ -144,6 +203,11 @@ void StreamManager::SetStreamStartCallback(StreamStartCallback cb)
 void StreamManager::SetStreamStopCallback(StreamStopCallback cb)
 {
     stream_stop_cb_ = cb;
+}
+
+void StreamManager::SetStreamStateCallback(StreamStateCallback cb)
+{
+    stream_state_cb_ = cb;
 }
 
 void StreamManager::SetOnFrameCallback(OnFrameCallback cb)

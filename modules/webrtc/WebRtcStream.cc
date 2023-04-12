@@ -16,15 +16,28 @@
 #include "WebRtcStream.h"
 
 #include <inttypes.h>
+#include <media_format.h>
 #include <webrtc_internal.h>
+
+#include <stdexcept>
 
 #include "WebRtcMessage.h"
 #include "aitt_internal.h"
 
 namespace AittWebRTCNamespace {
 
-WebRtcStream::WebRtcStream() : webrtc_handle_(nullptr), channel_(nullptr), source_id_(0)
+WebRtcStream::WebRtcStream()
+      : webrtc_handle_(nullptr),
+        source_type_(WEBRTC_MEDIA_SOURCE_TYPE_NULL),
+        channel_(nullptr),
+        source_id_(0)
 {
+    // Notice for Tizen webrtc handle
+    // This API includes file read operation, launching thread,
+    // gstreamer library initialization, and so on.
+    auto ret = webrtc_create(&webrtc_handle_);
+    if (ret != WEBRTC_ERROR_NONE)
+        throw std::runtime_error("WebRtc Handler Creation Failed");
 }
 
 WebRtcStream::~WebRtcStream()
@@ -33,42 +46,8 @@ WebRtcStream::~WebRtcStream()
     DBG("%s", __func__);
 }
 
-bool WebRtcStream::Create(bool is_source, bool need_display)
-{
-    if (webrtc_handle_) {
-        ERR("Already created %p", webrtc_handle_);
-        return false;
-    }
-
-    auto ret = webrtc_create(&webrtc_handle_);
-    if (ret != WEBRTC_ERROR_NONE) {
-        ERR("Failed to create webrtc handle");
-        return false;
-    }
-
-    if (!is_source) {
-        auto add_source_ret =
-              webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_NULL, &source_id_);
-        if (add_source_ret != WEBRTC_ERROR_NONE)
-            ERR("Failed to add media source");
-        auto set_transceiver_codec_ret = webrtc_media_source_set_transceiver_codec(webrtc_handle_,
-              source_id_, WEBRTC_MEDIA_TYPE_VIDEO, WEBRTC_TRANSCEIVER_CODEC_VP8);
-        if (set_transceiver_codec_ret != WEBRTC_ERROR_NONE)
-            ERR("Failed to set transceiver codec");
-    }
-
-    webrtc_create_data_channel(webrtc_handle_, "label", nullptr, &channel_);
-    AttachSignals(is_source, need_display);
-
-    return true;
-}
-
 void WebRtcStream::Destroy(void)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return;
-    }
     auto stop_ret = webrtc_stop(webrtc_handle_);
     if (stop_ret != WEBRTC_ERROR_NONE)
         ERR("Failed to stop webrtc handle");
@@ -87,11 +66,6 @@ void WebRtcStream::Destroy(void)
 
 bool WebRtcStream::Start(void)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     auto ret = webrtc_start(webrtc_handle_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to start webrtc handle");
@@ -101,11 +75,6 @@ bool WebRtcStream::Start(void)
 
 bool WebRtcStream::Stop(void)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     auto ret = webrtc_stop(webrtc_handle_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to stop webrtc handle");
@@ -114,53 +83,44 @@ bool WebRtcStream::Stop(void)
     return ret == WEBRTC_ERROR_NONE;
 }
 
-bool WebRtcStream::AttachCameraSource(void)
+int WebRtcStream::Push(void *obj)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
+    auto ret = webrtc_media_packet_source_push_packet(webrtc_handle_, source_id_,
+          static_cast<media_packet_h>(obj));
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to push packet");
 
+    // TODO what should be initialized?
+    return ret;
+}
+
+void WebRtcStream::SetSourceType(webrtc_media_source_type_e source_type)
+{
+    source_type_ = source_type;
+}
+
+bool WebRtcStream::ActivateSource(void)
+{
     if (source_id_) {
         ERR("source already attached");
         return false;
     }
 
-    auto ret =
-          webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_CAMERA, &source_id_);
+    auto ret = webrtc_add_media_source(webrtc_handle_, source_type_, &source_id_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to add media source");
 
+    if (source_type_ == WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET) {
+        int set_buffer_cb_ret = webrtc_media_packet_source_set_buffer_state_changed_cb(
+              webrtc_handle_, source_id_, OnBufferStateChanged, this);
+        DBG("webrtc_media_packet_source_set_buffer_state_changed_cb %s",
+              set_buffer_cb_ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
+    }
     return ret == WEBRTC_ERROR_NONE;
 }
 
-bool WebRtcStream::AttachMediaPacketSource(void)
+bool WebRtcStream::DeactivateSource(void)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
-    if (source_id_) {
-        ERR("source already attached");
-        return false;
-    }
-
-    auto ret = webrtc_add_media_source(webrtc_handle_, WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET,
-          &source_id_);
-    if (ret != WEBRTC_ERROR_NONE)
-        ERR("Failed to add media source");
-
-    return ret == WEBRTC_ERROR_NONE;
-}
-
-bool WebRtcStream::DetachSource(void)
-{
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     if (!source_id_) {
         ERR("Media source is not attached");
         return false;
@@ -169,17 +129,14 @@ bool WebRtcStream::DetachSource(void)
     auto ret = webrtc_remove_media_source(webrtc_handle_, source_id_);
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to remove media source");
+    else
+        source_id_ = 0;
 
     return ret == WEBRTC_ERROR_NONE;
 }
 
 bool WebRtcStream::SetVideoResolution(int width, int height)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     if (!source_id_) {
         ERR("Media source is not attached");
         return false;
@@ -194,11 +151,6 @@ bool WebRtcStream::SetVideoResolution(int width, int height)
 
 bool WebRtcStream::SetVideoFrameRate(int frame_rate)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     if (!source_id_) {
         ERR("Media source is not attached");
         return false;
@@ -211,12 +163,38 @@ bool WebRtcStream::SetVideoFrameRate(int frame_rate)
     return ret == WEBRTC_ERROR_NONE;
 }
 
+bool WebRtcStream::SetMediaFormat(int width, int height, int frame_rate, const std::string &format)
+{
+    media_format_h media_format =
+          static_cast<media_format_h>(GetMediaFormatHandler(width, height, frame_rate, format));
+    if (!media_format)
+        return false;
+
+    auto ret = webrtc_media_packet_source_set_format(webrtc_handle_, source_id_, media_format);
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to set media format");
+    media_format_unref(media_format);
+
+    return ret == WEBRTC_ERROR_NONE;
+}
+
+void WebRtcStream::SetDecodeCodec(const std::string &codec)
+{
+    webrtc_transceiver_codec_e transceiver_codec = WEBRTC_TRANSCEIVER_CODEC_VP8;
+    if (codec == "VP9")
+        transceiver_codec = WEBRTC_TRANSCEIVER_CODEC_VP9;
+    else if (codec == "H264")
+        transceiver_codec = WEBRTC_TRANSCEIVER_CODEC_H264;
+    auto ret = webrtc_media_source_set_transceiver_codec(webrtc_handle_, source_id_,
+          WEBRTC_MEDIA_TYPE_VIDEO, transceiver_codec);
+    if (ret != WEBRTC_ERROR_NONE)
+        ERR("Failed to set transceiver codec");
+
+    return;
+}
+
 bool WebRtcStream::CreateOfferAsync(std::function<void(std::string)> on_created_cb)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
     on_offer_created_cb_ = on_created_cb;
     auto ret = webrtc_create_offer_async(webrtc_handle_, NULL, OnOfferCreated, this);
     if (ret != WEBRTC_ERROR_NONE)
@@ -237,10 +215,6 @@ void WebRtcStream::OnOfferCreated(webrtc_h webrtc, const char *description, void
 
 bool WebRtcStream::CreateAnswerAsync(std::function<void(std::string)> on_created_cb)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
     on_answer_created_cb_ = on_created_cb;
     auto ret = webrtc_create_answer_async(webrtc_handle_, NULL, OnAnswerCreated, this);
     if (ret != WEBRTC_ERROR_NONE)
@@ -261,11 +235,6 @@ void WebRtcStream::OnAnswerCreated(webrtc_h webrtc, const char *description, voi
 
 bool WebRtcStream::SetLocalDescription(const std::string &description)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     auto ret = webrtc_set_local_description(webrtc_handle_, description.c_str());
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to set local description");
@@ -277,11 +246,6 @@ bool WebRtcStream::SetLocalDescription(const std::string &description)
 
 bool WebRtcStream::SetRemoteDescription(const std::string &description)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
-
     auto ret = webrtc_set_remote_description(webrtc_handle_, description.c_str());
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to set remote description");
@@ -311,11 +275,6 @@ std::string &WebRtcStream::GetPeerId(void)
 
 bool WebRtcStream::AddIceCandidateFromMessage(const std::string &ice_message)
 {
-    ERR("%s", __func__);
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return false;
-    }
     auto ret = webrtc_add_ice_candidate(webrtc_handle_, ice_message.c_str());
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to set add ice candidate");
@@ -478,13 +437,13 @@ void WebRtcStream::PrintStats(void)
         DBG("webrtc_foreach_stats failed");
 }
 
+void WebRtcStream::AddDataChannel(void)
+{
+    webrtc_create_data_channel(webrtc_handle_, "label", nullptr, &channel_);
+}
+
 void WebRtcStream::AttachSignals(bool is_source, bool need_display)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return;
-    }
-
     int ret = WEBRTC_ERROR_NONE;
     // TODO: ADHOC TV profile doesn't show DBG level log
     ret = webrtc_set_error_cb(webrtc_handle_, OnError, this);
@@ -521,11 +480,6 @@ void WebRtcStream::AttachSignals(bool is_source, bool need_display)
 
 void WebRtcStream::DetachSignals(void)
 {
-    if (!webrtc_handle_) {
-        ERR("WebRTC handle is not created");
-        return;
-    }
-
     webrtc_unset_error_cb(webrtc_handle_);
     webrtc_unset_state_changed_cb(webrtc_handle_);
     webrtc_unset_signaling_state_change_cb(webrtc_handle_);
@@ -631,4 +585,54 @@ void WebRtcStream::OnDataChannelOpen(webrtc_data_channel_h channel, void *user_d
     ERR("%s", __func__);
 }
 
+void WebRtcStream::OnBufferStateChanged(unsigned int id,
+      webrtc_media_packet_source_buffer_state_e state, void *user_data)
+{
+    ERR("%s", __func__);
+    auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
+    RET_IF(webrtc_stream == nullptr);
+    webrtc_stream->GetEventHandler().CallOnSourceBufferStateCb(
+          WebRtcState::ToSourceBufferState(state));
+}
+
+static media_format_mimetype_e __get_video_format_enum(const std::string &format)
+{
+    if (format == "I420")
+        return MEDIA_FORMAT_I420;
+    else if (format == "NV12")
+        return MEDIA_FORMAT_NV12;
+    else if (format == "VP8")
+        return MEDIA_FORMAT_VP8;
+    else if (format == "VP9")
+        return MEDIA_FORMAT_VP9;
+    else if (format == "H264")
+        return MEDIA_FORMAT_H264_HP;
+    else if (format == "JPEG")
+        return MEDIA_FORMAT_MJPEG;
+    else
+        return MEDIA_FORMAT_MAX;
+}
+
+void *WebRtcStream::GetMediaFormatHandler(int width, int height, int frame_rate,
+      const std::string &format)
+{
+    media_format_h media_format = nullptr;
+    auto ret = media_format_create(&media_format);
+    if (ret != MEDIA_FORMAT_ERROR_NONE) {
+        DBG("failed to media_format_create()");
+        return nullptr;
+    }
+
+    ret = media_format_set_video_mime(media_format, __get_video_format_enum(format));
+    ret |= media_format_set_video_width(media_format, width);
+    ret |= media_format_set_video_height(media_format, height);
+    ret |= media_format_set_video_frame_rate(media_format, frame_rate);
+    if (ret != MEDIA_FORMAT_ERROR_NONE) {
+        DBG("failed to set video format");
+        media_format_unref(media_format);
+        return nullptr;
+    }
+
+    return media_format;
+}
 }  // namespace AittWebRTCNamespace

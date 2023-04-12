@@ -64,6 +64,11 @@ class WebRtcState {
         CLOSED,
     };
 
+    enum class SourceBufferState {
+        UNDERFLOW,
+        OVERFLOW,
+    };
+
   public:
     static Stream ToStreamState(webrtc_state_e state);
     static std::string StreamToStr(WebRtcState::Stream state);
@@ -73,6 +78,8 @@ class WebRtcState {
     static std::string IceGatheringToStr(WebRtcState::IceGathering state);
     static IceConnection ToIceConnectionState(webrtc_ice_connection_state_e state);
     static std::string IceConnectionToStr(WebRtcState::IceConnection state);
+    static SourceBufferState ToSourceBufferState(webrtc_media_packet_source_buffer_state_e state);
+    static std::string SourceBufferStateToStr(WebRtcState::SourceBufferState state);
 };
 
 }  // namespace AittWebRTCNamespace

@@ -105,14 +105,16 @@ class WebRtcStreamTest : public testing::Test {
 TEST_F(WebRtcStreamTest, test_Create_WebRtcStream_OnDevice)
 {
     WebRtcStream src_stream{};
-    EXPECT_EQ(true, src_stream.Create(true, false)) << "Failed to create source stream";
 }
 
 TEST_F(WebRtcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
 {
     WebRtcStream stream{};
-    EXPECT_EQ(true, stream.Create(true, false)) << "Failed to create source stream";
-    EXPECT_EQ(true, stream.AttachCameraSource()) << "Failed to attach camera source";
+    stream.AddDataChannel();
+    stream.AttachSignals(true, false);
+
+    stream.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
+    EXPECT_EQ(true, stream.ActivateSource()) << "Failed to attach camera source";
     stream.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnStreamStateChanged, std::placeholders::_1, std::ref(stream), this));
 
@@ -220,8 +222,10 @@ class WebRtcSourceOffererTest : public testing::Test {
 
 TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
 {
-    EXPECT_EQ(true, src_stream_.Create(true, false)) << "Failed to create source stream";
-    EXPECT_EQ(true, src_stream_.AttachCameraSource()) << "Failed to attach camera source";
+    src_stream_.AddDataChannel();
+    src_stream_.AttachSignals(true, false);
+    src_stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
+    EXPECT_EQ(true, src_stream_.ActivateSource()) << "Failed to attach camera source";
     src_stream_.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this));
 
@@ -232,7 +236,8 @@ TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
           OnSrcIceGatheringStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
     src_stream_.Start();
 
-    EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
+    sink_stream_.AddDataChannel();
+    sink_stream_.AttachSignals(false, false);
     sink_stream_.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 
@@ -339,8 +344,10 @@ class WebRtcSinkOffererTest : public testing::Test {
 
 TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
 {
-    EXPECT_EQ(true, src_stream_.Create(true, false)) << "Failed to create source stream";
-    EXPECT_EQ(true, src_stream_.AttachCameraSource()) << "Failed to attach camera source";
+    src_stream_.AddDataChannel();
+    src_stream_.AttachSignals(true, false);
+    src_stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
+    EXPECT_EQ(true, src_stream_.ActivateSource()) << "Failed to attach camera source";
     auto on_src_stream_state_changed_cb =
           std::bind(OnSrcStreamStateChanged, std::placeholders::_1, std::ref(src_stream_), this);
     src_stream_.GetEventHandler().SetOnStateChangedCb(on_src_stream_state_changed_cb);
@@ -352,7 +359,8 @@ TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
           OnSrcIceGatheringStateNotify, std::placeholders::_1, std::ref(src_stream_), this));
     src_stream_.Start();
 
-    EXPECT_EQ(true, sink_stream_.Create(false, false)) << "Failed to create sink stream";
+    src_stream_.AddDataChannel();
+    src_stream_.AttachSignals(false, false);
     sink_stream_.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 

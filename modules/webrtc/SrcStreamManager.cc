@@ -28,6 +28,11 @@ SrcStreamManager::SrcStreamManager(const std::string &topic, const std::string &
       const std::string &thread_id)
       : StreamManager(topic + "/SRC", topic + "/SINK", aitt_id, thread_id)
 {
+    SetWebRtcStreamCallbacks(stream_);
+    stream_.AttachSignals(true, false);
+    source_type_ = "CAMERA";
+    stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
+    stream_.ActivateSource();
 }
 
 SrcStreamManager::~SrcStreamManager()
@@ -45,11 +50,16 @@ void SrcStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
 
     stream.GetEventHandler().SetOnIceCandidateCb(
           std::bind(&SrcStreamManager::OnIceCandidate, this));
+
+    stream.GetEventHandler().SetOnSourceBufferStateCb(
+          std::bind(&SrcStreamManager::OnSourceBufferStateNotify, this, std::placeholders::_1));
 }
 
 void SrcStreamManager::OnStreamStateChanged(WebRtcState::Stream state)
 {
     DBG("OnSrcStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+    if (stream_state_cb_)
+        stream_state_cb_(WebRtcState::StreamToStr(state));
 }
 
 void SrcStreamManager::OnSignalingStateNotify(WebRtcState::Signaling state, WebRtcStream &stream)
@@ -72,6 +82,13 @@ void SrcStreamManager::OnIceCandidate(void)
 {
     if (ice_candidate_added_cb_)
         ice_candidate_added_cb_();
+}
+
+void SrcStreamManager::OnSourceBufferStateNotify(WebRtcState::SourceBufferState state)
+{
+    DBG("OnSourceBufferStateNotify: %s", WebRtcState::SourceBufferStateToStr(state).c_str());
+    if (stream_state_cb_)
+        stream_state_cb_(WebRtcState::SourceBufferStateToStr(state));
 }
 
 void SrcStreamManager::HandleStreamState(const std::string &discovery_id,
@@ -123,8 +140,6 @@ void SrcStreamManager::UpdateStreamInfo(const std::string &discovery_id, const s
 void SrcStreamManager::AddStream(const std::string &discovery_id, const std::string &id,
       const std::string &sdp, const std::vector<std::string> &ice_candidates)
 {
-    SetWebRtcStreamCallbacks(stream_);
-    CreateSrcStream();
     stream_.Start();
 
     std::stringstream s_stream;
@@ -136,22 +151,6 @@ void SrcStreamManager::AddStream(const std::string &discovery_id, const std::str
     stream_.AddPeerInformation(sdp, ice_candidates);
 
     return;
-}
-
-void SrcStreamManager::CreateSrcStream(void)
-{
-    SetWebRtcStreamCallbacks(stream_);
-    stream_.Create(true, false);
-    if (source_type_ == "MEDIA_PACKET")
-        stream_.AttachMediaPacketSource();
-    else if (source_type_ == "CAMERA") {
-        stream_.AttachCameraSource();
-        if (width_ && height_)
-            stream_.SetVideoResolution(width_, height_);
-        if (frame_rate_)
-            stream_.SetVideoFrameRate(frame_rate_);
-    } else
-        DBG("Source is not available");
 }
 
 std::vector<uint8_t> SrcStreamManager::GetDiscoveryMessage(void)
@@ -173,6 +172,16 @@ std::vector<uint8_t> SrcStreamManager::GetDiscoveryMessage(void)
 
     message = fbb.GetBuffer();
     return message;
+}
+
+int SrcStreamManager::Push(void *obj)
+{
+    if (source_type_ != "MEDIA_PACKET") {
+        DBG("Wrong source type");
+        return -1;
+    }
+
+    return stream_.Push(obj);
 }
 
 }  // namespace AittWebRTCNamespace

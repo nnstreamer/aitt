@@ -45,6 +45,11 @@ Module::Module(AittDiscovery &discovery, const std::string &topic, AittStreamRol
     discovery_cb_ = discovery_.AddDiscoveryCB(stream_manager_->GetWatchingTopic(),
           std::bind(&Module::DiscoveryMessageCallback, this, std::placeholders::_1,
                 std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    stream_manager_->SetIceCandidateAddedCallback(std::bind(&Module::OnIceCandidateAdded, this));
+    stream_manager_->SetStreamStartCallback(std::bind(&Module::OnStreamStarted, this));
+    stream_manager_->SetStreamStopCallback(std::bind(&Module::OnStreamStopped, this));
+    stream_manager_->SetStreamStateCallback(
+          std::bind(&Module::OnStreamState, this, std::placeholders::_1));
 }
 
 Module::~Module(void)
@@ -66,6 +71,12 @@ int Module::SetConfig(const std::string &key, const std::string &value)
             stream_manager_->SetHeight(std::stoi(value));
         else if (key == "FRAME_RATE")
             stream_manager_->SetFrameRate(std::stoi(value));
+        else if (key == "MEDIA_FORMAT")
+            stream_manager_->SetMediaFormat(value);
+        else if (key == "SOURCE_TYPE")
+            stream_manager_->SetSourceType(value);
+        else if (key == "DECODE_CODEC")
+            stream_manager_->SetDecodeCodec(value);
         else
             return AITT_ERROR_INVALID_PARAMETER;
     } catch (std::exception &e) {
@@ -97,15 +108,17 @@ int Module::GetHeight(void)
 
 void Module::Start(void)
 {
-    stream_manager_->SetIceCandidateAddedCallback(std::bind(&Module::OnIceCandidateAdded, this));
-    stream_manager_->SetStreamStartCallback(std::bind(&Module::OnStreamStarted, this));
-    stream_manager_->SetStreamStopCallback(std::bind(&Module::OnStreamStopped, this));
-
     stream_manager_->Start();
 }
 
 void Module::Stop(void)
 {
+}
+
+int Module::Push(void *obj)
+{
+    // TODO: We need to classify error codes
+    return stream_manager_->Push(obj);
 }
 
 void Module::OnIceCandidateAdded(void)
@@ -137,6 +150,22 @@ void Module::OnStreamStopped(void)
 
     msg = fbb.GetBuffer();
     discovery_.UpdateDiscoveryMsg(stream_manager_->GetTopic(), msg.data(), msg.size());
+}
+
+void Module::OnStreamState(const std::string &state)
+{
+    if (!state_callback_)
+        return;
+
+    DBG("%s", state.c_str());
+    if (state == "IDLE")
+        state_callback_(this, AITT_STREAM_STATE_INIT, state_cb_user_data_);
+    else if (state == "PLAYING")
+        state_callback_(this, AITT_STREAM_STATE_PLAYING, state_cb_user_data_);
+    else if (state == "UNDERFLOW")
+        state_callback_(this, AITT_STREAM_STATE_UNDERFLOW, state_cb_user_data_);
+    else if (state == "OVERFLOW")
+        state_callback_(this, AITT_STREAM_STATE_OVERFLOW, state_cb_user_data_);
 }
 
 void Module::SetStateCallback(StateCallback cb, void *user_data)

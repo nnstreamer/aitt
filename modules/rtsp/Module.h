@@ -40,6 +40,7 @@ class Module : public AittStreamModule {
     int GetHeight(void) override;
     void Start(void) override;
     void Stop(void) override;
+    int Push(void *obj) override;
     void SetStateCallback(StateCallback cb, void *user_data) override;
     void SetReceiveCallback(ReceiveCallback cb, void *user_data) override;
 

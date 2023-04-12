@@ -30,6 +30,10 @@ SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string
         video_appsrc_(nullptr),
         decode_pipeline_(nullptr)
 {
+    SetWebRtcStreamCallbacks(stream_);
+    stream_.AttachSignals(false, need_display_);
+    stream_.ActivateSource();
+    stream_.SetDecodeCodec(decode_codec_);
 }
 
 SinkStreamManager::~SinkStreamManager()
@@ -57,6 +61,8 @@ void SinkStreamManager::SetWebRtcStreamCallbacks(WebRtcStream &stream)
 void SinkStreamManager::OnStreamStateChanged(WebRtcState::Stream state, WebRtcStream &stream)
 {
     DBG("OnSinkStreamStateChanged: %s", WebRtcState::StreamToStr(state).c_str());
+    if (stream_state_cb_)
+        stream_state_cb_(WebRtcState::StreamToStr(state));
     if (state == WebRtcState::Stream::NEGOTIATING) {
         stream.CreateOfferAsync(std::bind(&SinkStreamManager::OnOfferCreated, this,
               std::placeholders::_1, std::ref(stream)));
@@ -108,11 +114,22 @@ void SinkStreamManager::BuildDecodePipeline(void)
     GstElement *src = gst_element_factory_make("appsrc", nullptr);
 
     // TODO:How do we can know decoder type
-    GstCaps *app_src_caps = gst_caps_new_simple("video/x-vp8", nullptr, nullptr);
-    g_object_set(G_OBJECT(src), "format", GST_FORMAT_TIME, "caps", app_src_caps, nullptr);
-    gst_caps_unref(app_src_caps);
+    GstElement *dec = nullptr;
+    if (decode_codec_ == "H264") {
+        GstCaps *app_src_caps = gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING,
+              "byte-stream", "alignment", G_TYPE_STRING, "au", NULL);
 
-    GstElement *dec = gst_element_factory_make("vp8dec", nullptr);
+        g_object_set(G_OBJECT(src), "caps", app_src_caps, "format", GST_FORMAT_TIME, NULL);
+        gst_caps_unref(app_src_caps);
+
+        dec = gst_element_factory_make("avdec_h264", NULL);
+    } else {
+        GstCaps *app_src_caps = gst_caps_new_simple("video/x-vp8", nullptr, nullptr);
+        g_object_set(G_OBJECT(src), "format", GST_FORMAT_TIME, "caps", app_src_caps, nullptr);
+        gst_caps_unref(app_src_caps);
+
+        dec = gst_element_factory_make("vp8dec", nullptr);
+    }
     GstElement *convert = gst_element_factory_make("videoconvert", nullptr);
     GstElement *filter = gst_element_factory_make("capsfilter", "I420toRGBCapsfilter");
     GstCaps *filter_caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "BGR", NULL);
@@ -154,7 +171,9 @@ void SinkStreamManager::OnSignalHandOff(GstElement *object, GstBuffer *buffer, G
         return;
     }
     RET_IF(vinfo.width == 0 || vinfo.height == 0 || vinfo.finfo == nullptr);
-    manager->SetFormat(vinfo.finfo->name, vinfo.width, vinfo.height);
+    manager->SetMediaFormat(vinfo.finfo->name);
+    manager->SetWidth(vinfo.width);
+    manager->SetHeight(vinfo.height);
     manager->HandleFrame(buffer);
 }
 
@@ -198,8 +217,6 @@ void SinkStreamManager::HandleStartStream(const std::string &discovery_id)
 
 void SinkStreamManager::AddStream(const std::string &discovery_id)
 {
-    SetWebRtcStreamCallbacks(stream_);
-    stream_.Create(false, need_display_);
     stream_.Start();
 
     std::stringstream s_stream;
@@ -276,6 +293,12 @@ std::vector<uint8_t> SinkStreamManager::GetDiscoveryMessage(void)
 void SinkStreamManager::SetOnFrameCallback(OnFrameCallback cb)
 {
     request_server_.SetOnFrameCallback(cb);
+}
+
+int SinkStreamManager::Push(void *obj)
+{
+    DBG("Not supported");
+    return -1;
 }
 
 }  // namespace AittWebRTCNamespace

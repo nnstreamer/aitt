@@ -34,15 +34,18 @@ class WebRtcStream {
   public:
     WebRtcStream();
     ~WebRtcStream();
-    bool Create(bool is_source, bool need_display);
     void Destroy(void);
     bool Start(void);
     bool Stop(void);
-    bool AttachCameraSource(void);
-    bool AttachMediaPacketSource(void);
-    bool DetachSource(void);
+    int Push(void *obj);
+    void SetSourceType(webrtc_media_source_type_e source_type);
+    bool ActivateSource(void);
+    bool DeactivateSource(void);
     bool SetVideoResolution(int width, int height);
     bool SetVideoFrameRate(int frame_rate);
+    bool SetMediaFormat(int width, int height, int frame_rate, const std::string &format);
+    void SetDecodeCodec(const std::string &codec);
+    void AddDataChannel(void);
     void AttachSignals(bool is_source, bool need_display);
     void DetachSignals(void);
     // Cautions : Event handler is not a pointer. So, change event_handle after Set Event handler
@@ -70,6 +73,7 @@ class WebRtcStream {
     std::string GetLocalDescription(void) const { return local_description_; };
 
     void PrintStats(void);
+    bool IsPlayingState(void);
 
   private:
     static void OnOfferCreated(webrtc_h webrtc, const char *description, void *user_data);
@@ -90,12 +94,16 @@ class WebRtcStream {
     static void OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsigned int id,
           void *user_data);
     static void OnDataChannelOpen(webrtc_data_channel_h channel, void *user_data);
+    static void OnBufferStateChanged(unsigned int id,
+          webrtc_media_packet_source_buffer_state_e state, void *user_data);
     bool IsNegotiatingState(void);
-    bool IsPlayingState(void);
     bool IsRedundantCandidate(const std::string &candidate);
+    static void *GetMediaFormatHandler(int width, int height, int frame_rate,
+          const std::string &format);
 
   private:
     webrtc_h webrtc_handle_;
+    webrtc_media_source_type_e source_type_;
     webrtc_data_channel_h channel_;
     unsigned int source_id_;
     std::string local_description_;

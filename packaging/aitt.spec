@@ -21,7 +21,6 @@ BuildRequires: pkgconfig(gmock_main)
 BuildRequires: pkgconfig(libmosquitto)
 BuildRequires: pkgconfig(openssl1.1)
 %if %{use_glib}
-BuildRequires: pkgconfig(capi-media-camera)
 BuildRequires: pkgconfig(capi-media-player)
 BuildRequires: pkgconfig(capi-media-image-util)
 BuildRequires: pkgconfig(capi-media-sound-manager)

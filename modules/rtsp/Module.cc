@@ -168,6 +168,11 @@ void Module::Stop(void)
     }
 }
 
+int Module::Push(void *obj)
+{
+    return AITT_ERROR_NOT_SUPPORTED;
+}
+
 void Module::UpdateDiscoveryMsg()
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER)
