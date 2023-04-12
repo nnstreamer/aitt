@@ -261,13 +261,15 @@ void TCP::SendSizedDataSecure(const void *data, int32_t data_size)
 
     int32_t size_len;
     if (data_size) {
-        unsigned char data_buf[crypto.GetCryptogramSize(data_size)];
+        unsigned char *data_buf =
+              static_cast<unsigned char *>(malloc(crypto.GetCryptogramSize(data_size)));
         int32_t data_len =
               crypto.Encrypt(static_cast<const unsigned char *>(data), data_size, data_buf);
         unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len = crypto.Encrypt((unsigned char *)&data_len, sizeof(data_len), size_buf);
         Send(size_buf, size_len);
         Send(data_buf, data_len);
+        free(data_buf);
     } else {
         unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len =
@@ -299,7 +301,7 @@ int32_t TCP::RecvSizedDataSecure(void **data)
         ERR("Invalid Size(%d)", cipher_data_len);
         return -1;
     }
-    unsigned char cipher_data_buf[cipher_data_len];
+    unsigned char *cipher_data_buf = static_cast<unsigned char *>(malloc(cipher_data_len));
     Recv(cipher_data_buf, cipher_data_len);
     unsigned char *data_buf = static_cast<unsigned char *>(malloc(cipher_data_len));
     result = crypto.Decrypt(cipher_data_buf, cipher_data_len, data_buf);
@@ -309,6 +311,7 @@ int32_t TCP::RecvSizedDataSecure(void **data)
     } else {
         *data = data_buf;
     }
+    free(cipher_data_buf);
     return result;
 }
 

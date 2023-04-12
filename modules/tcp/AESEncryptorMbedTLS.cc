@@ -16,6 +16,7 @@
 #include "AESEncryptorMbedTLS.h"
 
 #include <mbedtls/aes.h>
+#include <stdlib.h>
 
 #include "aitt_internal.h"
 
@@ -29,7 +30,8 @@ int AESEncryptorMbedTLS::Encrypt(const unsigned char *plaintext, int plaintext_l
 
     const int BLOCKSIZE = AITT_TCP_ENCRYPTOR_BLOCK_SIZE;
     int padding_len = BLOCKSIZE - (plaintext_len % BLOCKSIZE);
-    unsigned char padding_buffer[plaintext_len + padding_len];
+    unsigned char *padding_buffer =
+          static_cast<unsigned char *>(malloc(plaintext_len + padding_len));
 
     memcpy(padding_buffer, plaintext, plaintext_len);
     for (int i = 0; i < padding_len; i++)
@@ -43,6 +45,7 @@ int AESEncryptorMbedTLS::Encrypt(const unsigned char *plaintext, int plaintext_l
     mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, plaintext_len + padding_len, iv,
           padding_buffer, ciphertext);
 
+    free(padding_buffer);
     return plaintext_len + padding_len;
 }
 
