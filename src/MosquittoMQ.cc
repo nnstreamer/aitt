@@ -134,15 +134,15 @@ void MosquittoMQ::Connect(const std::string &host, int port, const std::string &
         }
     }
 
-    ret = mosquitto_loop_start(handle);
-    if (ret != MOSQ_ERR_SUCCESS) {
-        ERR("mosquitto_loop_start() Fail(%s)", mosquitto_strerror(ret));
-        throw AittException(AittException::MQTT_ERR);
-    }
-
     ret = mosquitto_connect(handle, host.c_str(), port, keep_alive);
     if (ret != MOSQ_ERR_SUCCESS) {
         ERR("mosquitto_connect(%s, %d) Fail(%s)", host.c_str(), port, mosquitto_strerror(ret));
+        throw AittException(AittException::MQTT_ERR);
+    }
+
+    ret = mosquitto_loop_start(handle);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        ERR("mosquitto_loop_start() Fail(%s)", mosquitto_strerror(ret));
         throw AittException(AittException::MQTT_ERR);
     }
 }
