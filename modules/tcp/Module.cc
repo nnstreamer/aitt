@@ -201,21 +201,21 @@ void *Module::Unsubscribe(void *handlePtr)
     if (!listen_info)
         return nullptr;
 
-    auto it = subscribeTable.find(listen_info->topic);
-    if (it == subscribeTable.end())
-        throw std::runtime_error("Service is not registered: " + listen_info->topic);
-
-    subscribeTable.erase(it);
-
-    UpdateDiscoveryMsg();
-
     void *cbdata = listen_info->cbdata;
     for (auto fd : listen_info->client_list) {
         TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(fd));
         delete tcp_data;
     }
     listen_info->client_list.clear();
+
+    auto it = subscribeTable.find(listen_info->topic);
+    if (it == subscribeTable.end())
+        throw std::runtime_error("Service is not registered: " + listen_info->topic);
+
+    subscribeTable.erase(it);
     delete listen_info;
+
+    UpdateDiscoveryMsg();
 
     return cbdata;
 }
@@ -392,7 +392,6 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
 
 int Module::HandleClientDisconnect(int handle)
 {
-    std::lock_guard<std::mutex> autoLock(subscribeTableLock);
     TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(handle));
     if (tcp_data == nullptr) {
         ERR("No watch data");
@@ -408,6 +407,7 @@ int Module::HandleClientDisconnect(int handle)
 
 void Module::GetMsgInfo(AittMsg &msg, Module::TCPData *tcp_data)
 {
+    std::lock_guard<std::mutex> autoLock(subscribeTableLock);
     int32_t info_length = 0;
     void *msg_info = nullptr;
     info_length = tcp_data->client->RecvSizedData(&msg_info);

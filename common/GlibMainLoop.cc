@@ -84,7 +84,6 @@ void GlibMainLoop::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_dat
     g_source_set_callback(source, (GSourceFunc)EventHandler, cb_data, DestroyNotify);
 
     g_source_attach(source, ctx);
-
     g_source_unref(source);
 
     callback_table_lock.lock();
@@ -97,15 +96,13 @@ GlibMainLoop::MainLoopData *GlibMainLoop::RemoveWatch(int fd)
     GSource *source;
     MainLoopData *user_data = nullptr;
 
-    {
-        std::lock_guard<std::mutex> autoLock(callback_table_lock);
-        auto it = callback_table.find(fd);
-        if (it == callback_table.end())
-            return user_data;
-        source = it->second.first;
-        user_data = it->second.second->data;
-        callback_table.erase(it);
-    }
+    std::lock_guard<std::mutex> autoLock(callback_table_lock);
+    auto it = callback_table.find(fd);
+    if (it == callback_table.end())
+        return user_data;
+    source = it->second.first;
+    user_data = it->second.second->data;
+    callback_table.erase(it);
 
     g_source_destroy(source);
     return user_data;

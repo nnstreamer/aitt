@@ -343,7 +343,6 @@ TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
               });
 
         IterateEventLoop();
-        sleep(1);
         ASSERT_FALSE(ready2);
         ASSERT_TRUE(ready);
     } catch (std::exception &e) {
