@@ -25,6 +25,7 @@
 
 using AittDiscovery = aitt::AittDiscovery;
 using AittStreamModule = aitt::AittStreamModule;
+using AittStream = aitt::AittStream;
 
 #define MODULE_NAMESPACE AittRTSPNamespace
 namespace AittRTSPNamespace {
@@ -33,8 +34,8 @@ class Module : public AittStreamModule {
     explicit Module(AittDiscovery &discovery, const std::string &topic, AittStreamRole role);
     virtual ~Module(void);
 
-    int SetConfig(const std::string &key, const std::string &value) override;
-    int SetConfig(const std::string &key, void *obj) override;
+    AittStream *SetConfig(const std::string &key, const std::string &value) override;
+    AittStream *SetConfig(const std::string &key, void *obj) override;
     std::string GetFormat(void) override;
     int GetWidth(void) override;
     int GetHeight(void) override;

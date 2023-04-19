@@ -19,6 +19,7 @@
 #include <flatbuffers/flexbuffers.h>
 
 #include "aitt_internal.h"
+#include "AittException.h"
 
 #define RTSP_DBG(fmt, ...)                                       \
     do {                                                         \
@@ -75,13 +76,13 @@ Module::~Module(void)
     discovery_.RemoveDiscoveryCB(discovery_cb_);
 }
 
-int Module::SetConfig(const std::string &key, const std::string &value)
+AittStream *Module::SetConfig(const std::string &key, const std::string &value)
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_PUBLISHER) {
         if (key == "URI") {
             if (value.find("rtsp://") != 0) {
                 RTSP_ERR("rtsp uri validation check failed");
-                return AITT_ERROR_INVALID_PARAMETER;
+                throw aitt::AittException(aitt::AittException::INVALID_ARG);
             }
 
             info.SetURI(value);
@@ -97,15 +98,15 @@ int Module::SetConfig(const std::string &key, const std::string &value)
                 fps = std::stoi(value);
             } catch (std::exception &e) {
                 RTSP_ERR("An exception(%s) occurs during SetFPS().", e.what());
-                return AITT_ERROR_INVALID_PARAMETER;
+                throw aitt::AittException(aitt::AittException::INVALID_ARG);
             }
             client.SetFPS(fps);
         }
     }
-    return AITT_ERROR_NONE;
+    return this;
 }
 
-int Module::SetConfig(const std::string &key, void *obj)
+AittStream *Module::SetConfig(const std::string &key, void *obj)
 {
     if (role_ == AittStreamRole::AITT_STREAM_ROLE_SUBSCRIBER) {
         if (key == "display") {
@@ -114,7 +115,7 @@ int Module::SetConfig(const std::string &key, void *obj)
         }
     }
 
-    return AITT_ERROR_NONE;
+    return this;
 }
 
 std::string Module::GetFormat(void)

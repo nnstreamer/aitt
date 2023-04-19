@@ -59,10 +59,10 @@ Module::~Module(void)
         delete stream_manager_;
 }
 
-int Module::SetConfig(const std::string &key, const std::string &value)
+AittStream *Module::SetConfig(const std::string &key, const std::string &value)
 {
     if (stream_manager_->IsStarted())
-        return AITT_ERROR_RESOURCE_BUSY;
+        throw aitt::AittException(aitt::AittException::RESOURCE_BUSY_ERR);
 
     try {
         if (key == "WIDTH" && std::stoi(value) > 0)
@@ -78,17 +78,17 @@ int Module::SetConfig(const std::string &key, const std::string &value)
         else if (key == "DECODE_CODEC")
             stream_manager_->SetDecodeCodec(value);
         else
-            return AITT_ERROR_INVALID_PARAMETER;
+            throw aitt::AittException(aitt::AittException::INVALID_ARG);
     } catch (std::exception &e) {
         DBG("exception while setting");
-        return AITT_ERROR_INVALID_PARAMETER;
+        throw aitt::AittException(aitt::AittException::INVALID_ARG);
     }
-    return AITT_ERROR_NONE;
+    return this;
 }
 
-int Module::SetConfig(const std::string &key, void *obj)
+AittStream *Module::SetConfig(const std::string &key, void *obj)
 {
-    return AITT_ERROR_NONE;
+    return this;
 }
 
 std::string Module::GetFormat(void)

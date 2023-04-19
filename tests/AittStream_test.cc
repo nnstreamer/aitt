@@ -83,9 +83,6 @@ TEST_F(AITTWEBRTCTest, Default_P)
 TEST_F(AITTWEBRTCTest, Set_Resolution_P)
 {
     try {
-        publisher->SetConfig("WIDTH", std::to_string(SD_WIDTH));
-        publisher->SetConfig("HEIGHT", std::to_string(SD_HEIGHT));
-
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   if (stream == nullptr) {
@@ -101,7 +98,10 @@ TEST_F(AITTWEBRTCTest, Set_Resolution_P)
               },
               nullptr);
         subscriber->Start();
-        publisher->Start();
+
+        publisher->SetConfig("WIDTH", std::to_string(SD_WIDTH))
+              ->SetConfig("HEIGHT", std::to_string(SD_HEIGHT))
+              ->Start();
 
         g_main_loop_run(main_loop);
     } catch (std::exception &e) {
@@ -115,10 +115,6 @@ TEST_F(AITTWEBRTCTest, Set_Resolution_P)
 TEST_F(AITTWEBRTCTest, Set_Resolution_Frame_Rate_P)
 {
     try {
-        publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH));
-        publisher->SetConfig("HEIGHT", std::to_string(HD_HEIGHT));
-        publisher->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10));
-
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   if (stream == nullptr) {
@@ -134,7 +130,11 @@ TEST_F(AITTWEBRTCTest, Set_Resolution_Frame_Rate_P)
               },
               nullptr);
         subscriber->Start();
-        publisher->Start();
+
+        publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH))
+              ->SetConfig("HEIGHT", std::to_string(HD_HEIGHT))
+              ->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10))
+              ->Start();
 
         g_main_loop_run(main_loop);
     } catch (std::exception &e) {
@@ -146,12 +146,6 @@ TEST_F(AITTWEBRTCTest, Set_Resolution_Frame_Rate_P)
 TEST_F(AITTWEBRTCTest, Set_Source_Type_Media_Packet_P)
 {
     try {
-        publisher->SetConfig("SOURCE_TYPE", "MEDIA_PACKET");
-        publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH));
-        publisher->SetConfig("HEIGHT", std::to_string(HD_HEIGHT));
-        publisher->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10));
-        publisher->SetConfig("MEDIA_FORMAT", MEDIA_FORMAT_I420);
-
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   if (stream == nullptr) {
@@ -165,7 +159,13 @@ TEST_F(AITTWEBRTCTest, Set_Source_Type_Media_Packet_P)
               },
               nullptr);
         subscriber->Start();
-        publisher->Start();
+
+        publisher->SetConfig("SOURCE_TYPE", "MEDIA_PACKET")
+              ->SetConfig("WIDTH", std::to_string(HD_WIDTH))
+              ->SetConfig("HEIGHT", std::to_string(HD_HEIGHT))
+              ->SetConfig("FRAME_RATE", std::to_string(FRAME_RATE_10))
+              ->SetConfig("MEDIA_FORMAT", MEDIA_FORMAT_I420)
+              ->Start();
 
         g_main_loop_run(main_loop);
     } catch (std::exception &e) {
@@ -205,11 +205,12 @@ class AITTRTSPTest : public testing::Test {
 TEST_F(AITTRTSPTest, Publisher_First_P)
 {
     try {
-        publisher->SetConfig("URI",
-              "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
-        publisher->SetConfig("ID", "admin");
-        publisher->SetConfig("Password", "admin");
-        publisher->Start();
+        publisher
+              ->SetConfig("URI",
+                    "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64")
+              ->SetConfig("ID", "admin")
+              ->SetConfig("Password", "admin")
+              ->Start();
 
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
@@ -239,14 +240,14 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
                   main_loop.Quit();
               },
               nullptr);
-        subscriber->SetConfig("FPS", "1");
-        subscriber->Start();
+        subscriber->SetConfig("FPS", "1")->Start();
 
-        publisher->SetConfig("URI",
-              "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
-        publisher->SetConfig("ID", "admin");
-        publisher->SetConfig("Password", "admin");
-        publisher->Start();
+        publisher
+              ->SetConfig("URI",
+                    "rtsp://192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64")
+              ->SetConfig("ID", "admin")
+              ->SetConfig("Password", "admin")
+              ->Start();
 
         main_loop.Run();
     } catch (std::exception &e) {
