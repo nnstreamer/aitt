@@ -32,7 +32,6 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
-import com.samsung.android.aitt.stream.AittStreamConfigBuilder;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,8 +48,8 @@ public class RTSPInstrumentedTest {
     private static final String RTSP_URL = "rtsp://192.168.1.4:1935";
     private static final String USERNAME = "username";
     private static final String PASSWORD = "password";
-    private static final int WIDTH = 640;
-    private static final int HEIGHT = 480;
+    private static final String WIDTH = "640";
+    private static final String HEIGHT = "480";
 
     private static String brokerIp;
     private static String wifiIP;
@@ -84,11 +83,8 @@ public class RTSPInstrumentedTest {
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setHeight(HEIGHT);
-            builder.setWidth(WIDTH);
-            publisher.setConfig(builder.build());
+            publisher.setConfig("URI", RTSP_URL).setConfig("ID", null).setConfig("PASSWORD", null).setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
+
             publisher.start();
 
             publisher.stop();
@@ -117,13 +113,9 @@ public class RTSPInstrumentedTest {
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId("");
-            builder.setPassword("");
-            builder.setHeight(HEIGHT);
-            builder.setWidth(WIDTH);
-            publisher.setConfig(builder.build());
+
+            publisher.setConfig("URI", RTSP_URL).setConfig("ID", "").setConfig("PASSWORD", "").setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
+
             publisher.start();
 
             publisher.stop();
@@ -152,13 +144,9 @@ public class RTSPInstrumentedTest {
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId(USERNAME);
-            builder.setPassword(PASSWORD);
-            builder.setHeight(HEIGHT);
-            builder.setWidth(WIDTH);
-            publisher.setConfig(builder.build());
+
+            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
+
             publisher.start();
 
             publisher.stop();
@@ -179,12 +167,9 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId(USERNAME);
-            builder.setPassword(PASSWORD);
-            builder.setWidth(WIDTH);
-            publisher.setConfig(builder.build());
+
+            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("WIDTH", WIDTH);
+
             publisher.start();
 
             publisher.stop();
@@ -202,12 +187,9 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId(USERNAME);
-            builder.setPassword(PASSWORD);
-            builder.setHeight(HEIGHT);
-            publisher.setConfig(builder.build());
+
+            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("HEIGHT", HEIGHT);
+
             publisher.start();
 
             publisher.stop();
@@ -224,12 +206,8 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId(USERNAME);
-            builder.setPassword(PASSWORD);
-            builder.setHeight(-1);
-            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig(builder.build()));
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig("HEIGHT", "-1"));
 
             publisher.disconnect();
         } catch (Exception e) {
@@ -244,16 +222,59 @@ public class RTSPInstrumentedTest {
             aitt.connect(brokerIp, PORT);
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            AittStreamConfigBuilder builder = new AittStreamConfigBuilder();
-            builder.setUrl(RTSP_URL);
-            builder.setId(USERNAME);
-            builder.setPassword(PASSWORD);
-            builder.setWidth(-1);
-            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig(builder.build()));
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig("WIDTH", "-1"));
 
             publisher.disconnect();
         } catch (Exception e) {
             fail("Failed testRTSPStreamInvalidWidth, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testRTSPSetNullKey_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);
+            aitt.connect(brokerIp, PORT);
+
+            AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig(null, "value"));
+
+            publisher.disconnect();
+        } catch (Exception e) {
+            fail("Failed testRTSPSetNullKey, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testRTSPStreamConfigInvalidKey_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);
+            aitt.connect(brokerIp, PORT);
+
+            AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig("KEY", "value"));
+
+            publisher.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamConfigInvalidKey, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testSetConfigInvalidRole_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);
+            aitt.connect(brokerIp, PORT);
+
+            AittStream subscriber = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, SUBSCRIBER);
+
+            assertThrows(IllegalArgumentException.class, () -> subscriber.setConfig("URI", RTSP_URL));
+
+        } catch (Exception e) {
+            fail("Failed testSetConfigInvalidRole, (" + e + ")");
         }
     }
 

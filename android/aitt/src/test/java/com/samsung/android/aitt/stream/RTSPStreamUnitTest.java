@@ -29,8 +29,8 @@ public class RTSPStreamUnitTest {
    private final String url = "rtsp://192.168.1.4:1935";
    private final String id = "id1";
    private final String password = "pwd1";
-   private final int height = 640;
-   private final int width = 480;
+   private final String height = "640";
+   private final String width = "480";
 
    @Test
    public void testCreatePublisherStream_P() {
@@ -57,32 +57,16 @@ public class RTSPStreamUnitTest {
    @Test
    public void testSetConfig_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
-      assertNotNull("RTSPStream is not null", rtspStream);
 
-      AittStreamConfigBuilder configBuilder = new AittStreamConfigBuilder();
-      configBuilder.setUrl(url);
-      configBuilder.setId(id);
-      configBuilder.setPassword(password);
-      configBuilder.setHeight(height);
-      configBuilder.setWidth(width);
-      rtspStream.setConfig(configBuilder.build());
-   }
-
-   @Test
-   public void testSetNullConfig_N() {
-      RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
-
-      assertThrows(IllegalArgumentException.class, () -> rtspStream.setConfig(null));
+      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
    }
 
    @Test
    public void testSetConfigInvalidUrl_N() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
 
-      AittStreamConfigBuilder configBuilder = new AittStreamConfigBuilder();
       String url = "192.168.1.4:1935";
-      configBuilder.setUrl(url);
-      assertThrows(IllegalArgumentException.class, () -> rtspStream.setConfig(configBuilder.build()));
+      assertThrows(IllegalArgumentException.class, () -> rtspStream.setConfig("URI", url));
    }
 
    @Test
@@ -95,13 +79,7 @@ public class RTSPStreamUnitTest {
    public void testStartPublisher_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
 
-      AittStreamConfigBuilder configBuilder = new AittStreamConfigBuilder();
-      configBuilder.setUrl(url);
-      configBuilder.setId(id);
-      configBuilder.setPassword(password);
-      configBuilder.setHeight(height);
-      configBuilder.setWidth(width);
-      rtspStream.setConfig(configBuilder.build());
+      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
 
       rtspStream.setStateCallback(state -> assertEquals("Expected state is ready", state, AittStream.StreamState.READY));
 
@@ -112,13 +90,7 @@ public class RTSPStreamUnitTest {
    public void testStopPublisher_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
 
-      AittStreamConfigBuilder configBuilder = new AittStreamConfigBuilder();
-      configBuilder.setUrl(url);
-      configBuilder.setId(id);
-      configBuilder.setPassword(password);
-      configBuilder.setHeight(height);
-      configBuilder.setWidth(width);
-      rtspStream.setConfig(configBuilder.build());
+      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
 
       AtomicBoolean isStarted = new AtomicBoolean(false);
       rtspStream.setStateCallback(state -> {

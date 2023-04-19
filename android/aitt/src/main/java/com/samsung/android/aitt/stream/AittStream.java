@@ -51,7 +51,7 @@ public interface AittStream {
     /**
      * Method to set configuration
      */
-    void setConfig(AittStreamConfig config);
+    AittStream setConfig(String key, String value);
 
     /**
      * Method to start stream

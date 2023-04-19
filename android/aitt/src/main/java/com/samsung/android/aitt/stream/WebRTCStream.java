@@ -102,27 +102,36 @@ public final class WebRTCStream implements AittStream {
     }
 
     @Override
-    public void setConfig(AittStreamConfig config) {
-        if (config == null)
-            throw new IllegalArgumentException("Invalid configuration");
+    public AittStream setConfig(String key, String value) {
+        if (streamRole == StreamRole.SUBSCRIBER)
+            throw new IllegalArgumentException("The role of this stream is not publisher");
 
-        int width = config.getWidth();
-        if (width < 0) {
-            throw new IllegalArgumentException("Invalid frame width");
-        } else if (width == 0) {
-            streamInfo.frameWidth = DEFAULT_STREAM_WIDTH;
-        } else {
-            streamInfo.frameWidth = width;
-        }
+        if (key == null)
+            throw new IllegalArgumentException("Invalid key");
 
-        int height = config.getHeight();
-        if (height < 0) {
-            throw new IllegalArgumentException("Invalid frame height");
-        } else if (height == 0) {
-            streamInfo.frameHeight = DEFAULT_STREAM_HEIGHT;
-        } else {
-            streamInfo.frameHeight = height;
+        switch (key) {
+            case "HEIGHT":
+                int height = Integer.parseInt(value);
+                if (height == 0)
+                    streamInfo.frameHeight = DEFAULT_STREAM_HEIGHT;
+                else if (height < 0)
+                    throw new IllegalArgumentException("Invalid frame height");
+                else
+                    streamInfo.frameHeight = height;
+                break;
+            case "WIDTH":
+                int width = Integer.parseInt(value);
+                if (width == 0)
+                    streamInfo.frameWidth = DEFAULT_STREAM_WIDTH;
+                else if (width < 0)
+                    throw new IllegalArgumentException("Invalid frame width");
+                else
+                    streamInfo.frameWidth = width;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid key");
         }
+        return this;
     }
 
     @Override

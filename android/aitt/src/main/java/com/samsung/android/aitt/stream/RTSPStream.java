@@ -80,10 +80,10 @@ public class RTSPStream implements AittStream {
      */
     private static class DiscoveryInfo {
         private String url;
-        private String id;
-        private String password;
-        private int height;
-        private int width;
+        private String id = EMPTY_STRING;
+        private String password = EMPTY_STRING;
+        private int height = DEFAULT_HEIGHT;
+        private int width = DEFAULT_WIDTH;
     }
 
     /**
@@ -116,50 +116,58 @@ public class RTSPStream implements AittStream {
 
     /**
      * Method to set configuration
-     *
-     * @param config AittStreamConfig object
+     * @param key Key is the parameter to be configured
+     * @param value Value is the value specific to the key
+     * @return Returns AittStream object
      */
     @Override
-    public void setConfig(AittStreamConfig config) {
-        if (config == null)
-            throw new IllegalArgumentException("Invalid configuration");
+    public AittStream setConfig(String key, String value) {
+        if (streamRole == StreamRole.SUBSCRIBER)
+            throw new IllegalArgumentException("The role of this stream is not publisher");
 
-        String url = config.getUrl();
-        if (url == null || !url.startsWith(URL_PREFIX)) {
-            throw new IllegalArgumentException("Invalid RTSP URL");
+        if (key == null)
+            throw new IllegalArgumentException("Invalid key");
+
+        switch (key) {
+            case "URI":
+                if (value == null || !value.startsWith(URL_PREFIX))
+                    throw new IllegalArgumentException("Invalid RTSP URL");
+                discoveryInfo.url = value;
+                break;
+            case "ID":
+                if (value != null)
+                    discoveryInfo.id = value;
+                else
+                    discoveryInfo.id = EMPTY_STRING;
+                break;
+            case "PASSWORD":
+                if (value != null)
+                    discoveryInfo.password = value;
+                else
+                    discoveryInfo.password = EMPTY_STRING;
+                break;
+            case "HEIGHT":
+                int height = Integer.parseInt(value);
+                if (height == 0)
+                    discoveryInfo.height = DEFAULT_HEIGHT;
+                else if (height < 0)
+                    throw new IllegalArgumentException("Invalid stream height");
+                else
+                    discoveryInfo.height = height;
+                break;
+            case "WIDTH":
+                int width = Integer.parseInt(value);
+                if (width == 0)
+                    discoveryInfo.width = DEFAULT_WIDTH;
+                else if (width < 0)
+                    throw new IllegalArgumentException("Invalid stream width");
+                else
+                    discoveryInfo.width = width;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid key");
         }
-
-        discoveryInfo.url = url;
-
-        if (config.getId() != null) {
-            discoveryInfo.id = config.getId();
-        } else {
-            discoveryInfo.id = EMPTY_STRING;
-        }
-
-        if (config.getPassword() != null) {
-            discoveryInfo.password = config.getPassword();
-        } else {
-            discoveryInfo.password = EMPTY_STRING;
-        }
-
-        int height = config.getHeight();
-        if (height == 0) {
-            discoveryInfo.height = DEFAULT_HEIGHT;
-        } else if (height < 0) {
-            throw new IllegalArgumentException("Invalid stream height");
-        } else {
-            discoveryInfo.height = height;
-        }
-
-        int width = config.getWidth();
-        if (width == 0) {
-            discoveryInfo.width = DEFAULT_WIDTH;
-        } else if (width < 0) {
-            throw new IllegalArgumentException("Invalid stream width");
-        } else {
-            discoveryInfo.width = width;
-        }
+        return this;
     }
 
     /**
