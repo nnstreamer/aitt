@@ -324,9 +324,10 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            publisherStream.setConfig("WIDTH", "320").setConfig("HEIGHT", "240");
+            publisherStream.setConfig("WIDTH", "320")
+                    .setConfig("HEIGHT", "240")
+                    .start();
 
-            publisherStream.start();
             Log.i(TAG, "A WebRTC client and a publisher stream are created.");
 
             subscriberStream.start();
@@ -393,9 +394,9 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            publisherStream.setConfig("WIDTH", "320").setConfig("HEIGHT", "0");
-
-            publisherStream.start();
+            publisherStream.setConfig("WIDTH", "320")
+                    .setConfig("HEIGHT", "0")
+                    .start();
 
             publisherStream.disconnect();
         } catch (Exception e) {
@@ -410,9 +411,9 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            publisherStream.setConfig("HEIGHT", "240").setConfig("WIDTH", "0");
-
-            publisherStream.start();
+            publisherStream.setConfig("HEIGHT", "240")
+                    .setConfig("WIDTH", "0")
+                    .start();
 
             publisherStream.disconnect();
         } catch (Exception e) {
@@ -427,7 +428,8 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "-1").setConfig("HEIGHT", "240"));
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "-1")
+                                                                              .setConfig("HEIGHT", "240"));
 
             publisherStream.disconnect();
         } catch (Exception e) {
@@ -442,7 +444,8 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "320").setConfig("HEIGHT", "-1"));
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "320")
+                                                                              .setConfig("HEIGHT", "-1"));
 
             publisherStream.disconnect();
         } catch (Exception e) {

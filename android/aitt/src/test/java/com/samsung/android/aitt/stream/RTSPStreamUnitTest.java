@@ -58,7 +58,11 @@ public class RTSPStreamUnitTest {
    public void testSetConfig_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
 
-      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
+      rtspStream.setConfig("URI", url)
+              .setConfig("ID", id)
+              .setConfig("PASSWORD", password)
+              .setConfig("HEIGHT", height)
+              .setConfig("WIDTH", width);
    }
 
    @Test
@@ -79,18 +83,19 @@ public class RTSPStreamUnitTest {
    public void testStartPublisher_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
 
-      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
-
       rtspStream.setStateCallback(state -> assertEquals("Expected state is ready", state, AittStream.StreamState.READY));
 
-      rtspStream.start();
+      rtspStream.setConfig("URI", url)
+              .setConfig("ID", id)
+              .setConfig("PASSWORD", password)
+              .setConfig("HEIGHT", height)
+              .setConfig("WIDTH", width)
+              .start();
    }
 
    @Test
    public void testStopPublisher_P() {
       RTSPStream rtspStream = RTSPStream.createPublisherStream(topic, AittStream.StreamRole.PUBLISHER);
-
-      rtspStream.setConfig("URI", url).setConfig("ID", id).setConfig("PASSWORD", password).setConfig("HEIGHT", height).setConfig("WIDTH", width);
 
       AtomicBoolean isStarted = new AtomicBoolean(false);
       rtspStream.setStateCallback(state -> {
@@ -102,7 +107,12 @@ public class RTSPStreamUnitTest {
          }
       });
 
-      rtspStream.start();
+      rtspStream.setConfig("URI", url)
+              .setConfig("ID", id)
+              .setConfig("PASSWORD", password)
+              .setConfig("HEIGHT", height)
+              .setConfig("WIDTH", width)
+              .start();
 
       rtspStream.stop();
    }

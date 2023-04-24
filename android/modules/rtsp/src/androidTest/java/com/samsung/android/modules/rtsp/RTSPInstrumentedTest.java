@@ -83,9 +83,12 @@ public class RTSPInstrumentedTest {
             subscriber.start();
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
-            publisher.setConfig("URI", RTSP_URL).setConfig("ID", null).setConfig("PASSWORD", null).setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
-
-            publisher.start();
+            publisher.setConfig("URI", RTSP_URL)
+                    .setConfig("ID", null)
+                    .setConfig("PASSWORD", null)
+                    .setConfig("HEIGHT", HEIGHT)
+                    .setConfig("WIDTH", WIDTH)
+                    .start();
 
             publisher.stop();
             subscriber.stop();
@@ -114,9 +117,12 @@ public class RTSPInstrumentedTest {
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
 
-            publisher.setConfig("URI", RTSP_URL).setConfig("ID", "").setConfig("PASSWORD", "").setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
-
-            publisher.start();
+            publisher.setConfig("URI", RTSP_URL)
+                    .setConfig("ID", "")
+                    .setConfig("PASSWORD", "")
+                    .setConfig("HEIGHT", HEIGHT)
+                    .setConfig("WIDTH", WIDTH)
+                    .start();
 
             publisher.stop();
             subscriber.stop();
@@ -145,9 +151,12 @@ public class RTSPInstrumentedTest {
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
 
-            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("HEIGHT", HEIGHT).setConfig("WIDTH", WIDTH);
-
-            publisher.start();
+            publisher.setConfig("URI", RTSP_URL)
+                    .setConfig("ID", USERNAME)
+                    .setConfig("PASSWORD", PASSWORD)
+                    .setConfig("HEIGHT", HEIGHT)
+                    .setConfig("WIDTH", WIDTH)
+                    .start();
 
             publisher.stop();
             subscriber.stop();
@@ -168,9 +177,11 @@ public class RTSPInstrumentedTest {
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
 
-            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("WIDTH", WIDTH);
-
-            publisher.start();
+            publisher.setConfig("URI", RTSP_URL)
+                    .setConfig("ID", USERNAME)
+                    .setConfig("PASSWORD", PASSWORD)
+                    .setConfig("WIDTH", WIDTH)
+                    .start();
 
             publisher.stop();
             aitt.destroyStream(publisher);
@@ -188,9 +199,11 @@ public class RTSPInstrumentedTest {
 
             AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
 
-            publisher.setConfig("URI", RTSP_URL).setConfig("ID", USERNAME).setConfig("PASSWORD", PASSWORD).setConfig("HEIGHT", HEIGHT);
-
-            publisher.start();
+            publisher.setConfig("URI", RTSP_URL)
+                    .setConfig("ID", USERNAME)
+                    .setConfig("PASSWORD", PASSWORD)
+                    .setConfig("HEIGHT", HEIGHT)
+                    .start();
 
             publisher.stop();
             aitt.destroyStream(publisher);
