@@ -136,23 +136,21 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public void start() {
-        if (invalidWebRTC())
+        if (invalidWebRTC()) {
             return;
-
-        webrtc.registerIceCandidateAddedCallback(this::updateDiscoveryMessage);
-
-        FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
-        fbb.putString(START);
-        ByteBuffer buffer = fbb.finish();
-        byte[] data = new byte[buffer.remaining()];
-        buffer.get(data, 0, data.length);
-        if (jniInterface != null)
-            jniInterface.updateDiscoveryMessage(publishTopic, data);
-
-        if (streamRole == StreamRole.SUBSCRIBER && webrtc.getPeerDiscoveryId() != null) {
-            updateDiscoveryMessage();
         }
-
+        webrtc.registerIceCandidateAddedCallback(() -> publishDiscoveryMessage(generateDiscoveryMessage()));
+        if (streamRole == StreamRole.PUBLISHER) {
+            FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
+            fbb.putString(START);
+            ByteBuffer buffer = fbb.finish();
+            byte[] data = new byte[buffer.remaining()];
+            buffer.get(data, 0, data.length);
+            publishDiscoveryMessage(data);
+        } else if (streamRole == StreamRole.SUBSCRIBER && webrtc.getPeerDiscoveryId() != null) {
+            byte[] discData = generateDiscoveryMessage();
+            publishDiscoveryMessage(discData);
+        }
         updateState(StreamState.READY);
     }
 
@@ -313,7 +311,7 @@ public final class WebRTCStream implements AittStream {
         return hasId & hasPeerId & hasSdp & hasIceCandidate;
     }
 
-    private void updateDiscoveryMessage() {
+    private byte[] generateDiscoveryMessage() {
         FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
         {
             int smap = fbb.startMap();
@@ -334,11 +332,14 @@ public final class WebRTCStream implements AittStream {
         ByteBuffer buffer = fbb.finish();
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data, 0, data.length);
-
-        if (jniInterface != null)
-            jniInterface.updateDiscoveryMessage(publishTopic, data);
+        return data;
     }
 
+    private void publishDiscoveryMessage(byte[] data) {
+        if (jniInterface != null) {
+            jniInterface.updateDiscoveryMessage(publishTopic, data);
+        }
+    }
     private void updateState(StreamState state) {
         streamState = state;
         if (stateChangeCallback != null)
