@@ -51,10 +51,11 @@ class Module : public AittTransport {
     void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos, bool retain);
 
   private:
+    using Subscribe_CB_Info = std::pair<SubscribeCallback, void *>;
+
     struct TCPServerData : public MainLoopHandler::MainLoopData {
         Module *impl;
-        SubscribeCallback cb;
-        void *cbdata;
+        std::vector<std::unique_ptr<Subscribe_CB_Info>> cb_list;
         std::string topic;
         std::vector<int> client_list;
     };
@@ -69,7 +70,8 @@ class Module : public AittTransport {
     //    "/customTopic/mytopic": $serverHandle,
     //    ...
     // }
-    using SubscribeMap = std::map<std::string, std::unique_ptr<TCP::Server>>;
+    using SubscribeMap = std::map<TCPServerData *, std::unique_ptr<TCP::Server>>;
+    using SubscribeHandles = std::map<Subscribe_CB_Info *, TCPServerData *>;
 
     // ClientTable
     // map {
@@ -129,6 +131,7 @@ class Module : public AittTransport {
     PublishMap publishTable;
     std::mutex publishTableLock;
     SubscribeMap subscribeTable;
+    SubscribeHandles subscribe_handles;
     std::mutex subscribeTableLock;
     ClientMap clientTable;
     std::mutex clientTableLock;

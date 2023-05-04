@@ -88,6 +88,49 @@ class AITTTCPTest : public testing::Test, public AittTests {
             FAIL() << "Unexpected exception: " << e.what();
         }
     }
+    void TCP_SubscribeSameTopicTwiceTemplate(AittProtocol protocol)
+    {
+        try {
+            AITT aitt(clientId, LOCAL_IP);
+            aitt.Connect();
+
+            aitt.Subscribe(
+                  testTopic,
+                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                      AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
+                      test->ToggleReady();
+                  },
+                  static_cast<void *>(this), protocol);
+            aitt.Subscribe(
+                  testTopic,
+                  [&](AittMsg *handle, const void *msg, const int szmsg, void *cbdata) -> void {
+                      AITTTCPTest *test = static_cast<AITTTCPTest *>(cbdata);
+                      test->ToggleReady2();
+                  },
+                  static_cast<void *>(this), protocol);
+
+            usleep(100 * SLEEP_MS);
+            /*
+            while (aitt.CountSubscriber(testTopic, protocol) == 2) {
+                usleep(SLEEP_10MS);
+            }
+            */
+
+            aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), protocol);
+
+            mainLoop.AddTimeout(CHECK_INTERVAL,
+                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                        MainLoopHandler::MainLoopData *data) -> int {
+                      return ReadyAllCheck(static_cast<AittTests *>(this));
+                  });
+            IterateEventLoop();
+
+            ASSERT_TRUE(ready);
+            ASSERT_TRUE(ready2);
+        } catch (std::exception &e) {
+            FAIL() << "Unexpected exception: " << e.what();
+        }
+    }
 };
 
 TEST_F(AITTTCPTest, TCP_Wildcard_single_Anytime)
@@ -167,4 +210,14 @@ TEST_F(AITTTCPTest, SECURE_TCP_various_msg_Anytime)
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
+}
+
+TEST_F(AITTTCPTest, TCP_Subscribe_Same_Topic_twice_Anytime)
+{
+    TCP_SubscribeSameTopicTwiceTemplate(AITT_TYPE_TCP);
+}
+
+TEST_F(AITTTCPTest, Secure_TCP_Subscribe_Same_Topic_twice_Anytime)
+{
+    TCP_SubscribeSameTopicTwiceTemplate(AITT_TYPE_TCP_SECURE);
 }

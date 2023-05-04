@@ -66,6 +66,18 @@ class AittTests {
         return AITT_LOOP_EVENT_CONTINUE;
     }
 
+    int ReadyAllCheck(void *data)
+    {
+        AittTests *test = static_cast<AittTests *>(data);
+
+        if (test->ready && test->ready2) {
+            test->StopEventLoop();
+            return AITT_LOOP_EVENT_REMOVE;
+        }
+
+        return AITT_LOOP_EVENT_CONTINUE;
+    }
+
     void StopEventLoop(void) { mainLoop.Quit(); }
 
     void IterateEventLoop(void)
