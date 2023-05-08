@@ -81,29 +81,16 @@ class Module : public AittTransport {
     // }
     using ClientMap = std::map<std::string /* id */, std::string /* host */>;
 
-    // NOTE:
-    // There could be multiple clientIds for the single host
-    // If several applications are run on the same device, each applicaion will get unique client
-    // Ids therefore we have to keep in mind that the clientId is not 1:1 matched for the IPAddress.
-
     // PublishTable
     // map {
     //    "/customTopic/faceRecog": map {
-    //       $clientId: map {
-    //          11234: $clientHandle,
-    //          ...
-    //          21234: $clientHandle,
+    //       $clientId: pair { 11234: $clientHandle } //one topic has one port for each client.
+    //       ...
     //       },
     //    },
     // }
-    //
-    // NOTE:
-    // TCP handle should be the unique_ptr, so if we delete the entry from the map,
-    // the handle must be released automatically
-    // in order to make the handle "unique_ptr", it should be a class object not the "void *"
-    using PortMap =
-          std::map<TCP::ConnectInfo /* port */, std::unique_ptr<TCP>, TCP::ConnectInfo::Compare>;
-    using HostMap = std::map<std::string /* clientId */, PortMap>;
+    using PortInfo = std::pair<TCP::ConnectInfo /* port */, std::unique_ptr<TCP>>;
+    using HostMap = std::map<std::string /* clientId */, PortInfo>;
     using PublishMap = std::map<std::string /* topic */, HostMap>;
 
     static int AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,

@@ -75,10 +75,10 @@ TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
     } while (0);
 
     if (ret <= 0)
-        ret = errno;
+        ERR_CODE(errno, "TCP::TCP(%d) Fail", ret);
 
     free(addr);
-    if (handle >= 0 && close(handle) < 0)
+    if (0 <= handle && close(handle) < 0)
         ERR_CODE(errno, "close");
     throw std::runtime_error("TCP::TCP() Fail");
 }
@@ -315,7 +315,7 @@ int32_t TCP::RecvSizedDataSecure(void **data)
     return result;
 }
 
-TCP::ConnectInfo::ConnectInfo() : port(0), secure(false), key(), iv()
+TCP::ConnectInfo::ConnectInfo() : port(0), num_of_cb(0), secure(false), key(), iv()
 {
 }
 

@@ -28,15 +28,10 @@ class TCP {
   public:
     class Server;
     struct ConnectInfo {
-        struct Compare {
-            bool operator()(const ConnectInfo &lhs, const ConnectInfo &rhs) const
-            {
-                return lhs.port < rhs.port;
-            }
-        };
-
         ConnectInfo();
+
         unsigned short port;
+        int num_of_cb;
         bool secure;
         unsigned char key[AITT_TCP_ENCRYPTOR_KEY_LEN];
         unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];

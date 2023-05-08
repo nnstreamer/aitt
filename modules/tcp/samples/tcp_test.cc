@@ -25,7 +25,7 @@
 
 #include "../TCPServer.h"
 
-//#define _LOG_WITH_TIMESTAMP
+// #define _LOG_WITH_TIMESTAMP
 #include "aitt_internal.h"
 #ifdef _LOG_WITH_TIMESTAMP
 __thread __aitt__tls__ __aitt;
