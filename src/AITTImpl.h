@@ -26,6 +26,7 @@
 #include "AittDiscovery.h"
 #include "AittStream.h"
 #include "MQ.h"
+#include "MQDiscoveryHandler.h"
 #include "MainLoopHandler.h"
 #include "ModuleManager.h"
 
@@ -65,6 +66,8 @@ class AITT::Impl {
           AittStreamRole role);
     void DestroyStream(AittStream *aitt_stream);
 
+    int CountSubscriber(const std::string &topic, AittProtocol protocols);
+
   private:
     using Blob = std::pair<const void *, int>;
     using SubscribeInfo = std::pair<AittProtocol, void *>;
@@ -97,6 +100,8 @@ class AITT::Impl {
     std::string mqtt_broker_ip_;
     int mqtt_broker_port_;
     unsigned short reply_id;
+
+    MQDiscoveryHandler mq_discovery_handler;
 
 #ifdef ANDROID
     friend class AittDiscoveryHelper;

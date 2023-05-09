@@ -51,6 +51,7 @@ class AittTransport {
           const std::string &correlation) = 0;
     virtual void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos,
           bool retain) = 0;
+    virtual int CountSubscriber(const std::string &topic) = 0;
 
     AittProtocol GetProtocol() { return protocol; }
 

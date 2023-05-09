@@ -45,8 +45,9 @@ class AITTTest : public testing::Test, public AittTests {
               aitt_test, protocol);
 
         // Wait a few seconds until the AITT client gets a server list (discover devices)
-        DBG("Sleep %d ms", SLEEP_MS);
-        usleep(100 * SLEEP_MS);
+        while (aitt.CountSubscriber(testTopic, protocol) == 0) {
+            usleep(SLEEP_10MS);
+        }
 
         DBG("Publish(%s) : %s(%zu)", testTopic.c_str(), test_msg, strlen(test_msg));
         aitt.Publish(testTopic, test_msg, strlen(test_msg), protocol);
@@ -117,7 +118,9 @@ class AITTTest : public testing::Test, public AittTests {
                 aitt1.Connect();
 
                 // Wait a few seconds to the AITT client gets server list (discover devices)
-                usleep(100 * SLEEP_MS);
+                while (aitt1.CountSubscriber(TEST_STRESS_TOPIC, protocol) == 0) {
+                    usleep(SLEEP_10MS);
+                }
 
                 for (int i = 0; i < 10; i++) {
                     INFO("size = %zu", sizeof(dump_msg));
@@ -187,7 +190,9 @@ class AITTTest : public testing::Test, public AittTests {
                   static_cast<void *>(this), protocol);
 
             // Wait a few seconds to the AITT client gets server list (discover devices)
-            usleep(100 * SLEEP_MS);
+            while (aitt.CountSubscriber(testTopic, protocol) == 0) {
+                usleep(SLEEP_10MS);
+            }
 
             // NOTE:
             // Select target peers and send the data through the specified protocol - TCP
@@ -235,7 +240,9 @@ class AITTTest : public testing::Test, public AittTests {
                       static_cast<void *>(this), protocol);
 
                 // Wait a few seconds to the AITT client gets server list (discover devices)
-                usleep(100 * SLEEP_MS);
+                while (aitt.CountSubscriber(testTopic, protocol) == 0) {
+                    usleep(SLEEP_10MS);
+                }
 
                 aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
             });
@@ -252,6 +259,30 @@ class AITTTest : public testing::Test, public AittTests {
         } catch (std::exception &e) {
             FAIL() << "Unexpected exception: " << e.what();
         }
+    }
+
+    bool WaitDiscovery(AITT &aitt, std::string topic, int count, int max_ms = 2000)
+    {
+        int i = 0;
+        int max_loop = max_ms / 10;
+        int result = false;
+
+        for (i = 0; i < max_loop; ++i) {
+            if (aitt.CountSubscriber(topic) == count) {
+                result = true;
+                break;
+            }
+
+            usleep(SLEEP_10MS);
+        }
+
+        DBG("WAIT %d ms", i * SLEEP_10MS);
+        return result;
+    }
+
+    static void TempSubCallback(AittMsg *msg, const void *data, const int data_len, void *user_data)
+    {
+        DBG("TEMP CALLBACK");
     }
 };
 
@@ -687,8 +718,10 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
               static_cast<void *>(this), AITT_TYPE_MQTT);
 
         // Wait a few seconds to the AITT client gets server list (discover devices)
-        DBG("Sleep %d ms", SLEEP_MS);
-        usleep(100 * SLEEP_MS);
+        while (
+              aitt.CountSubscriber(testTopic, (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP)) < 2) {
+            usleep(SLEEP_10MS);
+        }
 
         DBG("Publish message to %s (%s) / %zu", testTopic.c_str(), TEST_MSG, sizeof(TEST_MSG));
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
@@ -704,6 +737,88 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
 
         ASSERT_TRUE(ready);
         ASSERT_TRUE(ready2);
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, CountSubscriber_P_Anytime)
+{
+    try {
+        AITT aitt_client1(clientId + std::string(".1"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_client2(clientId + std::string(".2"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_server(clientId + std::string(".server"), LOCAL_IP, AittOption(true, false));
+
+        aitt_client1.Connect();
+        aitt_client2.Connect();
+        aitt_server.Connect();
+
+        aitt_client1.Subscribe("topic1", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client1.Subscribe("topic1", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client1.Subscribe("topic2", TempSubCallback, nullptr, AITT_TYPE_TCP);
+        aitt_client1.Subscribe("topic1", TempSubCallback, nullptr, AITT_TYPE_TCP_SECURE);
+        aitt_client1.Subscribe("topic1", TempSubCallback, nullptr, AITT_TYPE_TCP_SECURE);
+
+        aitt_client2.Subscribe("topic2", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client1.Subscribe("topic2", TempSubCallback, nullptr, AITT_TYPE_TCP_SECURE);
+        aitt_client2.Subscribe("topic2", TempSubCallback, nullptr, AITT_TYPE_TCP);
+        aitt_client2.Subscribe("topic2", TempSubCallback, nullptr, AITT_TYPE_TCP);
+
+        ASSERT_TRUE(WaitDiscovery(aitt_server, std::string("topic1"), 4));
+        ASSERT_TRUE(WaitDiscovery(aitt_server, std::string("topic2"), 5));
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, CountSubscriber_Wildcard_Singlelevel_P_Anytime)
+{
+    try {
+        AITT aitt_client1(clientId + std::string(".1"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_client2(clientId + std::string(".2"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_server(clientId + std::string(".server"), LOCAL_IP, AittOption(true, false));
+
+        aitt_client1.Connect();
+        aitt_client2.Connect();
+        aitt_server.Connect();
+
+        aitt_client1.Subscribe("topic/+/single/level", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client1.Subscribe("topic/client/+/level", TempSubCallback, nullptr, AITT_TYPE_TCP);
+        aitt_client2.Subscribe("topic/client/single/+", TempSubCallback, nullptr,
+              AITT_TYPE_TCP_SECURE);
+
+        aitt_client2.Subscribe("topic2/client/+/+", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client2.Subscribe("topic2/+/single/+", TempSubCallback, nullptr, AITT_TYPE_TCP);
+        aitt_client1.Subscribe("topic2/+/+/level", TempSubCallback, nullptr, AITT_TYPE_TCP_SECURE);
+
+        aitt_client1.Subscribe("topic3/+/+/+", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+
+        ASSERT_TRUE(WaitDiscovery(aitt_server, "topic/client/single/level", 3));
+        ASSERT_TRUE(WaitDiscovery(aitt_server, "topic2/client/single/level", 3));
+        ASSERT_TRUE(WaitDiscovery(aitt_server, "topic3/client/single/level", 1));
+    } catch (std::exception &e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+TEST_F(AITTTest, CountSubscriber_Wildcard_Multilevel_P_Anytime)
+{
+    try {
+        AITT aitt_client1(clientId + std::string(".1"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_client2(clientId + std::string(".2"), LOCAL_IP, AittOption(true, false));
+        AITT aitt_server(clientId + std::string(".server"), LOCAL_IP, AittOption(true, false));
+
+        aitt_client1.Connect();
+        aitt_client2.Connect();
+        aitt_server.Connect();
+
+        aitt_client2.Subscribe("#", TempSubCallback, nullptr, AITT_TYPE_MQTT);
+        aitt_client1.Subscribe("topic/#", TempSubCallback, nullptr, AITT_TYPE_TCP);
+        aitt_client1.Subscribe("topic/client/#", TempSubCallback, nullptr, AITT_TYPE_TCP_SECURE);
+        aitt_client2.Subscribe("topic/client/multi/#", TempSubCallback, nullptr,
+              AITT_TYPE_TCP_SECURE);
+
+        ASSERT_TRUE(WaitDiscovery(aitt_server, "topic/client/multi/level", 4));
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }

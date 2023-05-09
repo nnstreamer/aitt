@@ -39,4 +39,6 @@ class NullTransport : public AittTransport {
 
     void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos,
           bool retain) override;
+
+    int CountSubscriber(const std::string &topic) override;
 };

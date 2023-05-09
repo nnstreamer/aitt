@@ -28,7 +28,8 @@
 
 #define TEST_MSG "This is aitt test message"
 #define TEST_MSG2 "This message is going to be delivered through a specified AittProtocol"
-#define SLEEP_MS 1000
+#define SLEEP_10MS 10000
+#define SLEEP_100MS 100000
 
 #define CHECK_INTERVAL 10
 

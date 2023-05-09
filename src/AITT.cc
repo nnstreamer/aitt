@@ -159,4 +159,9 @@ void AITT::DestroyStream(AittStream *aitt_stream)
     return pImpl->DestroyStream(aitt_stream);
 }
 
+int AITT::CountSubscriber(const std::string &topic, AittProtocol protocols)
+{
+    return pImpl->CountSubscriber(topic, protocols);
+}
+
 }  // namespace aitt

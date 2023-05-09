@@ -47,3 +47,8 @@ void NullTransport::SendReply(AittMsg* msg, const void* data, const int datalen,
       bool retain)
 {
 }
+
+int NullTransport::CountSubscriber(const std::string& topic)
+{
+    return 0;
+}

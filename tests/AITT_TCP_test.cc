@@ -62,8 +62,9 @@ class AITTTCPTest : public testing::Test, public AittTests {
                       static_cast<void *>(this), protocol);
 
                 // Wait a few seconds until the AITT client gets a server list (discover devices)
-                DBG("Sleep %d ms", SLEEP_MS);
-                usleep(100 * SLEEP_MS);
+                while (aitt.CountSubscriber("test/value1", protocol) == 0) {
+                    usleep(SLEEP_10MS);
+                }
 
                 aitt.Publish("test/value1", dump_msg, 12, protocol);
                 if (single_level) {
@@ -109,12 +110,9 @@ class AITTTCPTest : public testing::Test, public AittTests {
                   },
                   static_cast<void *>(this), protocol);
 
-            usleep(100 * SLEEP_MS);
-            /*
-            while (aitt.CountSubscriber(testTopic, protocol) == 2) {
+            while (aitt.CountSubscriber(testTopic, protocol) != 2) {
                 usleep(SLEEP_10MS);
             }
-            */
 
             aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), protocol);
 
@@ -193,7 +191,9 @@ TEST_F(AITTTCPTest, SECURE_TCP_various_msg_Anytime)
                         user_data, AITT_TYPE_TCP_SECURE);
 
                   // Wait a few seconds until the AITT client gets a server list (discover devices)
-                  usleep(100 * SLEEP_MS);
+                  while (aitt.CountSubscriber(testTopic, AITT_TYPE_TCP_SECURE) == 0) {
+                      usleep(SLEEP_10MS);
+                  }
 
                   for (int i = 1; i < static_cast<int>(data.size()); i *= 3) {
                       DBG("Publish(%s) : size(%d)", testTopic.c_str(), i);

@@ -49,6 +49,7 @@ class Module : public AittTransport {
     void PublishWithReply(const std::string &topic, const void *data, const int datalen,
           AittQoS qos, bool retain, const std::string &reply_topic, const std::string &correlation);
     void SendReply(AittMsg *msg, const void *data, const int datalen, AittQoS qos, bool retain);
+    int CountSubscriber(const std::string &topic);
 
   private:
     using Subscribe_CB_Info = std::pair<SubscribeCallback, void *>;

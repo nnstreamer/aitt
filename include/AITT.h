@@ -71,6 +71,9 @@ class API AITT {
     AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
           AittStreamRole role);
     void DestroyStream(AittStream *aitt_stream);
+    int CountSubscriber(const std::string &topic,
+          AittProtocol protocols = (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP
+                                                  | AITT_TYPE_TCP_SECURE));
 
   private:
     class Impl;

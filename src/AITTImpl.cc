@@ -22,6 +22,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "MQDiscoveryHandler.h"
 #include "MosquittoMQ.h"
 #include "aitt_internal.h"
 
@@ -34,7 +35,8 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
         modules(my_ip, discovery),
         id_(id),
         mqtt_broker_port_(0),
-        reply_id(0)
+        reply_id(0),
+        mq_discovery_handler(discovery, id)
 {
     if (option.GetUseCustomMqttBroker()) {
         mq = modules.NewCustomMQ(id, option);
@@ -145,6 +147,7 @@ void AITT::Impl::UnsubscribeAll()
         switch (subscribe_info->first) {
         case AITT_TYPE_MQTT:
             mq->Unsubscribe(subscribe_info->second);
+            mq_discovery_handler.Unsubscribe(subscribe_info->second);
             break;
         case AITT_TYPE_TCP:
         case AITT_TYPE_TCP_SECURE:
@@ -212,7 +215,7 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
 AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *loop_handle,
       const std::string &topic, const SubscribeCallback &cb, void *user_data, AittQoS qos)
 {
-    return mq->Subscribe(
+    AittSubscribeID subscribe_handle = mq->Subscribe(
           topic,
           [this, handle, loop_handle, cb](AittMsg *msg, const void *data, const int datalen,
                 void *mq_user_data) {
@@ -227,6 +230,10 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
               MainLoopHandler::AddIdle(loop_handle, idler_cb, nullptr);
           },
           user_data, qos);
+
+    mq_discovery_handler.Subscribe(subscribe_handle, topic);
+
+    return subscribe_handle;
 }
 
 int AITT::Impl::DetachedCB(SubscribeCallback cb, AittMsg msg, void *data, const int datalen,
@@ -259,6 +266,7 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     switch (found_info->first) {
     case AITT_TYPE_MQTT:
         user_data = mq->Unsubscribe(found_info->second);
+        mq_discovery_handler.Unsubscribe(found_info->second);
         break;
     case AITT_TYPE_TCP:
     case AITT_TYPE_TCP_SECURE:
@@ -444,6 +452,30 @@ void AITT::Impl::DestroyStream(AittStream *aitt_stream)
     }
     in_use_streams.erase(it);
     delete aitt_stream;
+}
+
+int AITT::Impl::CountSubscriber(const std::string &topic, AittProtocol protocols)
+{
+    int total = 0;
+
+    if (topic.find("+") != std::string::npos || topic.find("#") != std::string::npos) {
+        ERR("Not Support Wildcard in CountSubscriber");
+        return AITT_ERROR_NOT_SUPPORTED;
+    }
+
+    if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT) {
+        total += mq_discovery_handler.CountSubscriber(topic);
+    }
+
+    if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP) {
+        total += modules.Get(AITT_TYPE_TCP).CountSubscriber(topic);
+    }
+
+    if ((protocols & AITT_TYPE_TCP_SECURE) == AITT_TYPE_TCP_SECURE) {
+        total += modules.Get(AITT_TYPE_TCP_SECURE).CountSubscriber(topic);
+    }
+
+    return total;
 }
 
 }  // namespace aitt

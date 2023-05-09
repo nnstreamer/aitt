@@ -149,9 +149,9 @@ class AITTRRTest : public testing::Test, public AittTests {
                   if (status != AITT_CONNECTED)
                       return;
 
-                  usleep(CHECK_INTERVAL * SLEEP_MS);
+                  usleep(SLEEP_10MS);
                   while (!connect1) {
-                      usleep(SLEEP_MS);
+                      usleep(SLEEP_10MS);
                   }
                   using namespace std::placeholders;
                   auto replyCB = std::bind(&AITTRRTest::PublishSyncInCallback, GetHandle(), &handle,
@@ -208,20 +208,22 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
                 if (status != AITT_CONNECTED)
                     return;
                 aitt.Subscribe(
-                      rr_topic.c_str(),
+                      rr_topic,
                       [&](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
                           DBG("Subscribe Callback");
                           CheckSubscribe(msg, data, datalen);
-                          usleep(100 * SLEEP_MS);
+                          usleep(SLEEP_100MS);
                           aitt.SendReply(msg, reply.c_str(), reply.size());
                           sub_ok = true;
                       },
                       nullptr, protocol);
 
                 // Wait a few seconds until the AITT client gets a server list (discover devices)
-                usleep(100 * SLEEP_MS);
+                while (aitt.CountSubscriber(rr_topic, protocol) == 0) {
+                    usleep(SLEEP_10MS);
+                }
 
-                aitt.PublishWithReply(rr_topic.c_str(), message.c_str(), message.size(), protocol,
+                aitt.PublishWithReply(rr_topic, message.c_str(), message.size(), protocol,
                       AITT_QOS_AT_MOST_ONCE, false,
                       std::bind(&AITTRRTest::CheckReplyCallback, GetHandle(), true, &reply_ok,
                             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,

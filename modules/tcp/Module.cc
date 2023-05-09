@@ -174,8 +174,10 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
             ERR("insert(%s) Fail", topic.c_str());
             throw std::runtime_error("insert() Fail: " + listen_info->topic);
         }
-        UpdateDiscoveryMsg();
     }
+
+    UpdateDiscoveryMsg();
+
     subscribe_handles.insert(SubscribeHandles::value_type(info_ptr, listen_info));
 
     return info_ptr;
@@ -502,6 +504,24 @@ void Module::UpdatePublishTable(const std::string &topic, const std::string &cli
             port_info = std::make_pair(info, nullptr);
         }
     }
+}
+
+int Module::CountSubscriber(const std::string &topic)
+{
+    int count = 0;
+
+    std::lock_guard<std::mutex> auto_lock(publishTableLock);
+
+    for (auto topicIt = publishTable.begin(); topicIt != publishTable.end(); ++topicIt) {
+        if (discovery.CompareTopic(topicIt->first, topic)) {
+            for (auto hostIt = topicIt->second.begin(); hostIt != topicIt->second.end(); ++hostIt) {
+                TCP::ConnectInfo info = hostIt->second.first;
+                count += info.num_of_cb;
+            }
+        }
+    }
+
+    return count;
 }
 
 }  // namespace AittTCPNamespace
