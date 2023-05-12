@@ -17,6 +17,8 @@
 #include <flatbuffers/flexbuffers.h>
 #include <mosquitto.h>
 
+#include <iostream>
+
 #include "FlexbufPrinter.h"
 #include "aitt_internal.h"
 
@@ -24,6 +26,8 @@ struct ParsingData {
     ParsingData() : clean(false), broker_ip("127.0.0.1") {}
     bool clean;
     std::string broker_ip;
+    std::string id;
+    std::string topic;
 };
 const char *argp_program_version = "aitt-discovery-viewer 1.0";
 
@@ -34,7 +38,9 @@ static char argp_doc[] =
 
 /* The options we understand. */
 static struct argp_option options[] = {{"broker", 'b', "IP", 0, "broker ip address"},
-      {"clean", 'c', 0, OPTION_ARG_OPTIONAL, "clean discovery topic"}, {0}};
+      {"clean", 'c', 0, OPTION_ARG_OPTIONAL, "clean discovery topic"},
+      {"id", 'i', "ID", 0, "monitoring the client with ID"},
+      {"topic", 't', "ID", 0, "monitoring with topic"}, {0}};
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -46,6 +52,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         break;
     case 'c':
         args->clean = true;
+        break;
+    case 'i':
+        args->id = arg;
+        break;
+    case 't':
+        args->topic = arg;
         break;
     case ARGP_KEY_NO_ARGS:
         // argp_usage(state);
@@ -65,7 +77,7 @@ class MQTTHandler {
             ERR("mosquitto_lib_init() Fail(%s)", mosquitto_strerror(ret));
 
         std::string id = std::to_string(rand() % 100);
-        handle = mosquitto_new(id.c_str(), true, nullptr);
+        handle = mosquitto_new(id.c_str(), true, this);
         if (handle == nullptr) {
             ERR("mosquitto_new() Fail");
             mosquitto_lib_cleanup();
@@ -76,12 +88,22 @@ class MQTTHandler {
         mosquitto_message_v5_callback_set(handle,
               [](mosquitto *handle, void *user_data, const mosquitto_message *msg,
                     const mosquitto_property *props) {
+                  MQTTHandler *mqtt_handler = static_cast<MQTTHandler *>(user_data);
                   std::string topic = msg->topic;
                   size_t end = topic.find("/", DISCOVERY_TOPIC_BASE.length());
-                  std::string clientId = topic.substr(DISCOVERY_TOPIC_BASE.length(), end);
+                  std::string client_id = topic.substr(DISCOVERY_TOPIC_BASE.length(), end);
+
+                  if (!mqtt_handler->client_id_.empty() && mqtt_handler->client_id_ != client_id) {
+                      return;
+                  }
+
                   FlexbufPrinter printer;
+                  if (!mqtt_handler->topic_.empty()) {
+                      printer.SetTopic(mqtt_handler->topic_);
+                  }
+
                   if (msg->payloadlen)
-                      printer.PrettyPrint(clientId, static_cast<const uint8_t *>(msg->payload),
+                      printer.PrettyPrint(client_id, static_cast<const uint8_t *>(msg->payload),
                             msg->payloadlen);
               });
 
@@ -102,8 +124,13 @@ class MQTTHandler {
             ERR("mosquitto_subscribe() Fail(%s)", mosquitto_strerror(ret));
     }
 
+    void SetClientID(const std::string &client_id) { client_id_ = client_id; }
+    void SetTopic(const std::string &topic) { topic_ = topic; }
+
   private:
     mosquitto *handle;
+    std::string client_id_;
+    std::string topic_;
 };
 
 int main(int argc, char **argv)
@@ -119,8 +146,13 @@ int main(int argc, char **argv)
     }
 
     MQTTHandler mqtt;
+    if (!arg.id.empty()) {
+        mqtt.SetClientID(arg.id);
+    }
+    if (!arg.topic.empty()) {
+        mqtt.SetTopic(arg.topic);
+    }
     mqtt.Connect(arg.broker_ip);
-
     while (1) {
         sleep(10);
     }

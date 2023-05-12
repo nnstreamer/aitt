@@ -22,14 +22,21 @@ class FlexbufPrinter {
     FlexbufPrinter();
 
     void PrettyPrint(const std::string &name, const uint8_t *data, int datalen);
+    void SetTopic(const std::string &topic);
 
   private:
     std::string PrettyTab(bool ignore);
     void PrettyMap(const flexbuffers::Reference &data, bool inline_value);
     void PrettyVector(const flexbuffers::Reference &data, bool inline_value);
-    void PrettyBlob(const flexbuffers::Reference &data, bool inline_value);
+    void PrettyBlob(const flexbuffers::Reference &data);
     void PrettyParsing(const flexbuffers::Reference &data, bool inline_value);
+    void TCPTopicPrint(const flexbuffers::Map &map, const flexbuffers::TypedVector &topics,
+          const std::string &protocol, int idx);
+    void TCPPrettyParsing(const std::string &name, const flexbuffers::Reference &data,
+          const std::string &protocol);
+    void MQTTTopicPrint(const flexbuffers::Vector &topics, int idx);
+    void MQTTPrettyParsing(const std::string &name, const flexbuffers::Reference &data);
 
     int tab;
-    int type;
+    std::string topic_;
 };

@@ -37,6 +37,14 @@ class TCP {
         unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];
     };
 
+    enum ConnectInfoMember {
+        CONN_INFO_PORT,
+        CONN_INFO_NUM_OF_CB,
+        CONN_INFO_KEY,
+        CONN_INFO_IV,
+        CONN_INFO_MAX
+    };
+
     TCP(const std::string &host, const ConnectInfo &ConnectInfo);
     virtual ~TCP(void);
 

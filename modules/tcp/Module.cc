@@ -291,21 +291,21 @@ void Module::DiscoveryMessageCallback(const std::string &clientId, const std::st
         TCP::ConnectInfo info;
         auto connectInfo = map[topic].AsVector();
         size_t vec_size = connectInfo.size();
-        info.port = connectInfo[0].AsUInt16();
-        info.num_of_cb = connectInfo[1].AsUInt16();
+        info.port = connectInfo[TCP::CONN_INFO_PORT].AsUInt16();
+        info.num_of_cb = connectInfo[TCP::CONN_INFO_NUM_OF_CB].AsUInt16();
         if (secure) {
-            if (vec_size != 4) {
+            if (vec_size != TCP::CONN_INFO_MAX) {
                 ERR("Unknown Message");
                 return;
             }
             info.secure = true;
-            auto key_blob = connectInfo[2].AsBlob();
+            auto key_blob = connectInfo[TCP::CONN_INFO_KEY].AsBlob();
             if (key_blob.size() == sizeof(info.key))
                 memcpy(info.key, key_blob.data(), key_blob.size());
             else
                 ERR("Invalid key blob(%zu) != %zu", key_blob.size(), sizeof(info.key));
 
-            auto iv_blob = connectInfo[3].AsBlob();
+            auto iv_blob = connectInfo[TCP::CONN_INFO_IV].AsBlob();
             if (iv_blob.size() == sizeof(info.iv))
                 memcpy(info.iv, iv_blob.data(), iv_blob.size());
             else
