@@ -59,12 +59,11 @@ public interface AittStream {
     void start();
 
     /**
-     * Method to publish to a topic
-     * @param topic String topic to which data is published
+     * Method to push data on a topic
      * @param message Data to be published
      * @return returns status
      */
-    boolean publish(String topic, byte[] message);
+    boolean push(byte[] message);
 
     /**
      * Method to disconnect from the broker

@@ -47,14 +47,20 @@ public abstract class WebRTC {
 
     protected PeerConnection peerConnection;
     protected PeerConnectionFactory connectionFactory;
+    protected EglBase eglBase;
     protected DataChannel localDataChannel;
     protected ReceiveDataCallback dataCallback;
     protected IceCandidateAddedCallback iceCandidateAddedCallback;
     protected String localDescription;
     protected List<String> iceCandidates = new ArrayList<>();
     protected String peerDiscoveryId;
+    protected int frameWidth;
+    protected int frameHeight;
+    protected int frameRate;
+    protected SourceType sourceType = SourceType.CAMERA;
 
     protected final Context appContext;
+
     private String peerId;
 
     /**
@@ -71,6 +77,22 @@ public abstract class WebRTC {
         void onIceCandidate();
     }
 
+    protected enum SourceType {
+        CAMERA,
+        MEDIA_PACKET;
+
+        private static SourceType fromString(String str) {
+            switch (str) {
+                case "CAMERA":
+                    return CAMERA;
+                case "MEDIA_PACKET":
+                    return MEDIA_PACKET;
+                default:
+                    throw new IllegalArgumentException("Invalid SOURCE_TYPE: " + str);
+            }
+        }
+    }
+
     /**
      * Method to set remote description of peer
      *
@@ -80,12 +102,17 @@ public abstract class WebRTC {
 
     protected abstract void initializePeerConnection();
 
+    protected abstract void configureStream();
+
     /**
      * WebRTC constructor to create webRTC instance
      *
      * @param appContext Application context creating webRTC instance
+     * @param width Frame width
+     * @param height Frame height
+     * @param fps Frames per second
      */
-    public WebRTC(Context appContext) throws InstantiationException {
+    public WebRTC(Context appContext, int width, int height, int fps) throws InstantiationException {
         if (appContext == null)
             throw new IllegalArgumentException("App context is null.");
 
@@ -94,6 +121,10 @@ public abstract class WebRTC {
         initializePeerConnection();
         if (peerConnection == null)
             throw new InstantiationException("Failed to create peer connection");
+
+        frameWidth = width;
+        frameHeight = height;
+        frameRate = fps;
     }
 
     /**
@@ -118,6 +149,10 @@ public abstract class WebRTC {
             throw new IllegalArgumentException("Callback is null.");
 
         iceCandidateAddedCallback = cb;
+    }
+
+    public void start() {
+        Log.d(TAG, "Start WebRTC");
     }
 
     /**
@@ -224,24 +259,63 @@ public abstract class WebRTC {
         stop();
     }
 
-    /**
-     * Method used to send video data
-     *
-     * @param frame  Video frame in byte format
-     * @param width  width of the video frame
-     * @param height height of the video frame
-     */
-    public void sendVideoData(byte[] frame, int width, int height) {
-        Log.d(TAG, "Send video data");
+    public void setSourceType(String type) {
+        SourceType newType = SourceType.fromString(type);
+        if (sourceType == newType)
+            return;
+        sourceType = newType;
+        configureStream();
+    }
+
+    public void setFrameHeight(int height) {
+        frameHeight = height;
+    }
+
+    public void setFrameWidth(int width) {
+        frameWidth = width;
     }
 
     /**
-     * Method to send message data, if the message size is greater than MAX_MESSAGE_SIZE, message will be compressed before sending
+     * Method to get received Frame height
+     *
+     * @return Received frame height
+     */
+    public int getFrameHeight() {
+        return frameHeight;
+    }
+
+    /**
+     * Method to get received Frame width
+     *
+     * @return Received frame width
+     */
+    public int getFrameWidth() {
+        return frameWidth;
+    }
+
+    public void setFrameRate(int fps) {
+        frameRate = fps;
+    }
+
+    /**
+     * Method used to push media data
+     *
+     * @param packet  Media packet in byte format
+     * @return true if message is successfully sent, false otherwise
+     */
+    public boolean pushMediaPacket(byte[] packet) {
+        Log.d(TAG, "Push video data");
+        return true;
+    }
+
+    /**
+     * Method to push message data, if the message size is greater than MAX_MESSAGE_SIZE, message will be compressed before sending
      *
      * @param message message to be sent in byte format
+     * @return true if message is successfully sent, false otherwise
      */
-    public boolean sendMessageData(byte[] message) {
-        Log.d(TAG, "Send message data");
+    public boolean pushMessageData(byte[] message) {
+        Log.d(TAG, "Push message data");
         return true;
     }
 
@@ -271,10 +345,9 @@ public abstract class WebRTC {
      * Method to initialize peer connection factory
      */
     private void initializePeerConnectionFactory() {
-        EglBase mRootEglBase;
-        mRootEglBase = EglBase.create();
-        VideoEncoderFactory encoderFactory = new DefaultVideoEncoderFactory(mRootEglBase.getEglBaseContext(), true , true);
-        VideoDecoderFactory decoderFactory = new DefaultVideoDecoderFactory(mRootEglBase.getEglBaseContext());
+        eglBase = EglBase.create();
+        VideoEncoderFactory encoderFactory = new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true , true);
+        VideoDecoderFactory decoderFactory = new DefaultVideoDecoderFactory(eglBase.getEglBaseContext());
 
         PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(appContext).setEnableInternalTracer(true).createInitializationOptions());
         PeerConnectionFactory.Builder builder = PeerConnectionFactory.builder().setVideoEncoderFactory(encoderFactory).setVideoDecoderFactory(decoderFactory);
@@ -307,23 +380,5 @@ public abstract class WebRTC {
         public void onSetFailure(String s) {
             Log.d(TAG, "onSetFailure: Reason = " + s);
         }
-    }
-
-    /**
-     * Method to get received Frame height
-     *
-     * @return Received frame height
-     */
-    public int getFrameHeight() {
-        return 0;
-    }
-
-    /**
-     * Method to get received Frame width
-     *
-     * @return Received frame width
-     */
-    public int getFrameWidth() {
-        return 0;
     }
 }

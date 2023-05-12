@@ -27,4 +27,5 @@ public class Definitions {
     public static final int DEFAULT_IPC_PORT = 0;
     public static final int DEFAULT_STREAM_WIDTH = 640;
     public static final int DEFAULT_STREAM_HEIGHT = 480;
+    public static final int DEFAULT_FPS = 15;
 }

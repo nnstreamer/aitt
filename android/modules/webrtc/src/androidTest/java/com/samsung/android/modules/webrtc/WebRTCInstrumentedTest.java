@@ -36,6 +36,7 @@ import android.util.Log;
 import androidx.annotation.ColorInt;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.samsung.android.aitt.internal.Definitions;
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
 
@@ -162,7 +163,7 @@ public class WebRTCInstrumentedTest {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID, wifiIP, true);
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_MESSAGE_TOPIC, PUBLISHER);
-            publisherStream.start();
+            publisherStream.setConfig("SOURCE_TYPE", "MEDIA_PACKET").start();
             Log.i(TAG, "A WebRTC client and a publisher stream are created.");
 
             subscriberStream.start();
@@ -176,7 +177,7 @@ public class WebRTCInstrumentedTest {
 
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = publisher.publish(publisherStream, TEST_MESSAGE_TOPIC, message.getBytes());
+                boolean isPublished = publisherStream.push(message.getBytes());
                 if (isPublished)
                     break;
             }
@@ -217,7 +218,7 @@ public class WebRTCInstrumentedTest {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + LARGE_DATA_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_LARGE_MESSAGE_TOPIC, PUBLISHER);
-            publisherStream.start();
+            publisherStream.setConfig("SOURCE_TYPE", "MEDIA_PACKET").start();
             Log.i(TAG, "A WebRTC client and a publisher stream are created.");
 
             subscriberStream.start();
@@ -231,7 +232,7 @@ public class WebRTCInstrumentedTest {
 
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = publisher.publish(publisherStream, TEST_LARGE_MESSAGE_TOPIC, largeBytes);
+                boolean isPublished = publisherStream.push(largeBytes);
                 if (isPublished)
                     break;
                 Thread.sleep(SLEEP_INTERVAL);
@@ -250,7 +251,7 @@ public class WebRTCInstrumentedTest {
     }
 
     @Test
-    public void testWebRTCVideoStreamingNoConfig_N() {
+    public void testWebRTCMediaPacketStreamImproperConfig_N() {
         try {
             Aitt subscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID + VIDEO_PREFIX, wifiIP, true);
             subscriber.connect(brokerIp, PORT);
@@ -269,6 +270,7 @@ public class WebRTCInstrumentedTest {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+            publisherStream.setConfig("SOURCE_TYPE", "MEDIA_PACKET");
             publisherStream.start();
             Log.i(TAG, "A WebRTC client and a publisher stream are created.");
 
@@ -283,7 +285,7 @@ public class WebRTCInstrumentedTest {
 
             while (true) {
                 // TODO: Replace publish
-                boolean isPublished = publisher.publish(publisherStream, TEST_VIDEO_TOPIC, frameImageBytes);
+                boolean isPublished = publisherStream.push(frameImageBytes);
                 if (isPublished)
                     break;
             }
@@ -301,7 +303,7 @@ public class WebRTCInstrumentedTest {
     }
 
     @Test
-    public void testWebRTCVideoStreamingWithConfig_P() {
+    public void testWebRTCMediaPacketStreamWithConfig_P() {
         try {
             Aitt subscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID + VIDEO_PREFIX, wifiIP, true);
             subscriber.connect(brokerIp, PORT);
@@ -324,7 +326,8 @@ public class WebRTCInstrumentedTest {
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            publisherStream.setConfig("WIDTH", "320")
+            publisherStream.setConfig("SOURCE_TYPE", "MEDIA_PACKET")
+                    .setConfig("WIDTH", "320")
                     .setConfig("HEIGHT", "240")
                     .start();
 
@@ -340,11 +343,58 @@ public class WebRTCInstrumentedTest {
             }
 
             while (true) {
-                boolean isPublished = publisher.publish(publisherStream, TEST_VIDEO_TOPIC, frameImageBytes);
+                boolean isPublished = publisherStream.push(frameImageBytes);
                 if (isPublished)
                     break;
             }
             Log.i(TAG, "Video transmission has started through the publisher stream.");
+
+            Looper.loop();
+            Log.i(TAG, "A looper is finished.");
+
+            publisherStream.disconnect();
+
+            subscriberStream.stop();
+        } catch (Exception e) {
+            fail("Failed testWebRTCVideoStreamingWithConfig, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCCameraStream_P() {
+        try {
+            Aitt subscriber = new Aitt(appContext, AITT_WEBRTC_SERVER_ID + VIDEO_PREFIX, wifiIP, true);
+            subscriber.connect(brokerIp, PORT);
+            AittStream subscriberStream = subscriber.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, SUBSCRIBER);
+            subscriberStream.setReceiveCallback(data -> {
+                Log.i(TAG, "A callback is received in testWebRTCVideoStreamingWithConfig");
+                if (Definitions.DEFAULT_STREAM_WIDTH != subscriberStream.getStreamWidth())
+                    throw new RuntimeException("Wrong frame width");
+                if (Definitions.DEFAULT_STREAM_HEIGHT != subscriberStream.getStreamHeight())
+                    throw new RuntimeException("Wrong frame height");
+
+                Log.i(TAG, "The correct test image is received.");
+
+                if (looper != null)
+                    looper.quit();
+            });
+            Log.i(TAG, "A WebRTC server and a subscriber stream are created.");
+
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+            publisherStream.start();
+
+            Log.i(TAG, "A WebRTC client and a publisher stream are created.");
+
+            subscriberStream.start();
+            Log.i(TAG, "The subscriber stream starts.");
+
+            int intervalSum = 0;
+            while (intervalSum < 2000) {
+                Thread.sleep(SLEEP_INTERVAL);
+                intervalSum += SLEEP_INTERVAL;
+            }
 
             Looper.loop();
             Log.i(TAG, "A looper is finished.");
@@ -388,36 +438,21 @@ public class WebRTCInstrumentedTest {
     }
 
     @Test
-    public void testWebRTCStreamConfigWithoutHeight_P() {
+    public void testWebRTCStreamSetConfig_P() {
         try {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
             AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
 
-            publisherStream.setConfig("WIDTH", "320")
-                    .setConfig("HEIGHT", "0")
+            publisherStream.setConfig("SOURCE_TYPE", "CAMERA")
+                    .setConfig("WIDTH", "320")
+                    .setConfig("HEIGHT", "240")
+                    .setConfig("FRAME_RATE", "30")
                     .start();
 
             publisherStream.disconnect();
         } catch (Exception e) {
             fail("Failed testWebRTCStreamConfigWithoutHeight, (" + e + ")");
-        }
-    }
-
-    @Test
-    public void testWebRTCStreamConfigWithoutWidth_P() {
-        try {
-            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
-            publisher.connect(brokerIp, PORT);
-            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
-
-            publisherStream.setConfig("HEIGHT", "240")
-                    .setConfig("WIDTH", "0")
-                    .start();
-
-            publisherStream.disconnect();
-        } catch (Exception e) {
-            fail("Failed testWebRTCStreamConfigWithoutWidth, (" + e + ")");
         }
     }
 
@@ -446,6 +481,36 @@ public class WebRTCInstrumentedTest {
 
             assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "320")
                                                                               .setConfig("HEIGHT", "-1"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamInvalidHeight, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCStreamInvalidSourceType_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("SOURCE_TYPE", "A"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamInvalidHeight, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCStreamInvalidFrameRate_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("FRAME_RATE", "-1"));
 
             publisherStream.disconnect();
         } catch (Exception e) {

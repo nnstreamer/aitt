@@ -36,20 +36,14 @@ public final class WebRTCHandler extends StreamHandler {
     }
 
     @Override
-    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
+    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) throws InstantiationException {
         if (protocol != Aitt.Protocol.WEBRTC)
             throw new InvalidParameterException("Invalid protocol");
 
-        try {
-            if (role == AittStream.StreamRole.SUBSCRIBER) {
-                return createSubscriberStream(topic, role, context);
-            } else {
-                return createPublisherStream(topic, role, context);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Fail to create an AittStream instance.");
+        if (role == AittStream.StreamRole.SUBSCRIBER) {
+            return createSubscriberStream(topic, role, context);
+        } else {
+            return createPublisherStream(topic, role, context);
         }
-
-        return null;
     }
 }

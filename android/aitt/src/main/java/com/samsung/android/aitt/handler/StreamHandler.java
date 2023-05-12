@@ -30,7 +30,7 @@ public class StreamHandler implements ModuleHandler {
      * @param context context of the application
      * @return returns stream object
      */
-    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
+    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) throws InstantiationException {
         // TODO: Change this function properly after refactoring WebRTC modules.
         return null;
     }

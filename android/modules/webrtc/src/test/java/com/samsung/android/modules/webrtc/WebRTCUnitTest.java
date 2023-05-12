@@ -17,6 +17,10 @@ public class WebRTCUnitTest {
     @Mock
     private final Context context = mock(Context.class);
 
+    private static final int WIDTH = 320;
+    private static final int HEIGHT = 240;
+    private static final int FPS = 30;
+
     private static MockedStatic<Log> mockedLog;
 
     @BeforeClass
@@ -32,7 +36,7 @@ public class WebRTCUnitTest {
     @Test(expected = IllegalArgumentException.class)
     public void testWebRTCPublisherConstructor_N() throws IllegalArgumentException {
         try {
-            WebRTC webRTC = new WebRTCPublisher(null);
+            WebRTC webRTC = new WebRTCPublisher(null, WIDTH, HEIGHT, FPS);
             assertNotNull("WebRTC instance not null", webRTC);
         }  catch (InstantiationException e) {
             fail("Failed to create WebRTCPublisher" + e);
@@ -42,7 +46,7 @@ public class WebRTCUnitTest {
     @Test(expected = IllegalArgumentException.class)
     public void testWebRTCSubscriberConstructor_N() throws IllegalArgumentException {
         try {
-            WebRTC webRTC = new WebRTCSubscriber(null);
+            WebRTC webRTC = new WebRTCSubscriber(null, WIDTH, HEIGHT, FPS);
             assertNotNull("WebRTC instance not null", webRTC);
         } catch (InstantiationException e) {
             fail("Failed to create WebRTCSubscriber" + e);

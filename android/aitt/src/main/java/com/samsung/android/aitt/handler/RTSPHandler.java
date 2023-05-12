@@ -42,15 +42,10 @@ public class RTSPHandler extends StreamHandler {
         if (topic == null || topic.isEmpty())
             throw new InvalidParameterException("Invalid topic");
 
-        try {
-            if (role == AittStream.StreamRole.SUBSCRIBER) {
-                return createSubscriberStream(topic, role);
-            } else {
-                return createPublisherStream(topic, role);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Fail to create an AittStream instance.");
+        if (role == AittStream.StreamRole.SUBSCRIBER) {
+            return createSubscriberStream(topic, role);
+        } else {
+            return createPublisherStream(topic, role);
         }
-        return null;
     }
 }

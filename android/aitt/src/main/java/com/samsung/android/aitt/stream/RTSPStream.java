@@ -189,14 +189,13 @@ public class RTSPStream implements AittStream {
     }
 
     /**
-     * Method to publish to a topic
+     * Method to push data on a topic
      *
-     * @param topic   String topic to which data is published
      * @param message Data to be published
      * @return returns status
      */
     @Override
-    public boolean publish(String topic, byte[] message) {
+    public boolean push(byte[] message) {
         // TODO: implement this function.
         return true;
     }

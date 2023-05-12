@@ -40,7 +40,6 @@ import org.webrtc.VideoTrack;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
@@ -50,11 +49,9 @@ public final class WebRTCSubscriber extends WebRTC {
 
    private final ByteArrayOutputStream baos;
    private boolean recvLargeChunk = false;
-   private int frameHeight = 0;
-   private int frameWidth = 0;
 
-   public WebRTCSubscriber(Context appContext) throws InstantiationException {
-      super(appContext);
+   public WebRTCSubscriber(Context appContext, int width, int height, int fps) throws InstantiationException {
+      super(appContext, width, height, fps);
       baos = new ByteArrayOutputStream();
    }
 
@@ -77,16 +74,6 @@ public final class WebRTCSubscriber extends WebRTC {
       this.peerDiscoveryId = id;
       createOffer();
       return true;
-   }
-
-   @Override
-   public int getFrameHeight() {
-      return frameHeight;
-   }
-
-   @Override
-   public int getFrameWidth() {
-      return frameWidth;
    }
 
    @Override
@@ -206,6 +193,11 @@ public final class WebRTCSubscriber extends WebRTC {
          return;
 
       localDataChannel = peerConnection.createDataChannel("DataChannel", new DataChannel.Init());
+   }
+
+   @Override
+   protected void configureStream() {
+      Log.e(TAG, "Configuring stream not supported for subscriber");
    }
 
    private void createOffer() {

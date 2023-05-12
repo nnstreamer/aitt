@@ -15,6 +15,7 @@
  */
 package com.samsung.android.aitt.stream;
 
+import static com.samsung.android.aitt.internal.Definitions.DEFAULT_FPS;
 import static com.samsung.android.aitt.internal.Definitions.DEFAULT_STREAM_HEIGHT;
 import static com.samsung.android.aitt.internal.Definitions.DEFAULT_STREAM_WIDTH;
 
@@ -50,51 +51,35 @@ public final class WebRTCStream implements AittStream {
     private final String watchTopic;
     private final StreamRole streamRole;
     private final String id;
-    private final StreamInfo streamInfo;
+    private final WebRTC webrtc;
 
-    private WebRTC webrtc;
     private JniInterface jniInterface;
     private StreamState streamState = StreamState.INIT;
     private StreamStateChangeCallback stateChangeCallback = null;
 
-    private static class StreamInfo {
-        private int frameWidth = DEFAULT_STREAM_WIDTH;
-        private int frameHeight = DEFAULT_STREAM_HEIGHT;
-    }
-
-    WebRTCStream(String topic, StreamRole streamRole, Context context) {
+    WebRTCStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
         this.streamRole = streamRole;
 
         id = createId();
         if (streamRole == StreamRole.PUBLISHER) {
             publishTopic = topic + SRC;
             watchTopic = topic + SINK;
-            try {
-                webrtc = new WebRTCPublisher(context);
-            } catch (InstantiationException e) {
-                Log.e(TAG, "Failed to create WebRTC instance");
-            }
+            webrtc = new WebRTCPublisher(context, DEFAULT_STREAM_WIDTH, DEFAULT_STREAM_HEIGHT, DEFAULT_FPS);
         } else {
             publishTopic = topic + SINK;
             watchTopic = topic + SRC;
-            try {
-                webrtc = new WebRTCSubscriber(context);
-            }  catch (InstantiationException e) {
-                Log.e(TAG, "Failed to create WebRTC instance");
-            }
+            webrtc = new WebRTCSubscriber(context, DEFAULT_STREAM_WIDTH, DEFAULT_STREAM_HEIGHT, DEFAULT_FPS);
         }
-
-        streamInfo = new StreamInfo();
     }
 
-    public static WebRTCStream createSubscriberStream(String topic, StreamRole streamRole, Context context) {
+    public static WebRTCStream createSubscriberStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
         if (streamRole != StreamRole.SUBSCRIBER)
             throw new IllegalArgumentException("The role of this stream is not subscriber.");
 
         return new WebRTCStream(topic, streamRole, context);
     }
 
-    public static WebRTCStream createPublisherStream(String topic, StreamRole streamRole, Context context) {
+    public static WebRTCStream createPublisherStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
         if (streamRole != StreamRole.PUBLISHER)
             throw new IllegalArgumentException("The role of this stream is not publisher.");
 
@@ -106,27 +91,36 @@ public final class WebRTCStream implements AittStream {
         if (streamRole == StreamRole.SUBSCRIBER)
             throw new IllegalArgumentException("The role of this stream is not publisher");
 
+        if (streamState == StreamState.READY)
+            throw new RuntimeException("Stream is already started, cannot change configuration now");
+
         if (key == null)
             throw new IllegalArgumentException("Invalid key");
 
         switch (key) {
+            case "SOURCE_TYPE":
+                webrtc.setSourceType(value);
+                break;
             case "HEIGHT":
                 int height = Integer.parseInt(value);
-                if (height == 0)
-                    streamInfo.frameHeight = DEFAULT_STREAM_HEIGHT;
-                else if (height < 0)
+                if (height <= 0)
                     throw new IllegalArgumentException("Invalid frame height");
                 else
-                    streamInfo.frameHeight = height;
+                    webrtc.setFrameHeight(height);
                 break;
             case "WIDTH":
                 int width = Integer.parseInt(value);
-                if (width == 0)
-                    streamInfo.frameWidth = DEFAULT_STREAM_WIDTH;
-                else if (width < 0)
+                if (width <= 0)
                     throw new IllegalArgumentException("Invalid frame width");
                 else
-                    streamInfo.frameWidth = width;
+                    webrtc.setFrameWidth(width);
+                break;
+            case "FRAME_RATE":
+                int fps = Integer.parseInt(value);
+                if (fps <= 0)
+                    throw new IllegalArgumentException("Invalid frame rate");
+                else
+                    webrtc.setFrameRate(fps);
                 break;
             default:
                 throw new IllegalArgumentException("Invalid key");
@@ -136,10 +130,13 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public void start() {
-        if (invalidWebRTC()) {
+        if (streamState == StreamState.READY || streamState == StreamState.PLAYING) {
+            Log.e(TAG, "Stream already started");
             return;
         }
+
         webrtc.registerIceCandidateAddedCallback(() -> publishDiscoveryMessage(generateDiscoveryMessage()));
+        webrtc.start();
         if (streamRole == StreamRole.PUBLISHER) {
             FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
             fbb.putString(START);
@@ -184,8 +181,6 @@ public final class WebRTCStream implements AittStream {
             throw new IllegalArgumentException("The given callback is null.");
 
         if (streamRole == StreamRole.SUBSCRIBER) {
-            if (invalidWebRTC())
-                return;
             webrtc.registerDataCallback(streamDataCallback::pushStreamData);
         } else if (streamRole == StreamRole.PUBLISHER) {
             Log.e(TAG, "Invalid function call");
@@ -194,42 +189,30 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public int getStreamHeight() {
-        if (streamRole == StreamRole.SUBSCRIBER)
-            return webrtc.getFrameHeight();
-        return streamInfo.frameHeight;
+        return webrtc.getFrameHeight();
     }
 
     @Override
     public int getStreamWidth() {
-        if (streamRole == StreamRole.SUBSCRIBER)
-            return webrtc.getFrameWidth();
-        return streamInfo.frameWidth;
+        return webrtc.getFrameWidth();
     }
 
     @Override
-    public boolean publish(String topic, byte[] message) {
-        if (invalidWebRTC())
-            return false;
-
-        if (streamRole == StreamRole.PUBLISHER) {
-            if (topic.endsWith(Definitions.RESPONSE_POSTFIX)) {
-                Log.d(TAG, "A message is sent through a WebRTC publisher stream.");
-                return webrtc.sendMessageData(message);
-            } else {
-                Log.d(TAG, "Video data are sent through a WebRTC publisher stream.");
-                webrtc.sendVideoData(message, streamInfo.frameWidth, streamInfo.frameHeight);
-            }
-        } else {
-            Log.e(TAG, "publish() is not allowed to a subscriber stream.");
+    public boolean push(byte[] message) {
+        if (streamRole == StreamRole.SUBSCRIBER) {
+            throw new RuntimeException("Push is not allowed with a subscriber stream");
         }
 
-        return true;
+        if (publishTopic.contains(Definitions.RESPONSE_POSTFIX)) {
+            Log.d(TAG, "A message is sent through a WebRTC publisher stream.");
+            return webrtc.pushMessageData(message);
+        } else {
+            Log.d(TAG, "Media-packet is sent through a WebRTC publisher stream.");
+            return webrtc.pushMediaPacket(message);
+        }
     }
 
     public void setJNIInterface(JniInterface jniInterface) {
-        if (invalidWebRTC())
-            return;
-
         this.jniInterface = jniInterface;
 
         jniInterface.setDiscoveryCallback(watchTopic, (clientId, status, data) -> {
@@ -249,14 +232,6 @@ public final class WebRTCStream implements AittStream {
 
     private String createId() {
         return UUID.randomUUID().toString();
-    }
-
-    private boolean invalidWebRTC() {
-        if (webrtc == null) {
-            Log.e(TAG, "Invalid WebRTCStream");
-            return true;
-        }
-        return false;
     }
 
     private void handleStreamState(String clientId, ByteBuffer buffer) {
@@ -340,6 +315,7 @@ public final class WebRTCStream implements AittStream {
             jniInterface.updateDiscoveryMessage(publishTopic, data);
         }
     }
+
     private void updateState(StreamState state) {
         streamState = state;
         if (stateChangeCallback != null)

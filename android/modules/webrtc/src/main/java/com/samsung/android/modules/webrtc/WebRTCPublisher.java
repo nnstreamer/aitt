@@ -27,6 +27,9 @@ import com.github.luben.zstd.Zstd;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.webrtc.Camera1Enumerator;
+import org.webrtc.Camera2Enumerator;
+import org.webrtc.CameraEnumerator;
 import org.webrtc.CapturerObserver;
 import org.webrtc.DataChannel;
 import org.webrtc.IceCandidate;
@@ -48,6 +51,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public final class WebRTCPublisher extends WebRTC {
@@ -55,17 +59,19 @@ public final class WebRTCPublisher extends WebRTC {
     private static final String TAG = "WebRTCPublisher";
     private static final String VIDEO_TRACK_ID = "AITT_WEBRTC_v0";
     private static final String MEDIA_STREAM_ID = "AITT_WEBRTC";
+    private static final String SURFACE_TEXTURE_THREAD = "AITT_WEBRTC_SURFACE_TEXTURE";
 
-    private VideoTrack videoTrackFromSource;
-    private FrameVideoCapturer videoCapturer;
+    private MediaStream mediaStream;
+    private VideoSource videoSource;
+    private VideoTrack videoTrack;
+    private MediaPacketCapturer mediaPacketCapturer;
+    private VideoCapturer cameraCapturer;
+    private CameraEnumerator cameraEnumerator;
+    private List<String> cameraDeviceNames;
 
-    public WebRTCPublisher(Context appContext) throws InstantiationException {
-        super(appContext);
-
-        VideoSource videoSource = connectionFactory.createVideoSource(false);
-        createVideoTrack(videoSource);
-        addVideoTrack();
-        createVideoCapturer(videoSource);
+    public WebRTCPublisher(Context appContext, int width, int height, int fps) throws InstantiationException {
+        super(appContext, width, height, fps);
+        configureStream();
     }
 
     @Override
@@ -79,12 +85,20 @@ public final class WebRTCPublisher extends WebRTC {
     }
 
     @Override
-    public void sendVideoData(byte[] frame, int width, int height) {
-        videoCapturer.send(frame, width, height);
+    public void start() {
+        if (sourceType == SourceType.CAMERA && cameraCapturer != null)
+            cameraCapturer.startCapture(frameWidth, frameHeight, frameRate);
     }
 
     @Override
-    public boolean sendMessageData(byte[] message) {
+    public boolean pushMediaPacket(byte[] packet) {
+        if (sourceType != SourceType.MEDIA_PACKET)
+            throw new RuntimeException("Push is not supported for this source type");
+        return mediaPacketCapturer.send(packet, frameWidth, frameHeight);
+    }
+
+    @Override
+    public boolean pushMessageData(byte[] message) {
         ByteBuffer chunkData;
         if (message.length < MAX_MESSAGE_SIZE) {
             ByteBuffer data = ByteBuffer.wrap(message);
@@ -202,6 +216,40 @@ public final class WebRTCPublisher extends WebRTC {
         localDataChannel = peerConnection.createDataChannel("sendDataChannel", new DataChannel.Init());
     }
 
+    @Override
+    protected void configureStream() {
+        if (peerConnection == null)
+            throw new RuntimeException("Invalid stream state, peer connection not created");
+
+        cleanStream();
+        videoSource = connectionFactory.createVideoSource(false);
+        createVideoTrack();
+        createMediaStream();
+        createVideoCapturer();
+    }
+
+    private void cleanStream() {
+        if (mediaStream != null) {
+            peerConnection.removeStream(mediaStream);
+            if (videoTrack != null) {
+                mediaStream.removeTrack(videoTrack);
+                videoTrack.dispose();
+            }
+        }
+
+        if (videoSource != null)
+            videoSource.dispose();
+
+        if (cameraCapturer != null) {
+            try {
+                cameraCapturer.stopCapture();
+                cameraCapturer.dispose();
+            } catch (InterruptedException e) {
+                Log.e(TAG, "Failed to stop cameraCapturer:" + e.getMessage());
+            }
+        }
+    }
+
     private void createAnswer() {
         peerConnection.createAnswer(new SimpleSdpObserver() {
             @Override
@@ -223,40 +271,64 @@ public final class WebRTCPublisher extends WebRTC {
         }, new MediaConstraints());
     }
 
-    private void createVideoCapturer(VideoSource videoSource) {
-        videoCapturer = new FrameVideoCapturer();
-        videoCapturer.initialize(null, null, videoSource.getCapturerObserver());
+    private void createVideoTrack() {
+        videoTrack = connectionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
+        videoTrack.setEnabled(true);
     }
 
-    /**
-     * Method to create video track
-     */
-    private void createVideoTrack(VideoSource videoSource) {
-        videoTrackFromSource = connectionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
-        videoTrackFromSource.setEnabled(true);
-    }
-
-    /**
-     * Method to add video track
-     */
-    private void addVideoTrack() {
-        MediaStream mediaStream = connectionFactory.createLocalMediaStream(MEDIA_STREAM_ID);
-        mediaStream.addTrack(videoTrackFromSource);
+    private void createMediaStream() {
+        mediaStream = connectionFactory.createLocalMediaStream(MEDIA_STREAM_ID);
+        mediaStream.addTrack(videoTrack);
         peerConnection.addStream(mediaStream);
     }
 
+    private void createVideoCapturer() {
+        if (sourceType == SourceType.CAMERA) {
+            if (cameraDeviceNames == null)
+                setCameraDeviceNames();
+            for (String deviceName : cameraDeviceNames) {
+                cameraCapturer = cameraEnumerator.createCapturer(deviceName , null);
+                if (cameraCapturer != null)
+                    break;
+            }
+            if (cameraCapturer != null) {
+                SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create(SURFACE_TEXTURE_THREAD, eglBase.getEglBaseContext());
+                cameraCapturer.initialize(surfaceTextureHelper, appContext, videoSource.getCapturerObserver());
+            }
+        } else {
+            mediaPacketCapturer = new MediaPacketCapturer();
+            mediaPacketCapturer.initialize(null, null, videoSource.getCapturerObserver());
+        }
+    }
+
+    private void setCameraDeviceNames() {
+        cameraDeviceNames = new ArrayList<>();
+        if (Camera2Enumerator.isSupported(appContext))
+            cameraEnumerator = new Camera2Enumerator(appContext);
+        else
+            cameraEnumerator = new Camera1Enumerator(true);
+
+        String[] deviceNames = cameraEnumerator.getDeviceNames();
+        for (String deviceName : deviceNames) {
+            if(cameraEnumerator.isFrontFacing(deviceName)){
+                cameraDeviceNames.add(deviceName);
+            }
+        }
+    }
+
     /**
-     * Class to implement Frame video capturer
+     * Class to implement Media Packet capturer
      */
-    private static class FrameVideoCapturer implements VideoCapturer {
+    private static class MediaPacketCapturer implements VideoCapturer {
         private CapturerObserver capturerObserver;
 
-        void send(byte[] frame, int width, int height) {
+        boolean send(byte[] frame, int width, int height) {
             long timestampNS = TimeUnit.MILLISECONDS.toNanos(SystemClock.elapsedRealtime());
             NV21Buffer buffer = new NV21Buffer(frame, width, height, null);
             VideoFrame videoFrame = new VideoFrame(buffer, 0, timestampNS);
             this.capturerObserver.onFrameCaptured(videoFrame);
             videoFrame.release();
+            return true;
         }
 
         @Override

@@ -349,16 +349,6 @@ public class Aitt {
         return hostTable;
     }
 
-    // TODO: Update publish with proper stream interface.
-    public boolean publish(AittStream stream, String topic, byte[] message) {
-        if (stream == null) {
-            Log.e(TAG, "Stream is null.");
-            return false;
-        }
-
-        return stream.publish(topic, message);
-    }
-
     /**
      * Method to create transportHandler and publish message based on protocol
      *
@@ -776,13 +766,14 @@ public class Aitt {
     }
 
     /**
-     * Method that receives message from JNI layer for topics other than discovery topics
+     * Method to create AittStream object
      *
      * @param protocol The data received from JNI layer to be sent to application layer
      * @param topic The data received from JNI layer to be sent to application layer
      * @param streamRole The data received from JNI layer to be sent to application layer
+     * @return AittStream instance
      */
-    public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) {
+    public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) throws InstantiationException {
         ModuleHandler moduleHandler = createModuleHandler(protocol);
         if (moduleHandler == null) {
             Log.e(TAG, "Fail to create a module handler.");
@@ -792,13 +783,11 @@ public class Aitt {
         switch (protocol) {
             case WEBRTC:
                 WebRTCStream webRTCStream = (WebRTCStream) ((WebRTCHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
-                if (webRTCStream != null)
-                    webRTCStream.setJNIInterface(mJniInterface);
+                webRTCStream.setJNIInterface(mJniInterface);
                 return webRTCStream;
             case RTSP:
                 RTSPStream rtspStream = (RTSPStream) ((RTSPHandler) moduleHandler).newStreamModule(protocol, topic, streamRole, appContext);
-                if (rtspStream != null)
-                    rtspStream.setJNIInterface(mJniInterface);
+                rtspStream.setJNIInterface(mJniInterface);
                 return rtspStream;
             default:
                 Log.d(TAG, "Not supported yet.");
