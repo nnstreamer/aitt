@@ -160,6 +160,11 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public void stop() {
+        if (streamState == StreamState.INIT) {
+            return;
+        }
+
+        webrtc.stop();
         FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
         fbb.putString(STOP);
         ByteBuffer buffer = fbb.finish();

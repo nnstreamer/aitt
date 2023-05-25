@@ -71,7 +71,7 @@ public final class WebRTCSubscriber extends WebRTC {
          Log.e(TAG, "Stream peer already added");
          return false;
       }
-      this.peerDiscoveryId = id;
+      peerDiscoveryId = id;
       createOffer();
       return true;
    }

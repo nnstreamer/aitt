@@ -86,8 +86,19 @@ public final class WebRTCPublisher extends WebRTC {
 
     @Override
     public void start() {
+        if (peerConnection == null)
+            initializePeerConnection();
         if (sourceType == SourceType.CAMERA && cameraCapturer != null)
             cameraCapturer.startCapture(frameWidth, frameHeight, frameRate);
+    }
+
+    @Override
+    public void stop() {
+        if (peerConnection == null)
+            return;
+        cleanStream();
+        peerConnection.dispose();
+        peerConnection = null;
     }
 
     @Override

@@ -151,15 +151,22 @@ public abstract class WebRTC {
         iceCandidateAddedCallback = cb;
     }
 
+    /**
+     * Method to start WebRTC
+     */
     public void start() {
-        Log.d(TAG, "Start WebRTC");
+        if (peerConnection == null)
+            initializePeerConnection();
     }
 
     /**
-     * Method to disconnect the connection from peer
+     * Method to stop WebRTC
      */
     public void stop() {
-        // ToDo : Stop webRTC stream
+        if (peerConnection == null)
+            return;
+        peerConnection.dispose();
+        peerConnection = null;
     }
 
     /**
@@ -191,7 +198,7 @@ public abstract class WebRTC {
             Log.e(TAG, "Stream peer already added");
             return false;
         }
-        this.peerDiscoveryId = id;
+        peerDiscoveryId = id;
         return true;
     }
 
@@ -256,6 +263,9 @@ public abstract class WebRTC {
             Log.d(TAG, "No stream for peer: " + discoveryId);
             return;
         }
+
+        peerDiscoveryId = null;
+        peerId = null;
         stop();
     }
 
