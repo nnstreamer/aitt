@@ -124,6 +124,19 @@ public class JniInterface {
     }
 
     /**
+     * JNI Interface API to set will info data to specified MQTT topic
+     *
+     * @param topic   String to which message needs to be published
+     * @param data    Byte message to be published
+     * @param dataLen Size/length of the message to be published
+     * @param qos     QoS at which the message should be delivered
+     * @param retain  Boolean to decide whether or not the message should be retained by the broker
+     */
+    public void setWillInfo(final String topic, final byte[] data, long dataLen, int qos, boolean retain) {
+        setWillInfoJNI(instance, topic, data, dataLen, qos, retain);
+    }
+
+    /**
      * JNI Interface API to unsubscribe the given topic
      * @param aittSubId Subscribe ID of the topics to be unsubscribed
      */
@@ -269,6 +282,9 @@ public class JniInterface {
 
     /* Native API for publishing to a topic */
     private native void publishJNI(long instance, final String topic, final byte[] data, long dataLen, int protocol, int qos, boolean retain);
+
+    /* Native API for set will info to a topic */
+    private native void setWillInfoJNI(long instance, final String topic, final byte[] data, long dataLen, int qos, boolean retain);
 
     /* Native API for subscribing to a topic */
     private native long subscribeJNI(long instance, final String topic, int protocol, int qos);

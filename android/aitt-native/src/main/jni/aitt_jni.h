@@ -65,6 +65,9 @@ public:
                         jstring topic, jbyteArray data, jlong datalen, jint protocol,
                         jint qos, jboolean retain);
 
+    static void SetWillInfo(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
+                            jstring topic, jbyteArray data, jlong datalen, jint qos, jboolean retain);
+
     static void Unsubscribe(JNIEnv *env, jobject jniInterfaceObject, jlong handle,
                             jlong aittSubId);
 

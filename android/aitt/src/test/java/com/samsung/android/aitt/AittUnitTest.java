@@ -260,6 +260,52 @@ public class AittUnitTest {
     }
 
     @Test
+    public void testSetWillInfoMqtt_P() {
+        try {
+            String willInfo = "Test Will info data";
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            byte[] data = willInfo.getBytes();
+            aitt.setWillInfo(topic, data, Aitt.QoS.AT_MOST_ONCE, false);
+            aitt.connect(brokerIp, port);
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSetWillInfoMqtt_P " + e);
+        }
+    }
+
+    @Test
+    public void testWithoutWillInfo_N() {
+        try {
+            String willInfo = "";
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            byte[] data = willInfo.getBytes();
+            assertThrows(IllegalArgumentException.class, () -> aitt.setWillInfo(topic, data, Aitt.QoS.AT_MOST_ONCE, false));
+            aitt.connect(brokerIp, port);
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWithoutWillInfo_N " + e);
+        }
+    }
+
+    @Test
+    public void testWillInfoWithoutTopic_N() {
+        try {
+            String _topic = "";
+            String willInfo = "Test Will info data";
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            byte[] data = willInfo.getBytes();
+            assertThrows(IllegalArgumentException.class, () -> aitt.setWillInfo(_topic, data, Aitt.QoS.AT_MOST_ONCE, false));
+            aitt.connect(brokerIp, port);
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWillInfoWithoutTopic_N " + e);
+        }
+    }
+
+    @Test
     public void testConnectWithoutIP_P() {
         try {
             shadowJniInterface.setInitReturn(true);

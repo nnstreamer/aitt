@@ -51,6 +51,7 @@ public class Aitt {
 
     private static final String TAG = "AITT_ANDROID";
     private static final String INVALID_TOPIC = "Invalid topic";
+    private static final String INVALID_WILL_INFO = "Invalid will info";
     private static final String HOST_STRING = "host";
 
     private final Map<String, HostTable> publishTable = new HashMap<>();
@@ -296,6 +297,24 @@ public class Aitt {
             mJniInterface.publish(topic, message, message.length, jniProtocols, qos.ordinal(), retain);
 
         publishTransportProtocols(topic, message, protocols);
+    }
+
+    /**
+     * Method to set will info message to a specific mqtt topic with qos, and retain
+     *
+     * @param topic  String to which message needs to be published
+     * @param data   Byte message that needs to be published
+     * @param qos    QoS at which the message should be delivered
+     * @param retain Boolean to decide whether or not the message should be retained by the broker
+     */
+    public void setWillInfo(String topic, byte[] data, QoS qos, boolean retain) {
+        if (topic == null || topic.isEmpty()) {
+            throw new IllegalArgumentException(INVALID_TOPIC);
+        }
+        if (data == null || data.length <= 0) {
+            throw new IllegalArgumentException(INVALID_WILL_INFO);
+        }
+        mJniInterface.setWillInfo(topic, data, data.length, qos.ordinal(), retain);
     }
 
     /**

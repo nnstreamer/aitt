@@ -179,6 +179,50 @@ void AittNativeInterface::Publish(JNIEnv *env, jobject jni_interface_object, jlo
 }
 
 /**
+ * JNI API to set will info data to a given MQTT topic
+ * @param env JNI interface pointer
+ * @param jni_interface_object JNI interface object
+ * @param handle AittNativeInterface object
+ * @param topic subscribe topic
+ * @param data data to be published
+ * @param data_len data length of a publishing data
+ * @param protocol publishing protocol
+ * @param qos publishing qos
+ * @param retain Currently used in MQTT to inform broker to retain data or not
+ */
+void AittNativeInterface::SetWillInfo(JNIEnv *env, jobject jni_interface_object, jlong handle,
+                                  jstring topic, jbyteArray data, jlong data_len, jint qos, jboolean retain)
+{
+    if (!CheckParams(env, jni_interface_object)) {
+        return;
+    }
+
+    auto *instance = reinterpret_cast<AittNativeInterface *>(handle);
+    std::string mqttTopic = GetStringUTF(env, topic);
+    if (mqttTopic.empty()) {
+        return;
+    }
+
+    const char *cdata = (char *)env->GetByteArrayElements(data, nullptr);
+    if (cdata == nullptr) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to get byte array elements");
+        return;
+    }
+    const void *_data = reinterpret_cast<const void *>(cdata);
+
+    auto _qos = static_cast<AittQoS>(qos);
+    bool _retain = (bool) retain;
+
+    try {
+        instance->aitt.SetWillInfo(mqttTopic, _data, (int) data_len, _qos, _retain);
+    } catch (std::exception &e) {
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, "Failed to SetWillInfo");
+        JNI_LOG(ANDROID_LOG_ERROR, TAG, e.what());
+    }
+    env->ReleaseByteArrayElements(data, reinterpret_cast<jbyte *>((char *) cdata), 0);
+}
+
+/**
  * JNI API to disconnect from MQTT broker
  * @param env JNI interface pointer
  * @param jni_interface_object JNI interface object
@@ -577,16 +621,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
         return JNI_ERR;
     }
     static JNINativeMethod aitt_jni_methods[] = {
-            {"initJNI",                     "(Ljava/lang/String;Ljava/lang/String;Z)J", reinterpret_cast<void *>(AittNativeInterface::Init)},
-            {"connectJNI",                  "(JLjava/lang/String;I)V",                  reinterpret_cast<void *>(AittNativeInterface::Connect)},
-            {"subscribeJNI",                "(JLjava/lang/String;II)J",                 reinterpret_cast<void *>(AittNativeInterface::Subscribe)},
-            {"publishJNI",                  "(JLjava/lang/String;[BJIIZ)V",             reinterpret_cast<void *>(AittNativeInterface::Publish)},
-            {"unsubscribeJNI",              "(JJ)V",                                    reinterpret_cast<void *>(AittNativeInterface::Unsubscribe)},
-            {"disconnectJNI",               "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::Disconnect)},
-            {"setConnectionCallbackJNI",    "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::SetConnectionCallback)},
-            {"setDiscoveryCallbackJNI",     "(JLjava/lang/String;)I",                   reinterpret_cast<void *>(AittNativeInterface::SetDiscoveryCallback)},
-            {"removeDiscoveryCallbackJNI",  "(JI)V",                                    reinterpret_cast<void *>(AittNativeInterface::RemoveDiscoveryCallback)},
-            {"updateDiscoveryMessageJNI",   "(JLjava/lang/String;[BJ)V",                reinterpret_cast<void *>(AittNativeInterface::UpdateDiscoveryMessage)}};
+            {"initJNI",                    "(Ljava/lang/String;Ljava/lang/String;Z)J", reinterpret_cast<void *>(AittNativeInterface::Init)},
+            {"connectJNI",                 "(JLjava/lang/String;I)V",                  reinterpret_cast<void *>(AittNativeInterface::Connect)},
+            {"subscribeJNI",               "(JLjava/lang/String;II)J",                 reinterpret_cast<void *>(AittNativeInterface::Subscribe)},
+            {"publishJNI",                 "(JLjava/lang/String;[BJIIZ)V",             reinterpret_cast<void *>(AittNativeInterface::Publish)},
+            {"setWillInfoJNI",             "(JLjava/lang/String;[BJIZ)V",              reinterpret_cast<void *>(AittNativeInterface::SetWillInfo)},
+            {"unsubscribeJNI",             "(JJ)V",                                    reinterpret_cast<void *>(AittNativeInterface::Unsubscribe)},
+            {"disconnectJNI",              "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::Disconnect)},
+            {"setConnectionCallbackJNI",   "(J)V",                                     reinterpret_cast<void *>(AittNativeInterface::SetConnectionCallback)},
+            {"setDiscoveryCallbackJNI",    "(JLjava/lang/String;)I",                   reinterpret_cast<void *>(AittNativeInterface::SetDiscoveryCallback)},
+            {"removeDiscoveryCallbackJNI", "(JI)V",                                    reinterpret_cast<void *>(AittNativeInterface::RemoveDiscoveryCallback)},
+            {"updateDiscoveryMessageJNI",  "(JLjava/lang/String;[BJ)V",                reinterpret_cast<void *>(AittNativeInterface::UpdateDiscoveryMessage)}};
     if (env->RegisterNatives(klass, aitt_jni_methods,
                              sizeof(aitt_jni_methods) / sizeof(aitt_jni_methods[0]))) {
         env->DeleteLocalRef(klass);
