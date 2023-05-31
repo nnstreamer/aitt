@@ -19,20 +19,17 @@ import static com.samsung.android.aitt.stream.WebRTCStream.createPublisherStream
 import static com.samsung.android.aitt.stream.WebRTCStream.createSubscriberStream;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.samsung.android.aitt.Aitt;
-
 import com.samsung.android.aitt.stream.AittStream;
 
 import java.security.InvalidParameterException;
 
 public final class WebRTCHandler extends StreamHandler {
 
-    private static final String TAG = "WebRTCHandler";
-
     @Override
     public void setAppContext(Context context) {
+        //ToDo : Not needed for now
     }
 
     @Override

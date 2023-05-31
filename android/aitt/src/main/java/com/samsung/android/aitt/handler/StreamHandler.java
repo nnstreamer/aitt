@@ -31,7 +31,6 @@ public class StreamHandler implements ModuleHandler {
      * @return returns stream object
      */
     AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) throws InstantiationException {
-        // TODO: Change this function properly after refactoring WebRTC modules.
         return null;
     }
 
@@ -41,6 +40,6 @@ public class StreamHandler implements ModuleHandler {
      */
     @Override
     public void setAppContext(Context appContext) {
-        // TODO: implement this function.
+        // //ToDo : Not needed for now
     }
 }

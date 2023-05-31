@@ -366,39 +366,6 @@ public class AittUnitTest {
     }
 
     @Test
-    public void testPublishWebRTC_P() {
-        try {
-            shadowJniInterface.setInitReturn(true);
-            Aitt aitt = new Aitt(appContext, aittId);
-            aitt.connect(brokerIp, port);
-
-            byte[] payload = message.getBytes();
-            aitt.publish(topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false);
-
-            aitt.disconnect();
-        } catch (Exception e) {
-            fail("Failed testPublishWebRTC " + e);
-        }
-    }
-
-    @Test
-    public void testPublishWebRTCInvalidTopic_N() {
-        try {
-            shadowJniInterface.setInitReturn(true);
-            Aitt aitt = new Aitt(appContext, aittId);
-            aitt.connect(brokerIp, port);
-
-            String _topic = "";
-            byte[] payload = message.getBytes();
-            assertThrows(IllegalArgumentException.class, () -> aitt.publish(_topic, payload, Aitt.Protocol.WEBRTC, Aitt.QoS.AT_MOST_ONCE, false));
-
-            aitt.disconnect();
-        } catch (Exception e) {
-            fail("Failed testPublishWebRTCInvalidTopic" + e);
-        }
-    }
-
-    @Test
     public void testPublishIpc_P() {
         try {
             shadowJniInterface.setInitReturn(true);
@@ -439,7 +406,9 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             byte[] payload = message.getBytes();
-            aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, false);
+            aitt.publish(topic, payload, Aitt.Protocol.MQTT);
+            aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.EXACTLY_ONCE);
+            aitt.publish(topic, payload, Aitt.Protocol.TCP, Aitt.QoS.AT_LEAST_ONCE, true);
 
             aitt.disconnect();
         } catch (Exception e) {

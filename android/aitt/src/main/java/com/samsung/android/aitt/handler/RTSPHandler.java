@@ -17,11 +17,8 @@ package com.samsung.android.aitt.handler;
 
 import android.content.Context;
 
-import static android.content.ContentValues.TAG;
 import static com.samsung.android.aitt.stream.RTSPStream.createPublisherStream;
 import static com.samsung.android.aitt.stream.RTSPStream.createSubscriberStream;
-
-import android.util.Log;
 
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.stream.AittStream;
@@ -32,6 +29,7 @@ public class RTSPHandler extends StreamHandler {
 
     @Override
     public void setAppContext(Context context) {
+        //ToDo : Not needed for now
     }
 
     @Override
