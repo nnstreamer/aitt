@@ -32,7 +32,7 @@
 namespace AittTCPNamespace {
 
 TCP::Server::Server(const std::string &host, unsigned short &port, bool is_secure)
-      : handle(-1), addr(nullptr), addrlen(0), secure(is_secure), key(), iv()
+      : handle(-1), addr_(nullptr), addrlen_(0), secure(is_secure), key(), iv()
 {
     int ret = 0;
 
@@ -41,12 +41,12 @@ TCP::Server::Server(const std::string &host, unsigned short &port, bool is_secur
         if (handle < 0)
             break;
 
-        addrlen = sizeof(sockaddr_in);
-        addr = static_cast<sockaddr *>(calloc(1, sizeof(sockaddr_in)));
-        if (!addr)
+        addrlen_ = sizeof(sockaddr_in);
+        addr_ = static_cast<sockaddr *>(calloc(1, sizeof(sockaddr_in)));
+        if (!addr_)
             break;
 
-        sockaddr_in *inet_addr = reinterpret_cast<sockaddr_in *>(addr);
+        sockaddr_in *inet_addr = reinterpret_cast<sockaddr_in *>(addr_);
         if (!inet_pton(AF_INET, host.c_str(), &inet_addr->sin_addr)) {
             ret = EINVAL;
             break;
@@ -60,12 +60,12 @@ TCP::Server::Server(const std::string &host, unsigned short &port, bool is_secur
         if (ret < 0)
             break;
 
-        ret = bind(handle, addr, addrlen);
+        ret = bind(handle, addr_, addrlen_);
         if (ret < 0)
             break;
 
         if (!port) {
-            if (getsockname(handle, addr, &addrlen) < 0)
+            if (getsockname(handle, addr_, &addrlen_) < 0)
                 break;
             port = ntohs(inet_addr->sin_port);
         }
@@ -83,7 +83,7 @@ TCP::Server::Server(const std::string &host, unsigned short &port, bool is_secur
     if (ret <= 0)
         ret = errno;
 
-    free(addr);
+    free(addr_);
 
     if (handle >= 0 && close(handle) < 0)
         ERR_CODE(errno, "close");
@@ -96,7 +96,7 @@ TCP::Server::~Server(void)
     if (handle < 0)
         return;
 
-    free(addr);
+    free(addr_);
     if (close(handle) < 0)
         ERR_CODE(errno, "close");
 }

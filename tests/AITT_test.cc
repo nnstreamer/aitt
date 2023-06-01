@@ -128,7 +128,7 @@ class AITTTest : public testing::Test, public AittTests {
                           AITT_QOS_AT_MOST_ONCE);
                 }
                 mainLoop.AddTimeout(CHECK_INTERVAL,
-                      [&](MainLoopHandler::MainLoopResult result, int fd,
+                      [&](MainLoopHandler::Event result, int fd,
                             MainLoopHandler::MainLoopData *data) -> int {
                           return ReadyCheck(static_cast<AittTests *>(this));
                       });
@@ -147,7 +147,7 @@ class AITTTest : public testing::Test, public AittTests {
                   AITT_QOS_AT_MOST_ONCE);
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
@@ -203,7 +203,7 @@ class AITTTest : public testing::Test, public AittTests {
             aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
@@ -249,7 +249,7 @@ class AITTTest : public testing::Test, public AittTests {
             aitt.Connect();
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
@@ -316,7 +316,7 @@ TEST_F(AITTTest, SetConnectionCallback_P_Anytime)
         aitt.Connect();
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -368,7 +368,7 @@ TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
         aitt.Connect();
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -605,7 +605,7 @@ TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG));
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -646,7 +646,7 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
                   DBG("Ready flag is toggled");
 
                   mainLoop.AddTimeout(CHECK_INTERVAL,
-                        [&](MainLoopHandler::MainLoopResult result, int fd,
+                        [&](MainLoopHandler::Event result, int fd,
                               MainLoopHandler::MainLoopData *data) -> int {
                             AITTTest *test = static_cast<AITTTest *>(this);
                             test->ToggleReady();
@@ -659,7 +659,7 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG));
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -728,7 +728,7 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
               (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP));
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });

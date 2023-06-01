@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #include "MainLoopIface.h"
 
@@ -61,7 +62,7 @@ class PosixMainLoop : public MainLoopIface {
         ~MainLoopCbData();
         mainLoopCB cb;
         MainLoopData *data;
-        MainLoopResult result;
+        Event result;
         int fd;
         int timeout_interval;
         TimeoutData *timeout_data;
@@ -76,7 +77,7 @@ class PosixMainLoop : public MainLoopIface {
 
   private:
     void TimeoutTableInsert(unsigned int identifier, MainLoopCbData *cb_data);
-    bool CheckWatch(pollfd *pfds, nfds_t nfds, short int event);
+    bool CheckWatch(const std::vector<struct pollfd> &pfds, nfds_t nfds, short int event);
     int CheckTimeout(pollfd pfd, short int event);
     void CheckIdle(pollfd pfd, short int event);
     TimeoutData *SetTimer(int interval, unsigned int identifier);

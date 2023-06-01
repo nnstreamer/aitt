@@ -25,8 +25,8 @@
 
 namespace AittTCPNamespace {
 
-Module::Module(AittProtocol type, AittDiscovery &discovery, const std::string &my_ip)
-      : AittTransport(type, discovery), ip(my_ip), secure(type == AITT_TYPE_TCP_SECURE)
+Module::Module(AittProtocol type, AittDiscovery &manager, const std::string &my_ip)
+      : AittTransport(type, manager), ip(my_ip), secure(type == AITT_TYPE_TCP_SECURE)
 {
     aittThread = std::thread(&Module::ThreadMain, this);
 
@@ -347,7 +347,7 @@ void Module::UpdateDiscoveryMsg()
     discovery.UpdateDiscoveryMsg(NAME[secure], buf.data(), buf.size());
 }
 
-int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
+int Module::ReceiveData(MainLoopHandler::Event result, int handle,
       MainLoopHandler::MainLoopData *user_data)
 {
     TCPData *tcp_data = dynamic_cast<TCPData *>(user_data);
@@ -357,7 +357,7 @@ int Module::ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
     Module *impl = parent_info->impl;
     RETV_IF(impl == nullptr, AITT_LOOP_EVENT_REMOVE);
 
-    if (result == MainLoopHandler::HANGUP) {
+    if (result == MainLoopHandler::Event::HANGUP) {
         ERR("The main loop hung up. Disconnect the client.");
         return impl->HandleClientDisconnect(handle);
     }
@@ -447,7 +447,7 @@ void Module::UnpackMsgInfo(AittMsg &msg, const void *data, const size_t datalen)
         msg.SetEndSequence(map["end_sequence"].AsBool());
 }
 
-int Module::AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
+int Module::AcceptConnection(MainLoopHandler::Event result, int handle,
       MainLoopHandler::MainLoopData *user_data)
 {
     TCPServerData *listen_info = dynamic_cast<TCPServerData *>(user_data);

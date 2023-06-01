@@ -150,7 +150,7 @@ gboolean GlibMainLoop::EventHandler(GIOChannel *src, GIOCondition condition, gpo
 
     if ((G_IO_HUP | G_IO_ERR) & condition) {
         ERR("Connection Error(%d)", condition);
-        cb_data->result = (G_IO_HUP & condition) ? HANGUP : ERROR;
+        cb_data->result = (G_IO_HUP & condition) ? Event::HANGUP : Event::ERROR;
         ret = FALSE;
     }
 
@@ -165,7 +165,8 @@ void GlibMainLoop::DestroyNotify(gpointer data)
     delete cb_data;
 }
 
-GlibMainLoop::MainLoopCbData::MainLoopCbData() : data(nullptr), result(OK), fd(-1), ctx(nullptr)
+GlibMainLoop::MainLoopCbData::MainLoopCbData()
+      : data(nullptr), result(Event::OKAY), fd(-1), ctx(nullptr)
 {
 }
 

@@ -35,8 +35,8 @@ class AittTransport {
 
     static constexpr const char *const MODULE_ENTRY_NAME = DEFINE_TO_STR(AITT_TRANSPORT_NEW);
 
-    explicit AittTransport(AittProtocol type, AittDiscovery &discovery)
-          : protocol(type), discovery(discovery)
+    explicit AittTransport(AittProtocol type, AittDiscovery &manager)
+          : protocol(type), discovery(manager)
     {
     }
     virtual ~AittTransport(void) = default;

@@ -15,7 +15,6 @@
  */
 #pragma once
 
-#include <libgen.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -28,19 +27,28 @@
 
 #if defined(SYS_gettid)
 #define GETTID() syscall(SYS_gettid)
-#else  // SYS_gettid
+#else   // SYS_gettid
 #define GETTID() 0lu
 #endif  // SYS_gettid
 
 #define AITT_ERRMSG_LEN 80
 
+#ifdef TIZEN_RT
+#define _POSIX_C_SOURCE 200809L
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 0
+#endif
+#pragma GCC system_header
+#endif
+
+
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
-#define AITT_STRERROR_R(errno, buf, buflen)          \
-    do {                                             \
-        int ret = strerror_r(errno, buf, buflen);    \
-        if (ret != 0) {                              \
-            assert(ret == 0 && "strerror_r failed"); \
-        }                                            \
+#define AITT_STRERROR_R(errno, buf, buflen)                   \
+    do {                                                      \
+        int strerror_ret = strerror_r(errno, buf, buflen);    \
+        if (strerror_ret != 0) {                              \
+            assert(strerror_ret == 0 && "strerror_r failed"); \
+        }                                                     \
     } while (0)
 #else
 #define AITT_STRERROR_R(errno, buf, buflen)                   \
@@ -95,10 +103,10 @@
         }                       \
     } while (0)
 
-#define RETVM_IF(expr, val, fmt, arg...) \
-    do {                                 \
-        if (expr) {                      \
-            ERR(fmt, ##arg);             \
-            return (val);                \
-        }                                \
+#define RETVM_IF(expr, val, fmt, ...) \
+    do {                              \
+        if (expr) {                   \
+            ERR(fmt, ##__VA_ARGS__);  \
+            return (val);             \
+        }                             \
     } while (0)

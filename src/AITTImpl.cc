@@ -33,10 +33,11 @@ AITT::Impl::Impl(AITT &parent, const std::string &id, const std::string &my_ip,
       : public_api(parent),
         discovery(id),
         modules(my_ip, discovery),
+        mq_discovery_handler(discovery, id),
+        stream_manager(modules),
         id_(id),
         mqtt_broker_port_(0),
-        reply_id(0),
-        mq_discovery_handler(discovery, id)
+        reply_id(0)
 {
     if (option.GetUseCustomMqttBroker()) {
         mq = modules.NewCustomMQ(id, option);
@@ -97,7 +98,7 @@ void AITT::Impl::SetConnectionCallback(ConnectionCallback cb, void *user_data)
 }
 
 int AITT::Impl::ConnectionCB(ConnectionCallback cb, void *user_data, int status,
-      MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data)
+      MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *loop_data)
 {
     RETV_IF(cb == nullptr, AITT_LOOP_EVENT_REMOVE);
 
@@ -125,10 +126,7 @@ void AITT::Impl::Connect(const std::string &host, int port, const std::string &u
 void AITT::Impl::Disconnect(void)
 {
     UnsubscribeAll();
-
-    for (auto stream : in_use_streams)
-        delete stream;
-    in_use_streams.clear();
+    stream_manager.DestroyStreamAll();
 
     mqtt_broker_ip_.clear();
     mqtt_broker_port_ = -1;
@@ -237,7 +235,7 @@ AittSubscribeID AITT::Impl::SubscribeMQ(SubscribeInfo *handle, MainLoopHandler *
 }
 
 int AITT::Impl::DetachedCB(SubscribeCallback cb, AittMsg msg, void *data, const int datalen,
-      void *user_data, MainLoopHandler::MainLoopResult result, int fd,
+      void *user_data, MainLoopHandler::Event result, int fd,
       MainLoopHandler::MainLoopData *loop_data)
 {
     RETV_IF(cb == nullptr, AITT_LOOP_EVENT_REMOVE);
@@ -380,7 +378,7 @@ void AITT::Impl::HandleTimeout(int timeout_ms, unsigned int &timeout_id,
 {
     timeout_id = sync_loop.AddTimeout(
           timeout_ms,
-          [&, timeout_ms](MainLoopHandler::MainLoopResult result, int fd,
+          [&, timeout_ms](MainLoopHandler::Event result, int fd,
                 MainLoopHandler::MainLoopData *data) -> int {
               ERR("PublishWithReplySync() timeout(%d)", timeout_ms);
               sync_loop.Quit();
@@ -431,13 +429,7 @@ void *AITT::Impl::SubscribeTCP(SubscribeInfo *handle, const std::string &topic,
 AittStream *AITT::Impl::CreateStream(AittStreamProtocol type, const std::string &topic,
       AittStreamRole role)
 {
-    AittStreamModule *stream = nullptr;
-    try {
-        stream = modules.NewStreamModule(type, topic, role);
-        in_use_streams.push_back(stream);
-    } catch (std::exception &e) {
-        ERR("StreamHandler() Fail(%s)", e.what());
-    }
+    AittStream *stream = stream_manager.CreateStream(type, topic, role);
     discovery.Restart();
 
     return stream;
@@ -445,13 +437,7 @@ AittStream *AITT::Impl::CreateStream(AittStreamProtocol type, const std::string 
 
 void AITT::Impl::DestroyStream(AittStream *aitt_stream)
 {
-    auto it = std::find(in_use_streams.begin(), in_use_streams.end(), aitt_stream);
-    if (it == in_use_streams.end()) {
-        ERR("Unknown Stream(%p)", aitt_stream);
-        return;
-    }
-    in_use_streams.erase(it);
-    delete aitt_stream;
+    stream_manager.DestroyStream(aitt_stream);
 }
 
 int AITT::Impl::CountSubscriber(const std::string &topic, AittProtocol protocols)

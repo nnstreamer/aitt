@@ -23,6 +23,10 @@
 #include "AESEncryptorMbedTLS.h"
 #include "AESEncryptorOpenSSL.h"
 
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#endif
+
 namespace AittTCPNamespace {
 class TCP {
   public:
@@ -67,9 +71,9 @@ class TCP {
     void SendSizedDataSecure(const void *data, int32_t data_size);
     int RecvSizedDataSecure(void **data);
 
-    int handle;
-    socklen_t addrlen;
-    sockaddr *addr;
+    int handle_;
+    socklen_t addrlen_;
+    sockaddr *addr_;
     bool secure;
 #ifdef WITH_MBEDTLS
     AESEncryptorMbedTLS crypto;

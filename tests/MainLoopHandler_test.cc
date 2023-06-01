@@ -103,15 +103,14 @@ TEST_F(MainLoopTest, Normal_Anytime)
 
     handler.AddWatch(
           server_fd,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               int client_fd = accept(server_fd, 0, 0);
               EXPECT_NE(client_fd, -1);
               handler.AddWatch(
                     client_fd,
-                    [&](MainLoopHandler::MainLoopResult result, int fd,
+                    [&](MainLoopHandler::Event result, int fd,
                           MainLoopHandler::MainLoopData *data) -> int {
-                        EXPECT_EQ(result, MainLoopHandler::OK);
+                        EXPECT_EQ(result, MainLoopHandler::Event::OKAY);
                         char buf[2] = {0};
                         EXPECT_EQ(read(fd, buf, 1), 1);
                         EXPECT_STREQ(buf, "1");
@@ -135,22 +134,21 @@ TEST_F(MainLoopTest, HANGUP_Anytime)
 
     handler.AddWatch(
           server_fd,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               int client_fd = accept(server_fd, 0, 0);
               EXPECT_NE(client_fd, -1);
               handler.AddWatch(
                     client_fd,
-                    [&](MainLoopHandler::MainLoopResult result, int fd,
+                    [&](MainLoopHandler::Event result, int fd,
                           MainLoopHandler::MainLoopData *data) -> int {
-                        if (result == MainLoopHandler::OK) {
+                        if (result == MainLoopHandler::Event::OKAY) {
                             char buf[2] = {0};
                             EXPECT_EQ(read(fd, buf, 1), 1);
                             EXPECT_STREQ(buf, "1");
                             return AITT_LOOP_EVENT_CONTINUE;
                         }
 
-                        EXPECT_EQ(result, MainLoopHandler::HANGUP);
+                        EXPECT_EQ(result, MainLoopHandler::Event::HANGUP);
                         handler.Quit();
                         ret = true;
                         return AITT_LOOP_EVENT_REMOVE;
@@ -172,8 +170,7 @@ TEST_F(MainLoopTest, removeWatch_Anytime)
 
     handler.AddWatch(
           server_fd,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               ADD_FAILURE() << "It's removed";
               return AITT_LOOP_EVENT_REMOVE;
           },
@@ -192,8 +189,7 @@ TEST_F(MainLoopTest, UserData_Anytime)
 
     handler.AddWatch(
           server_fd,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               EXPECT_EQ(data, &test_data);
               handler.Quit();
               ret = true;
@@ -214,8 +210,7 @@ TEST_F(MainLoopTest, AddIdle_Anytime)
 
     handler.AddIdle(
           &handler,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               EXPECT_EQ(data, &test_data);
               handler.Quit();
               ret = true;
@@ -240,8 +235,7 @@ TEST_F(MainLoopTest, AddTimeout_Anytime)
 
     handler.AddTimeout(
           interval,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               EXPECT_EQ(data, &test_data);
               clock_gettime(CLOCK_MONOTONIC, &ts_end);
               double diff = 1000.0 * ts_end.tv_sec + 1e-6 * ts_end.tv_nsec
@@ -267,8 +261,7 @@ TEST_F(MainLoopTest, Quit_Without_RemoveTimeout_Anytime)
 
     handler.AddTimeout(
           interval,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               handler.Quit();
               EXPECT_FALSE(ret);
               ret = true;
@@ -286,16 +279,15 @@ TEST_F(MainLoopTest, Watch_Event_CB_Return_P_Anytime)
     MainLoopHandler handler;
 
     handler.AddWatch(server_fd,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               int client_fd = accept(server_fd, 0, 0);
               EXPECT_NE(client_fd, -1);
               handler.AddWatch(
                     client_fd,
-                    [&](MainLoopHandler::MainLoopResult result, int fd,
+                    [&](MainLoopHandler::Event result, int fd,
                           MainLoopHandler::MainLoopData *data) -> int {
                         static int count = 0;
-                        EXPECT_EQ(result, MainLoopHandler::OK);
+                        EXPECT_EQ(result, MainLoopHandler::Event::OKAY);
                         return CheckCount(handler, count);
                     },
                     nullptr);
@@ -308,12 +300,12 @@ TEST_F(MainLoopTest, IDLE_CB_Return_P_Anytime)
 {
     MainLoopHandler handler;
 
-    handler.AddIdle([&](MainLoopHandler::MainLoopResult result, int fd,
-                          MainLoopHandler::MainLoopData *data) -> int {
-        static int count = 0;
-        EXPECT_EQ(result, MainLoopHandler::OK);
-        return CheckCount(handler, count);
-    });
+    handler.AddIdle(
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
+              static int count = 0;
+              EXPECT_EQ(result, MainLoopHandler::Event::OKAY);
+              return CheckCount(handler, count);
+          });
 
     handler.Run();
 }
@@ -323,10 +315,9 @@ TEST_F(MainLoopTest, Timeout_CB_Return_P_Anytime)
     MainLoopHandler handler;
 
     handler.AddTimeout(200,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data) -> int {
               static int count = 0;
-              EXPECT_EQ(result, MainLoopHandler::OK);
+              EXPECT_EQ(result, MainLoopHandler::Event::OKAY);
               return CheckCount(handler, count);
           });
 

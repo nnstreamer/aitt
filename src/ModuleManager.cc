@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef TIZEN_RT
+
 #include "ModuleManager.h"
 
 #include <dlfcn.h>
@@ -184,3 +186,5 @@ std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const Aitt
 }
 
 }  // namespace aitt
+
+#endif  // TIZEN_RT

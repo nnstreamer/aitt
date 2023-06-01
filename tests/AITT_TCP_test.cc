@@ -78,7 +78,7 @@ class AITTTCPTest : public testing::Test, public AittTests {
             aitt.Connect();
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
@@ -117,7 +117,7 @@ class AITTTCPTest : public testing::Test, public AittTests {
             aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG), protocol);
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyAllCheck(static_cast<AittTests *>(this));
                   });

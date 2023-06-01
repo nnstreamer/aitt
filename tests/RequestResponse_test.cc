@@ -110,7 +110,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         }
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -171,7 +171,7 @@ class AITTRRTest : public testing::Test, public AittTests {
         aitt.Connect();
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });
@@ -233,7 +233,7 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
             aitt.Connect();
 
             mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::MainLoopResult result, int fd,
+                  [&](MainLoopHandler::Event result, int fd,
                         MainLoopHandler::MainLoopData *data) -> int {
                       return ReadyCheck(static_cast<AittTests *>(this));
                   });
@@ -298,7 +298,7 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
               nullptr, correlation);
 
         mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
               });

@@ -37,7 +37,7 @@ namespace AittTCPNamespace {
 
 class Module : public AittTransport {
   public:
-    explicit Module(AittProtocol type, AittDiscovery &discovery, const std::string &ip);
+    explicit Module(AittProtocol type, AittDiscovery &manager, const std::string &ip);
     virtual ~Module(void);
 
     void Publish(const std::string &topic, const void *data, const int datalen,
@@ -94,14 +94,14 @@ class Module : public AittTransport {
     using HostMap = std::map<std::string /* clientId */, PortInfo>;
     using PublishMap = std::map<std::string /* topic */, HostMap>;
 
-    static int AcceptConnection(MainLoopHandler::MainLoopResult result, int handle,
+    static int AcceptConnection(MainLoopHandler::Event result, int handle,
           MainLoopHandler::MainLoopData *watchData);
     void PublishFull(const AittMsg &msg, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false, bool is_reply = false);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
-    static int ReceiveData(MainLoopHandler::MainLoopResult result, int handle,
+    static int ReceiveData(MainLoopHandler::Event result, int handle,
           MainLoopHandler::MainLoopData *watchData);
     int HandleClientDisconnect(int handle);
     void GetMsgInfo(AittMsg &msg, TCPData *connect_info);

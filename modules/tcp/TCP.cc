@@ -32,7 +32,7 @@
 namespace AittTCPNamespace {
 
 TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
-      : handle(-1), addrlen(0), addr(nullptr), secure(false)
+      : handle_(-1), addrlen_(0), addr_(nullptr), secure(false)
 {
     int ret = 0;
 
@@ -42,20 +42,20 @@ TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
             break;
         }
 
-        handle = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-        if (handle < 0) {
+        handle_ = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+        if (handle_ < 0) {
             ERR("socket() Fail()");
             break;
         }
 
-        addrlen = sizeof(sockaddr_in);
-        addr = static_cast<sockaddr *>(calloc(1, addrlen));
-        if (!addr) {
+        addrlen_ = sizeof(sockaddr_in);
+        addr_ = static_cast<sockaddr *>(calloc(1, addrlen_));
+        if (!addr_) {
             ERR("calloc() Fail()");
             break;
         }
 
-        sockaddr_in *inet_addr = reinterpret_cast<sockaddr_in *>(addr);
+        sockaddr_in *inet_addr = reinterpret_cast<sockaddr_in *>(addr_);
         if (!inet_pton(AF_INET, host.c_str(), &inet_addr->sin_addr)) {
             ret = EINVAL;
             break;
@@ -64,7 +64,7 @@ TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
         inet_addr->sin_port = htons(connect_info.port);
         inet_addr->sin_family = AF_INET;
 
-        ret = connect(handle, addr, addrlen);
+        ret = connect(handle_, addr_, addrlen_);
         if (ret < 0) {
             ERR("connect() Fail(%s, %d)", host.c_str(), connect_info.port);
             break;
@@ -77,25 +77,25 @@ TCP::TCP(const std::string &host, const ConnectInfo &connect_info)
     if (ret <= 0)
         ERR_CODE(errno, "TCP::TCP(%d) Fail", ret);
 
-    free(addr);
-    if (0 <= handle && close(handle) < 0)
+    free(addr_);
+    if (0 <= handle_ && close(handle_) < 0)
         ERR_CODE(errno, "close");
     throw std::runtime_error("TCP::TCP() Fail");
 }
 
 TCP::TCP(int handle, sockaddr *addr, socklen_t szAddr, const ConnectInfo &connect_info)
-      : handle(handle), addrlen(szAddr), addr(addr), secure(false)
+      : handle_(handle), addrlen_(szAddr), addr_(addr), secure(false)
 {
     SetupOptions(connect_info);
 }
 
 TCP::~TCP(void)
 {
-    if (handle < 0)
+    if (handle_ < 0)
         return;
 
-    free(addr);
-    if (close(handle) < 0)
+    free(addr_);
+    if (close(handle_) < 0)
         ERR_CODE(errno, "close");
 }
 
@@ -103,7 +103,7 @@ void TCP::SetupOptions(const ConnectInfo &connect_info)
 {
     int on = 1;
 
-    int ret = setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
+    int ret = setsockopt(handle_, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on));
     if (ret < 0) {
         ERR_CODE(errno, "delay option setting failed");
     }
@@ -118,9 +118,9 @@ int32_t TCP::Send(const void *data, int32_t data_size)
 {
     int32_t sent = 0;
     while (sent < data_size) {
-        int ret = send(handle, static_cast<const char *>(data) + sent, data_size - sent, 0);
+        int ret = send(handle_, static_cast<const char *>(data) + sent, data_size - sent, 0);
         if (ret < 0) {
-            ERR("send(%d, %d) Fail(%d)", handle, data_size, errno);
+            ERR("send(%d, %d) Fail(%d)", handle_, data_size, errno);
             throw std::runtime_error("send() Fail");
         }
 
@@ -143,9 +143,9 @@ int32_t TCP::Recv(void *data, int32_t data_size)
 {
     int32_t received = 0;
     while (received < data_size) {
-        int ret = recv(handle, static_cast<char *>(data) + received, data_size - received, 0);
+        int ret = recv(handle_, static_cast<char *>(data) + received, data_size - received, 0);
         if (ret < 0) {
-            ERR("recv(%d, %d) Fail(%d)", handle, data_size, errno);
+            ERR("recv(%d, %d) Fail(%d)", handle_, data_size, errno);
             return -1;
         }
         if (ret == 0) {
@@ -177,7 +177,7 @@ int32_t TCP::HandleZeroMsg(void **data)
 
 int TCP::GetHandle(void)
 {
-    return handle;
+    return handle_;
 }
 
 void TCP::GetPeerInfo(std::string &host, unsigned short &port)
@@ -186,11 +186,11 @@ void TCP::GetPeerInfo(std::string &host, unsigned short &port)
           0,
     };
 
-    if (!inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in *>(this->addr)->sin_addr, address,
+    if (!inet_ntop(AF_INET, &reinterpret_cast<sockaddr_in *>(this->addr_)->sin_addr, address,
               sizeof(address)))
         throw std::runtime_error("inet_ntop() Fail");
 
-    port = ntohs(reinterpret_cast<sockaddr_in *>(this->addr)->sin_port);
+    port = ntohs(reinterpret_cast<sockaddr_in *>(this->addr_)->sin_port);
     host = address;
 }
 
@@ -199,7 +199,7 @@ unsigned short TCP::GetPort(void)
     sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
 
-    if (getsockname(handle, reinterpret_cast<sockaddr *>(&addr), &addrlen) < 0)
+    if (getsockname(handle_, reinterpret_cast<sockaddr *>(&addr), &addrlen) < 0)
         throw std::runtime_error("getsockname() Fail");
 
     return ntohs(addr.sin_port);
@@ -260,22 +260,24 @@ void TCP::SendSizedDataSecure(const void *data, int32_t data_size)
     }
 
     int32_t size_len;
+    unsigned char *size_buf =
+          static_cast<unsigned char *>(malloc(crypto.GetCryptogramSize(sizeof(int32_t))));
+
     if (data_size) {
         unsigned char *data_buf =
               static_cast<unsigned char *>(malloc(crypto.GetCryptogramSize(data_size)));
         int32_t data_len =
               crypto.Encrypt(static_cast<const unsigned char *>(data), data_size, data_buf);
-        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len = crypto.Encrypt((unsigned char *)&data_len, sizeof(data_len), size_buf);
         Send(size_buf, size_len);
         Send(data_buf, data_len);
         free(data_buf);
     } else {
-        unsigned char size_buf[crypto.GetCryptogramSize(sizeof(int32_t))];
         size_len =
               crypto.Encrypt((unsigned char *)&fixed_data_size, sizeof(fixed_data_size), size_buf);
         Send(size_buf, size_len);
     }
+    free(size_buf);
 }
 
 int32_t TCP::RecvSizedDataSecure(void **data)
@@ -283,17 +285,20 @@ int32_t TCP::RecvSizedDataSecure(void **data)
     int32_t result;
 
     int32_t cipher_size_len = crypto.GetCryptogramSize(sizeof(int32_t));
-    unsigned char cipher_size_buf[cipher_size_len];
+    unsigned char *cipher_size_buf = static_cast<unsigned char *>(malloc(cipher_size_len));
     result = Recv(cipher_size_buf, cipher_size_len);
     if (result < 0) {
         ERR("Recv() Fail(%d)", result);
+        free(cipher_size_buf);
         return result;
     }
 
-    unsigned char plain_size_buf[cipher_size_len];
+    unsigned char *plain_size_buf = static_cast<unsigned char *>(malloc(cipher_size_len));
     int32_t cipher_data_len = 0;
     crypto.Decrypt(cipher_size_buf, cipher_size_len, plain_size_buf);
     memcpy(&cipher_data_len, plain_size_buf, sizeof(cipher_data_len));
+    free(plain_size_buf);
+    free(cipher_size_buf);
     if (cipher_data_len == INT32_MAX)
         return HandleZeroMsg(data);
 

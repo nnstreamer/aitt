@@ -32,6 +32,7 @@ class AittException : public std::exception {
         NO_DATA_ERR,
         RESOURCE_BUSY_ERR,
         ALREADY,
+        NOT_SUPPORTED,
     };
 
     AittException(ErrCode err_code);

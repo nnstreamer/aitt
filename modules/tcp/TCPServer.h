@@ -36,8 +36,8 @@ class TCP::Server {
 
   private:
     int handle;
-    sockaddr *addr;
-    socklen_t addrlen;
+    sockaddr *addr_;
+    socklen_t addrlen_;
     bool secure;
     unsigned char key[AITT_TCP_ENCRYPTOR_KEY_LEN];
     unsigned char iv[AITT_TCP_ENCRYPTOR_IV_LEN];

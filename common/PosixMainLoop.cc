@@ -74,26 +74,37 @@ void PosixMainLoop::Run()
     is_running = true;
 
     while (is_running) {
-        nfds_t nfds = 0;
-
         table_lock.lock();
-        struct pollfd pfds[watch_table.size() + 2];
-        for (auto iter = watch_table.begin(); iter != watch_table.end(); iter++)
-            pfds[nfds++] = {iter->second->fd, POLLIN | POLLHUP | POLLERR, 0};
+        struct pollfd pfd = {0};
+        std::vector<struct pollfd> pfds;
+
+        for (auto iter = watch_table.begin(); iter != watch_table.end(); iter++) {
+            pfd.fd = iter->second->fd;
+            pfd.events = POLLIN | POLLHUP | POLLERR;
+            pfd.revents = 0;
+            pfds.push_back(pfd);
+        }
         table_lock.unlock();
 
-        pfds[nfds++] = {idle_pipe[0], POLLIN, 0};
-        pfds[nfds++] = {timeout_pipe[0], POLLIN, 0};
+        pfd.fd = idle_pipe[0];
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        pfds.push_back(pfd);
 
-        if (0 < poll(pfds, nfds, -1)) {
+        pfd.fd = timeout_pipe[0];
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        pfds.push_back(pfd);
+
+        if (0 < poll(pfds.data(), pfds.size(), -1)) {
             bool handled = false;
-            int ret = CheckTimeout(pfds[nfds - 1], POLLIN);
+            int ret = CheckTimeout(pfds[pfds.size() - 1], POLLIN);
             if (ret < 0)
                 break;
             handled |= !!ret;
-            handled |= CheckWatch(pfds, nfds - 2, POLLIN | POLLHUP | POLLERR);
+            handled |= CheckWatch(pfds, pfds.size() - 2, POLLIN | POLLHUP | POLLERR);
             if (!handled)
-                CheckIdle(pfds[nfds - 2], POLLIN);
+                CheckIdle(pfds[pfds.size() - 2], POLLIN);
         }
         if (false == idle_table.empty())
             WriteToPipe(idle_pipe[1], IDLE);
@@ -209,7 +220,7 @@ void PosixMainLoop::TimeoutTableInsert(unsigned int identifier, MainLoopCbData *
     timeout_table.insert(TimeoutMap::value_type(identifier, cb_data));
 }
 
-bool PosixMainLoop::CheckWatch(pollfd *pfds, nfds_t nfds, short int event)
+bool PosixMainLoop::CheckWatch(const std::vector<struct pollfd> &pfds, nfds_t nfds, short int event)
 {
     bool handled = false;
     for (nfds_t idx = 0; idx < nfds; idx++) {
@@ -218,12 +229,12 @@ bool PosixMainLoop::CheckWatch(pollfd *pfds, nfds_t nfds, short int event)
 
         table_lock.lock();
         auto iter = watch_table.find(pfds[idx].fd);
-        auto cb_data = (watch_table.end() == iter) ? NULL : iter->second;
+        auto cb_data = (watch_table.end() == iter) ? nullptr : iter->second;
         table_lock.unlock();
 
         if (cb_data) {
             if (pfds[idx].revents & (POLLHUP | POLLERR))
-                cb_data->result = (POLLHUP & pfds[idx].revents) ? HANGUP : ERROR;
+                cb_data->result = (POLLHUP & pfds[idx].revents) ? Event::HANGUP : Event::ERROR;
 
             int ret = cb_data->cb(cb_data->result, cb_data->fd, cb_data->data);
             handled = true;
@@ -336,7 +347,9 @@ PosixMainLoop::TimeoutData *PosixMainLoop::SetTimer(int interval, unsigned int i
     return data;
 }
 
-PosixMainLoop::TimeoutData::TimeoutData() : timerid(nullptr), timeout_id(0), pipe_fd(-1){};
+PosixMainLoop::TimeoutData::TimeoutData() : timerid(nullptr), timeout_id(0), pipe_fd(-1)
+{
+}
 PosixMainLoop::TimeoutData::~TimeoutData()
 {
     if (nullptr != timerid) {
@@ -344,10 +357,10 @@ PosixMainLoop::TimeoutData::~TimeoutData()
             ERR("timer_delete() Fail(%d)", errno);
         }
     }
-};
+}
 
 PosixMainLoop::MainLoopCbData::MainLoopCbData()
-      : data(nullptr), result(OK), fd(IDLE), timeout_interval(0), timeout_data(nullptr)
+      : data(nullptr), result(Event::OKAY), fd(IDLE), timeout_interval(0), timeout_data(nullptr)
 {
 }
 

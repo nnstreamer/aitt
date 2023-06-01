@@ -29,6 +29,7 @@
 #include "MQDiscoveryHandler.h"
 #include "MainLoopHandler.h"
 #include "ModuleManager.h"
+#include "StreamManager.h"
 
 namespace aitt {
 class AITT::Impl {
@@ -73,11 +74,11 @@ class AITT::Impl {
     using SubscribeInfo = std::pair<AittProtocol, void *>;
 
     int ConnectionCB(ConnectionCallback cb, void *user_data, int status,
-          MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
+          MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *loop_data);
     AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
           const std::string &topic, const SubscribeCallback &cb, void *cbdata, AittQoS qos);
     int DetachedCB(SubscribeCallback cb, AittMsg mq_msg, void *data, const int datalen, void *cbdata,
-          MainLoopHandler::MainLoopResult result, int fd, MainLoopHandler::MainLoopData *loop_data);
+          MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
 
@@ -91,17 +92,17 @@ class AITT::Impl {
     MainLoopHandler main_loop;
     std::thread aittThread;
     ModuleManager modules;
+    MQDiscoveryHandler mq_discovery_handler;
     std::unique_ptr<MQ> mq;
+    StreamManager stream_manager;
+
     std::vector<SubscribeInfo *> subscribed_list;
     std::mutex subscribed_list_mutex_;
-    std::vector<AittStreamModule *> in_use_streams;
 
     std::string id_;
     std::string mqtt_broker_ip_;
     int mqtt_broker_port_;
     unsigned short reply_id;
-
-    MQDiscoveryHandler mq_discovery_handler;
 
 #ifdef ANDROID
     friend class AittDiscoveryHelper;

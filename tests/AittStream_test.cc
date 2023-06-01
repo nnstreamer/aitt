@@ -220,7 +220,7 @@ TEST_F(AITTRTSPTest, Publisher_First_P)
               nullptr);
 
         main_loop.AddTimeout(3000,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   subscriber->Start();
                   return AITT_LOOP_EVENT_REMOVE;

@@ -66,7 +66,7 @@ TEST(AITT_C_MANUAL, will_set_P)
         kill(pid, SIGKILL);
         handler.AddTimeout(
               CHECK_INTERVAL,
-              [&](MainLoopHandler::MainLoopResult result, int fd,
+              [&](MainLoopHandler::Event result, int fd,
                     MainLoopHandler::MainLoopData *data) -> int {
                   if (sub_called) {
                       handler.Quit();

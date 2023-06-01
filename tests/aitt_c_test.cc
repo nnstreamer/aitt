@@ -427,7 +427,7 @@ TEST_F(AITTCTest, sub_unsub_P_Anytime)
 
     mainLoop.AddTimeout(
           200,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
+          [&](MainLoopHandler::Event result, int fd,
                 MainLoopHandler::MainLoopData *data) -> int {
               int ret = aitt_unsubscribe(handle, sub_handle);
               EXPECT_EQ(ret, AITT_ERROR_NONE);
@@ -441,7 +441,7 @@ TEST_F(AITTCTest, sub_unsub_P_Anytime)
 
     mainLoop.AddTimeout(
           CHECK_INTERVAL,
-          [&](MainLoopHandler::MainLoopResult result, int fd,
+          [&](MainLoopHandler::Event result, int fd,
                 MainLoopHandler::MainLoopData *data) -> int {
               if (sub_call_count == 1) {
                   StopEventLoop();

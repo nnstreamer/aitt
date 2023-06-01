@@ -25,7 +25,7 @@
 #define LOG_BLUE "\033[34m"
 #define LOG_END "\033[0m"
 
-#if defined(PLATFORM) && !defined(LOG_STDOUT)
+#if (defined(TIZEN) || defined(ANDROID)) && !defined(LOG_STDOUT)
 
 #define HEADER PLATFORM/aitt_platform.h
 #define TO_STR(x) #x

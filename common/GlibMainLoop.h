@@ -42,7 +42,7 @@ class GlibMainLoop : public MainLoopIface {
         MainLoopCbData();
         mainLoopCB cb;
         MainLoopData *data;
-        MainLoopResult result;
+        Event result;
         int fd;
         GMainContext *ctx;
     };

@@ -1,6 +1,3 @@
-set(AITT_TCP aitt-transport-tcp)
-set(AITT_SECURE_TCP aitt-transport-tcp-secure)
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 if(WITH_MBEDTLS)

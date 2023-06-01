@@ -104,6 +104,7 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 %license LICENSE.APLv2
 %manifest %{name}.manifest
 %{_libdir}/lib%{name}*.so*
+%{_bindir}/%{name}_discovery_viewer
 
 %files plugins
 %license LICENSE.APLv2
@@ -114,7 +115,8 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 %files unittests
 %license LICENSE.APLv2 external/C-Mock/LICENSE.md
 %manifest %{name}.manifest
-%{_bindir}/*
+%{_bindir}/*_ut*
+%{_bindir}/*_test
 %endif
 
 %files devel

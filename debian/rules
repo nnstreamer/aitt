@@ -24,6 +24,7 @@ export TEST ?= 1
 export COVERAGE ?= 0
 export GLIB ?= 1
 export MBEDTLS ?= 0
+export PLATFORM ?= "linux"
 
 %:
 	dh $@ --parallel --buildsystem=cmake
@@ -37,6 +38,7 @@ override_dh_auto_configure:
 	mkdir -p ${AITT_BUILD_ROOT_PATH}; \
 	cd ${AITT_BUILD_ROOT_PATH}; \
 	cmake .. \
+		-DPLATFORM=${PLATFORM} \
 		-DCMAKE_INSTALL_PREFIX:PATH=/usr \
 		-DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF \
 		-DBUILD_TESTING:BOOL=${TEST} \

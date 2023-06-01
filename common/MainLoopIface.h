@@ -26,8 +26,8 @@ namespace aitt {
 
 class MainLoopIface {
   public:
-    enum MainLoopResult {
-        OK,
+    enum class Event {
+        OKAY,
         ERROR,
         REMOVED,
         HANGUP,
@@ -35,7 +35,7 @@ class MainLoopIface {
     struct MainLoopData {
         virtual ~MainLoopData() = default;
     };
-    using mainLoopCB = std::function<int(MainLoopResult result, int fd, MainLoopData *data)>;
+    using mainLoopCB = std::function<int(Event result, int fd, MainLoopData *data)>;
 
     MainLoopIface() = default;
     virtual ~MainLoopIface() = default;
