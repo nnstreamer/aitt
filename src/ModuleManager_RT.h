@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "AittDiscovery.h"
+#include "AittStream.h"
 #include "AittTransport.h"
 #include "NullTransport.h"
 
@@ -33,6 +34,11 @@ class ModuleManager {
 
     AittTransport &Get(AittProtocol type);
     std::unique_ptr<MQ> NewCustomMQ(const std::string &id, const AittOption &option);
+
+    AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
+          AittStreamRole role);
+    void DestroyStream(AittStream *aitt_stream);
+    void DestroyStreamAll(void);
 
   private:
     // It should be ("the number of shifts" - 1) of AittProtocol

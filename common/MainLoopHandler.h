@@ -21,25 +21,12 @@
 
 namespace aitt {
 
-class MainLoopHandler : public MainLoopIface {
+class MainLoopHandler {
   public:
-    MainLoopHandler();
+    MainLoopHandler() = default;
     virtual ~MainLoopHandler() = default;
 
-    static void AddIdle(MainLoopHandler *handle, const mainLoopCB &cb,
-          MainLoopData *user_data = nullptr);
-
-    void Run() override;
-    bool Quit() override;
-    void AddIdle(const mainLoopCB &cb, MainLoopData *user_data = nullptr) override;
-    void AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data = nullptr) override;
-    MainLoopData *RemoveWatch(int fd) override;
-    unsigned int AddTimeout(int interval, const mainLoopCB &cb,
-          MainLoopData *user_data = nullptr) override;
-    void RemoveTimeout(unsigned int id) override;
-
-  private:
-    std::unique_ptr<MainLoopIface> loop;
+    static MainLoopIface *new_loop();
 };
 
 }  // namespace aitt

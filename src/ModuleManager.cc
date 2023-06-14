@@ -19,6 +19,8 @@
 
 #include <dlfcn.h>
 
+#include <algorithm>
+
 #include "AittException.h"
 #include "NullTransport.h"
 #include "aitt_internal.h"
@@ -183,6 +185,38 @@ std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const Aitt
     }
 
     return instance;
+}
+
+AittStream *ModuleManager::CreateStream(AittStreamProtocol type, const std::string &topic,
+      AittStreamRole role)
+{
+    AittStreamModule *stream = nullptr;
+    try {
+        stream = NewStreamModule(type, topic, role);
+        streams_in_use.push_back(stream);
+    } catch (std::exception &e) {
+        ERR("StreamHandler() Fail(%s)", e.what());
+    }
+
+    return stream;
+}
+
+void ModuleManager::DestroyStream(AittStream *aitt_stream)
+{
+    auto it = std::find(streams_in_use.begin(), streams_in_use.end(), aitt_stream);
+    if (it == streams_in_use.end()) {
+        ERR("Unknown Stream(%p)", aitt_stream);
+        return;
+    }
+    streams_in_use.erase(it);
+    delete aitt_stream;
+}
+
+void ModuleManager::DestroyStreamAll(void)
+{
+    for (auto stream : streams_in_use)
+        delete stream;
+    streams_in_use.clear();
 }
 
 }  // namespace aitt

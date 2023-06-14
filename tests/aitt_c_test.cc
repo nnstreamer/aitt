@@ -425,10 +425,9 @@ TEST_F(AITTCTest, sub_unsub_P_Anytime)
     ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
-    mainLoop.AddTimeout(
+    mainLoop->AddTimeout(
           200,
-          [&](MainLoopHandler::Event result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
               int ret = aitt_unsubscribe(handle, sub_handle);
               EXPECT_EQ(ret, AITT_ERROR_NONE);
               sub_handle = nullptr;
@@ -439,10 +438,9 @@ TEST_F(AITTCTest, sub_unsub_P_Anytime)
           },
           nullptr);
 
-    mainLoop.AddTimeout(
+    mainLoop->AddTimeout(
           CHECK_INTERVAL,
-          [&](MainLoopHandler::Event result, int fd,
-                MainLoopHandler::MainLoopData *data) -> int {
+          [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
               if (sub_call_count == 1) {
                   StopEventLoop();
                   return AITT_LOOP_EVENT_REMOVE;

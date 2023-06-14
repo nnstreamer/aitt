@@ -21,12 +21,16 @@
 #include <algorithm>
 #include <random>
 
+#include "MainLoopHandler.h"
 #include "aitt_internal.h"
 
 namespace AittTCPNamespace {
 
 Module::Module(AittProtocol type, AittDiscovery &manager, const std::string &my_ip)
-      : AittTransport(type, manager), ip(my_ip), secure(type == AITT_TYPE_TCP_SECURE)
+      : AittTransport(type, manager),
+        main_loop(aitt::MainLoopHandler::new_loop()),
+        ip(my_ip),
+        secure(type == AITT_TYPE_TCP_SECURE)
 {
     aittThread = std::thread(&Module::ThreadMain, this);
 
@@ -44,7 +48,7 @@ Module::~Module(void)
         ERR("RemoveDiscoveryCB() Fail(%s)", e.what());
     }
 
-    while (main_loop.Quit() == false) {
+    while (main_loop->Quit() == false) {
         // wait when called before the thread has completely created.
         usleep(1000);
     }
@@ -59,7 +63,7 @@ void Module::ThreadMain(void)
         pthread_setname_np(pthread_self(), "SecureTCPLoop");
     else
         pthread_setname_np(pthread_self(), "NormalTCPLoop");
-    main_loop.Run();
+    main_loop->Run();
 }
 
 void Module::PublishFull(const AittMsg &msg, const void *data, const int datalen, AittQoS qos,
@@ -166,7 +170,7 @@ void *Module::Subscribe(const std::string &topic, const AittTransport::Subscribe
         listen_info->cb_list.push_back(std::move(cb_info));
         listen_info->topic = topic;
 
-        main_loop.AddWatch(tcpServer->GetHandle(), AcceptConnection, listen_info);
+        main_loop->AddWatch(tcpServer->GetHandle(), AcceptConnection, listen_info);
 
         auto ret =
               subscribeTable.insert(SubscribeMap::value_type(listen_info, std::move(tcpServer)));
@@ -210,7 +214,7 @@ void *Module::Unsubscribe(void *handlePtr)
     }
 
     for (auto fd : listen_info->client_list) {
-        TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(fd));
+        TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop->RemoveWatch(fd));
         delete tcp_data;
     }
     listen_info->client_list.clear();
@@ -218,7 +222,7 @@ void *Module::Unsubscribe(void *handlePtr)
     auto it = subscribeTable.find(listen_info);
     if (it == subscribeTable.end())
         throw std::runtime_error("Not subscribed topic: " + listen_info->topic);
-    main_loop.RemoveWatch(it->second->GetHandle());
+    main_loop->RemoveWatch(it->second->GetHandle());
     subscribeTable.erase(it);
     delete listen_info;
 
@@ -347,8 +351,8 @@ void Module::UpdateDiscoveryMsg()
     discovery.UpdateDiscoveryMsg(NAME[secure], buf.data(), buf.size());
 }
 
-int Module::ReceiveData(MainLoopHandler::Event result, int handle,
-      MainLoopHandler::MainLoopData *user_data)
+int Module::ReceiveData(MainLoopIface::Event result, int handle,
+      MainLoopIface::MainLoopData *user_data)
 {
     TCPData *tcp_data = dynamic_cast<TCPData *>(user_data);
     RETV_IF(tcp_data == nullptr, AITT_LOOP_EVENT_REMOVE);
@@ -357,7 +361,7 @@ int Module::ReceiveData(MainLoopHandler::Event result, int handle,
     Module *impl = parent_info->impl;
     RETV_IF(impl == nullptr, AITT_LOOP_EVENT_REMOVE);
 
-    if (result == MainLoopHandler::Event::HANGUP) {
+    if (result == MainLoopIface::Event::HANGUP) {
         ERR("The main loop hung up. Disconnect the client.");
         return impl->HandleClientDisconnect(handle);
     }
@@ -397,7 +401,7 @@ int Module::ReceiveData(MainLoopHandler::Event result, int handle,
 
 int Module::HandleClientDisconnect(int handle)
 {
-    TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop.RemoveWatch(handle));
+    TCPData *tcp_data = dynamic_cast<TCPData *>(main_loop->RemoveWatch(handle));
     if (tcp_data == nullptr) {
         ERR("No watch data");
         return AITT_LOOP_EVENT_REMOVE;
@@ -447,8 +451,8 @@ void Module::UnpackMsgInfo(AittMsg &msg, const void *data, const size_t datalen)
         msg.SetEndSequence(map["end_sequence"].AsBool());
 }
 
-int Module::AcceptConnection(MainLoopHandler::Event result, int handle,
-      MainLoopHandler::MainLoopData *user_data)
+int Module::AcceptConnection(MainLoopIface::Event result, int handle,
+      MainLoopIface::MainLoopData *user_data)
 {
     TCPServerData *listen_info = dynamic_cast<TCPServerData *>(user_data);
     RETV_IF(listen_info == nullptr, AITT_LOOP_EVENT_REMOVE);
@@ -478,7 +482,7 @@ int Module::AcceptConnection(MainLoopHandler::Event result, int handle,
     tcp_data->parent = listen_info;
     tcp_data->client = std::move(client);
 
-    impl->main_loop.AddWatch(client_handle, ReceiveData, tcp_data);
+    impl->main_loop->AddWatch(client_handle, ReceiveData, tcp_data);
     return AITT_LOOP_EVENT_CONTINUE;
 }
 

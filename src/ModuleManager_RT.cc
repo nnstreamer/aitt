@@ -71,6 +71,18 @@ std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const Aitt
     return instance;
 }
 
+AittStream *ModuleManager::CreateStream(AittStreamProtocol type, const std::string &topic,
+      AittStreamRole role)
+{
+    throw AittException(AittException::NOT_SUPPORTED);
+}
+void ModuleManager::DestroyStream(AittStream *aitt_stream)
+{
+}
+void ModuleManager::DestroyStreamAll(void)
+{
+}
+
 }  // namespace aitt
 
 #endif  // TIZEN_RT

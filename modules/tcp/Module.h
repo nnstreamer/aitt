@@ -16,7 +16,7 @@
 #pragma once
 
 #include <AittTransport.h>
-#include <MainLoopHandler.h>
+#include <MainLoopIface.h>
 #include <flatbuffers/flexbuffers.h>
 
 #include <map>
@@ -29,7 +29,7 @@
 #include "TCPServer.h"
 
 using AittTransport = aitt::AittTransport;
-using MainLoopHandler = aitt::MainLoopHandler;
+using MainLoopIface = aitt::MainLoopIface;
 using AittDiscovery = aitt::AittDiscovery;
 
 #define MODULE_NAMESPACE AittTCPNamespace
@@ -54,14 +54,14 @@ class Module : public AittTransport {
   private:
     using Subscribe_CB_Info = std::pair<SubscribeCallback, void *>;
 
-    struct TCPServerData : public MainLoopHandler::MainLoopData {
+    struct TCPServerData : public MainLoopIface::MainLoopData {
         Module *impl;
         std::vector<std::unique_ptr<Subscribe_CB_Info>> cb_list;
         std::string topic;
         std::vector<int> client_list;
     };
 
-    struct TCPData : public MainLoopHandler::MainLoopData {
+    struct TCPData : public MainLoopIface::MainLoopData {
         TCPServerData *parent;
         std::unique_ptr<TCP> client;
     };
@@ -94,15 +94,15 @@ class Module : public AittTransport {
     using HostMap = std::map<std::string /* clientId */, PortInfo>;
     using PublishMap = std::map<std::string /* topic */, HostMap>;
 
-    static int AcceptConnection(MainLoopHandler::Event result, int handle,
-          MainLoopHandler::MainLoopData *watchData);
+    static int AcceptConnection(MainLoopIface::Event result, int handle,
+          MainLoopIface::MainLoopData *watchData);
     void PublishFull(const AittMsg &msg, const void *data, const int datalen,
           AittQoS qos = AITT_QOS_AT_MOST_ONCE, bool retain = false, bool is_reply = false);
     void DiscoveryMessageCallback(const std::string &clientId, const std::string &status,
           const void *msg, const int szmsg);
     void UpdateDiscoveryMsg();
-    static int ReceiveData(MainLoopHandler::Event result, int handle,
-          MainLoopHandler::MainLoopData *watchData);
+    static int ReceiveData(MainLoopIface::Event result, int handle,
+          MainLoopIface::MainLoopData *watchData);
     int HandleClientDisconnect(int handle);
     void GetMsgInfo(AittMsg &msg, TCPData *connect_info);
     void ThreadMain(void);
@@ -112,7 +112,7 @@ class Module : public AittTransport {
     void UnpackMsgInfo(AittMsg &msg, const void *data, const size_t datalen);
 
     const char *const NAME[2] = {"TCP", "SECURE_TCP"};
-    MainLoopHandler main_loop;
+    std::unique_ptr<MainLoopIface> main_loop;
     std::thread aittThread;
     int discovery_cb;
 

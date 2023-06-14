@@ -53,12 +53,10 @@ TEST_F(AITTManualTest, WillSet_P)
         } else {
             sleep(1);
             kill(pid, SIGKILL);
-            mainLoop.AddTimeout(
+            mainLoop->AddTimeout(
                   CHECK_INTERVAL,
-                  [&](MainLoopHandler::Event result, int fd,
-                        MainLoopHandler::MainLoopData *data) -> int {
-                      return ReadyCheck(static_cast<AittTests *>(this));
-                  },
+                  [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                        -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
                   nullptr);
             IterateEventLoop();
 

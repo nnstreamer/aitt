@@ -17,6 +17,8 @@
 
 #include <sys/time.h>
 
+#include <memory>
+
 #include "AITT.h"
 #include "MainLoopHandler.h"
 #include "aitt_internal.h"
@@ -33,10 +35,18 @@
 
 #define CHECK_INTERVAL 10
 
-using aitt::MainLoopHandler;
+using aitt::MainLoopIface;
 
 class AittTests {
   public:
+    AittTests()
+          : subscribeHandle(nullptr),
+            ready(false),
+            ready2(false),
+            mainLoop(aitt::MainLoopHandler::new_loop())
+    {
+    }
+
     void Init()
     {
         ready = false;
@@ -79,11 +89,11 @@ class AittTests {
         return AITT_LOOP_EVENT_CONTINUE;
     }
 
-    void StopEventLoop(void) { mainLoop.Quit(); }
+    void StopEventLoop(void) { mainLoop->Quit(); }
 
     void IterateEventLoop(void)
     {
-        mainLoop.Run();
+        mainLoop->Run();
         DBG("Go forward");
     }
 
@@ -91,7 +101,7 @@ class AittTests {
     bool ready;
     bool ready2;
 
-    MainLoopHandler mainLoop;
+    std::unique_ptr<MainLoopIface> mainLoop;
     std::string clientId;
     std::string testTopic;
 };

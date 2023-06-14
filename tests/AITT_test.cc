@@ -127,11 +127,11 @@ class AITTTest : public testing::Test, public AittTests {
                     aitt1.Publish(TEST_STRESS_TOPIC, dump_msg, sizeof(dump_msg), protocol,
                           AITT_QOS_AT_MOST_ONCE);
                 }
-                mainLoop.AddTimeout(CHECK_INTERVAL,
-                      [&](MainLoopHandler::Event result, int fd,
-                            MainLoopHandler::MainLoopData *data) -> int {
-                          return ReadyCheck(static_cast<AittTests *>(this));
-                      });
+                mainLoop->AddTimeout(
+                      CHECK_INTERVAL,
+                      [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                            -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+                      nullptr);
 
                 IterateEventLoop();
             }
@@ -146,11 +146,11 @@ class AITTTest : public testing::Test, public AittTests {
             aitt_retry.Publish(TEST_STRESS_TOPIC, dump_msg, sizeof(dump_msg), protocol,
                   AITT_QOS_AT_MOST_ONCE);
 
-            mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::Event result, int fd,
-                        MainLoopHandler::MainLoopData *data) -> int {
-                      return ReadyCheck(static_cast<AittTests *>(this));
-                  });
+            mainLoop->AddTimeout(
+                  CHECK_INTERVAL,
+                  [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                        -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+                  nullptr);
 
             IterateEventLoop();
 
@@ -202,11 +202,11 @@ class AITTTest : public testing::Test, public AittTests {
             // Publish message through the specified protocol - TCP
             aitt.Publish(testTopic, TEST_MSG2, sizeof(TEST_MSG2), protocol);
 
-            mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::Event result, int fd,
-                        MainLoopHandler::MainLoopData *data) -> int {
-                      return ReadyCheck(static_cast<AittTests *>(this));
-                  });
+            mainLoop->AddTimeout(
+                  CHECK_INTERVAL,
+                  [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                        -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+                  nullptr);
 
             IterateEventLoop();
 
@@ -248,11 +248,11 @@ class AITTTest : public testing::Test, public AittTests {
             });
             aitt.Connect();
 
-            mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::Event result, int fd,
-                        MainLoopHandler::MainLoopData *data) -> int {
-                      return ReadyCheck(static_cast<AittTests *>(this));
-                  });
+            mainLoop->AddTimeout(
+                  CHECK_INTERVAL,
+                  [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                        -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+                  nullptr);
 
             IterateEventLoop();
             ASSERT_TRUE(ready);
@@ -315,11 +315,12 @@ TEST_F(AITTTest, SetConnectionCallback_P_Anytime)
               this);
         aitt.Connect();
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
 
         IterateEventLoop();
         ASSERT_TRUE(ready);
@@ -367,11 +368,12 @@ TEST_F(AITTTest, UnsetConnectionCallback_P_Anytime)
               this);
         aitt.Connect();
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
 
         IterateEventLoop();
         ASSERT_FALSE(ready2);
@@ -604,11 +606,12 @@ TEST_F(AITTTest, Unsubscribe_in_Subscribe_MQTT_P_Anytime)
         DBG("Publish message to %s (%s)", testTopic.c_str(), TEST_MSG);
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG));
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
 
         IterateEventLoop();
 
@@ -645,24 +648,27 @@ TEST_F(AITTTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
                         cbdata);
                   DBG("Ready flag is toggled");
 
-                  mainLoop.AddTimeout(CHECK_INTERVAL,
-                        [&](MainLoopHandler::Event result, int fd,
-                              MainLoopHandler::MainLoopData *data) -> int {
+                  mainLoop->AddTimeout(
+                        CHECK_INTERVAL,
+                        [&](MainLoopIface::Event result, int fd,
+                              MainLoopIface::MainLoopData *data) -> int {
                             AITTTest *test = static_cast<AITTTest *>(this);
                             test->ToggleReady();
                             return AITT_LOOP_EVENT_REMOVE;
-                        });
+                        },
+                        nullptr);
               },
               static_cast<void *>(this));
 
         DBG("Publish message to %s (%s)", testTopic.c_str(), TEST_MSG);
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG));
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
 
         IterateEventLoop();
 
@@ -727,11 +733,12 @@ TEST_F(AITTTest, PublishSubscribe_Multiple_Protocols_P_Anytime)
         aitt.Publish(testTopic, TEST_MSG, sizeof(TEST_MSG),
               (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP));
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
 
         IterateEventLoop();
 

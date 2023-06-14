@@ -178,6 +178,8 @@ class AITTRTSPTest : public testing::Test {
   protected:
     void SetUp() override
     {
+        main_loop = aitt::MainLoopHandler::new_loop();
+
         aitt = new AITT("streamClientId", LOCAL_IP, AittOption(true, false));
         aitt->Connect();
 
@@ -194,12 +196,13 @@ class AITTRTSPTest : public testing::Test {
         aitt->DestroyStream(subscriber);
         aitt->Disconnect();
         delete aitt;
+        delete main_loop;
     }
 
     AITT *aitt;
     AittStream *publisher;
     AittStream *subscriber;
-    MainLoopHandler main_loop;
+    MainLoopIface *main_loop;
 };
 
 TEST_F(AITTRTSPTest, Publisher_First_P)
@@ -215,17 +218,18 @@ TEST_F(AITTRTSPTest, Publisher_First_P)
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   DBG("ReceiveCallback Called");
-                  main_loop.Quit();
+                  main_loop->Quit();
               },
               nullptr);
 
-        main_loop.AddTimeout(3000,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        main_loop->AddTimeout(
+              3000,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   subscriber->Start();
                   return AITT_LOOP_EVENT_REMOVE;
-              });
-        main_loop.Run();
+              },
+              nullptr);
+        main_loop->Run();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
@@ -237,7 +241,7 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
         subscriber->SetReceiveCallback(
               [&](AittStream *stream, void *obj, void *user_data) {
                   DBG("ReceiveCallback Called");
-                  main_loop.Quit();
+                  main_loop->Quit();
               },
               nullptr);
         subscriber->SetConfig("FPS", "1")->Start();
@@ -249,7 +253,7 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
               ->SetConfig("Password", "admin")
               ->Start();
 
-        main_loop.Run();
+        main_loop->Run();
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }

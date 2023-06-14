@@ -32,7 +32,7 @@ TEST(AITT_C_MANUAL, will_set_P)
     ASSERT_EQ(ret, AITT_ERROR_NONE);
 
     static bool sub_called = false;
-    MainLoopHandler handler;
+    MainLoopIface *handler = aitt::MainLoopHandler::new_loop();
     aitt_sub_h sub_handle = nullptr;
     ret = aitt_subscribe(
           handle, TEST_C_WILL_TOPIC,
@@ -64,18 +64,18 @@ TEST(AITT_C_MANUAL, will_set_P)
     } else {
         sleep(1);
         kill(pid, SIGKILL);
-        handler.AddTimeout(
+        handler->AddTimeout(
               CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   if (sub_called) {
-                      handler.Quit();
+                      handler->Quit();
                   }
                   return AITT_LOOP_EVENT_REMOVE;
               },
               nullptr);
 
-        handler.Run();
+        handler->Run();
+        delete handler;
 
         ret = aitt_disconnect(handle);
         EXPECT_EQ(ret, AITT_ERROR_NONE);

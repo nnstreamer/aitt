@@ -109,11 +109,12 @@ class AITTRRTest : public testing::Test, public AittTests {
             }
         }
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -170,11 +171,12 @@ class AITTRRTest : public testing::Test, public AittTests {
               this);
         aitt.Connect();
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
         IterateEventLoop();
 
         aitt.Disconnect();
@@ -232,11 +234,11 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
             });
             aitt.Connect();
 
-            mainLoop.AddTimeout(CHECK_INTERVAL,
-                  [&](MainLoopHandler::Event result, int fd,
-                        MainLoopHandler::MainLoopData *data) -> int {
-                      return ReadyCheck(static_cast<AittTests *>(this));
-                  });
+            mainLoop->AddTimeout(
+                  CHECK_INTERVAL,
+                  [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data)
+                        -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+                  nullptr);
             IterateEventLoop();
 
             EXPECT_TRUE(sub_ok);
@@ -297,11 +299,12 @@ TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
               },
               nullptr, correlation);
 
-        mainLoop.AddTimeout(CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd,
-                    MainLoopHandler::MainLoopData *data) -> int {
+        mainLoop->AddTimeout(
+              CHECK_INTERVAL,
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
                   return ReadyCheck(static_cast<AittTests *>(this));
-              });
+              },
+              nullptr);
         IterateEventLoop();
 
         EXPECT_TRUE(sub_ok);

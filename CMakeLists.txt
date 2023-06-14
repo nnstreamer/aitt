@@ -11,7 +11,9 @@ option(VERSIONING "Specify Library Verion" ON)
 
 include(GNUInstallDirs)
 include(FindPkgConfig)
+find_package(Threads REQUIRED)
 
+add_definitions(-DLOG_TAG="AITT")
 add_definitions(-DPLATFORM=${PLATFORM})
 
 if(PLATFORM STREQUAL "android")
@@ -27,10 +29,10 @@ else(PLATFORM STREQUAL "android")
 		set(ADDITION_PKG dlog)
 	endif(PLATFORM STREQUAL "tizen")
 	if(PLATFORM STREQUAL "tizenRT")
-		set(USE_GLIB OFF)
-		set(MBEDTLS OFF)
-		set(BUILD_TESTING OFF)
 		add_definitions(-DTIZEN_RT)
+		set(USE_GLIB OFF)
+		set(WITH_MBEDTLS ON)
+		set(BUILD_TESTING OFF)
 	endif(PLATFORM STREQUAL "tizenRT")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-psabi -fdiagnostics-color -fvisibility=hidden")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
@@ -42,13 +44,9 @@ else(PLATFORM STREQUAL "android")
 	link_directories(${AITT_NEEDS_LIBRARY_DIRS})
 endif(PLATFORM STREQUAL "android")
 
-find_package(Threads REQUIRED)
-
 if(LOG_STDOUT)
 	add_definitions(-DLOG_STDOUT)
 endif(LOG_STDOUT)
-
-add_definitions(-DLOG_TAG="AITT")
 
 if(COVERAGE_TEST)
 	add_compile_options(--coverage)

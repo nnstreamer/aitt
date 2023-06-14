@@ -24,58 +24,16 @@
 
 namespace aitt {
 
-MainLoopHandler::MainLoopHandler()
-      :
+MainLoopIface *MainLoopHandler::new_loop()
+{
+    MainLoopIface *loop;
+
 #ifdef USE_GLIB
-        loop(new GlibMainLoop())
+    loop = new GlibMainLoop();
 #else
-        loop(new PosixMainLoop())
+    loop = new PosixMainLoop();
 #endif
-{
-}
-
-void MainLoopHandler::AddIdle(MainLoopHandler *handle, const mainLoopCB &cb,
-      MainLoopData *user_data)
-{
-    RET_IF(handle == nullptr);
-
-    handle->loop->AddIdle(cb, user_data);
-}
-
-void MainLoopHandler::Run()
-{
-    return loop->Run();
-}
-
-bool MainLoopHandler::Quit()
-{
-    return loop->Quit();
-}
-
-void MainLoopHandler::AddWatch(int fd, const mainLoopCB &cb, MainLoopData *user_data)
-{
-    return loop->AddWatch(fd, cb, user_data);
-}
-
-void MainLoopHandler::AddIdle(const mainLoopCB &cb, MainLoopData *user_data)
-{
-    return loop->AddIdle(cb, user_data);
-}
-
-MainLoopIface::MainLoopData *MainLoopHandler::RemoveWatch(int fd)
-{
-    return loop->RemoveWatch(fd);
-}
-
-unsigned int MainLoopHandler::AddTimeout(int interval, const mainLoopCB &cb,
-      MainLoopData *user_data)
-{
-    return loop->AddTimeout(interval, cb, user_data);
-}
-
-void MainLoopHandler::RemoveTimeout(unsigned int id)
-{
-    return loop->RemoveTimeout(id);
+    return loop;
 }
 
 }  // namespace aitt

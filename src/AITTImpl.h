@@ -27,9 +27,8 @@
 #include "AittStream.h"
 #include "MQ.h"
 #include "MQDiscoveryHandler.h"
-#include "MainLoopHandler.h"
+#include "MainLoopIface.h"
 #include "ModuleManager.h"
-#include "StreamManager.h"
 
 namespace aitt {
 class AITT::Impl {
@@ -74,27 +73,27 @@ class AITT::Impl {
     using SubscribeInfo = std::pair<AittProtocol, void *>;
 
     int ConnectionCB(ConnectionCallback cb, void *user_data, int status,
-          MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *loop_data);
-    AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopHandler *loop_handle,
+          MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *loop_data);
+    AittSubscribeID SubscribeMQ(SubscribeInfo *info, MainLoopIface *loop_handle,
           const std::string &topic, const SubscribeCallback &cb, void *cbdata, AittQoS qos);
-    int DetachedCB(SubscribeCallback cb, AittMsg mq_msg, void *data, const int datalen, void *cbdata,
-          MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *loop_data);
+    int DetachedCB(SubscribeCallback cb, AittMsg mq_msg, void *data, const int datalen,
+          void *cbdata, MainLoopIface::Event result, int fd,
+          MainLoopIface::MainLoopData *loop_data);
     void *SubscribeTCP(SubscribeInfo *, const std::string &topic, const SubscribeCallback &cb,
           void *cbdata, AittQoS qos);
 
-    void HandleTimeout(int timeout_ms, unsigned int &timeout_id, aitt::MainLoopHandler &sync_loop,
+    void HandleTimeout(int timeout_ms, unsigned int &timeout_id, MainLoopIface *sync_loop,
           bool &is_timeout);
     void UnsubscribeAll();
     void ThreadMain(void);
 
     AITT &public_api;
     AittDiscovery discovery;
-    MainLoopHandler main_loop;
+    std::unique_ptr<MainLoopIface> main_loop;
     std::thread aittThread;
     ModuleManager modules;
     MQDiscoveryHandler mq_discovery_handler;
     std::unique_ptr<MQ> mq;
-    StreamManager stream_manager;
 
     std::vector<SubscribeInfo *> subscribed_list;
     std::mutex subscribed_list_mutex_;

@@ -41,7 +41,6 @@
 #pragma GCC system_header
 #endif
 
-
 #if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
 #define AITT_STRERROR_R(errno, buf, buflen)                   \
     do {                                                      \

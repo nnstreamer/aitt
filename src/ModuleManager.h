@@ -35,9 +35,12 @@ class ModuleManager {
     virtual ~ModuleManager() = default;
 
     AittTransport &Get(AittProtocol type);
-    AittStreamModule *NewStreamModule(AittStreamProtocol type, const std::string &topic,
-          AittStreamRole role);
     std::unique_ptr<MQ> NewCustomMQ(const std::string &id, const AittOption &option);
+
+    AittStream *CreateStream(AittStreamProtocol type, const std::string &topic,
+          AittStreamRole role);
+    void DestroyStream(AittStream *aitt_stream);
+    void DestroyStreamAll(void);
 
   private:
     using ModuleHandle = std::unique_ptr<void, void (*)(void *)>;
@@ -55,11 +58,14 @@ class ModuleManager {
     ModuleHandle OpenModule(const char *file);
     ModuleHandle OpenTransport(TransportType type);
     void LoadTransport(TransportType type);
+    AittStreamModule *NewStreamModule(AittStreamProtocol type, const std::string &topic,
+          AittStreamRole role);
 
     std::string ip;
     AittDiscovery &discovery;
     std::vector<ModuleHandle> transport_handles;
     std::unique_ptr<AittTransport> transports[TYPE_TRANSPORT_MAX];
+    std::vector<AittStreamModule *> streams_in_use;
     std::vector<ModuleHandle> stream_handles;
     ModuleHandle custom_mqtt_handle;
     NullTransport null_transport;

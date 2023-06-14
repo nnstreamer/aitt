@@ -56,10 +56,11 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         DBG("Publish message to %s (%s)", "MQ_TEST_TOPIC1", TEST_MSG);
         mq.Publish("MQ_TEST_TOPIC1", TEST_MSG, sizeof(TEST_MSG));
 
-        mainLoop.AddTimeout(
+        mainLoop->AddTimeout(
               CHECK_INTERVAL,
-              [&](MainLoopHandler::Event result, int fd, MainLoopHandler::MainLoopData *data)
-                    -> int { return ReadyCheck(static_cast<AittTests *>(this)); },
+              [&](MainLoopIface::Event result, int fd, MainLoopIface::MainLoopData *data) -> int {
+                  return ReadyCheck(static_cast<AittTests *>(this));
+              },
               nullptr);
 
         IterateEventLoop();
