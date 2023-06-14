@@ -16,6 +16,7 @@
 
 #include "StreamManager.h"
 
+#include "AittException.h"
 #include "aitt_internal.h"
 
 namespace AittWebRTCNamespace {
@@ -126,6 +127,8 @@ void StreamManager::SetMediaFormat(const std::string &format)
     if (format_ == format)
         return;
 
+    IsSupportedFormat(format);
+
     if (source_type_ == "MEDIA_PACKET" && width_ && height_ && frame_rate_)
         stream_.SetMediaFormat(width_, height_, frame_rate_, format);
     format_ = format;
@@ -135,6 +138,8 @@ void StreamManager::SetDecodeCodec(const std::string &codec)
 {
     if (decode_codec_ == codec)
         return;
+
+    IsSupportedFormat(codec);
 
     if (source_type_ == "NULL")
         stream_.SetDecodeCodec(codec);
@@ -213,6 +218,12 @@ void StreamManager::SetStreamStateCallback(StreamStateCallback cb)
 void StreamManager::SetOnFrameCallback(OnFrameCallback cb)
 {
     on_frame_cb_ = cb;
+}
+
+void StreamManager::IsSupportedFormat(const std::string &format)
+{
+    if (format != "VP8" && format != "H264")
+        throw aitt::AittException(aitt::AittException::INVALID_ARG);
 }
 
 }  // namespace AittWebRTCNamespace

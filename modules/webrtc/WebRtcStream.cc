@@ -175,6 +175,13 @@ bool WebRtcStream::SetMediaFormat(int width, int height, int frame_rate, const s
         ERR("Failed to set media format");
     media_format_unref(media_format);
 
+    if (source_type_ == WEBRTC_MEDIA_SOURCE_TYPE_MEDIA_PACKET && format == "H264") {
+        int set_payload_ret = webrtc_media_source_set_payload_type(webrtc_handle_, source_id_,
+              WEBRTC_MEDIA_TYPE_VIDEO, 127);
+        DBG("webrtc_media_source_set_payload_type %s",
+              set_payload_ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
+    }
+
     return ret == WEBRTC_ERROR_NONE;
 }
 
@@ -190,6 +197,12 @@ void WebRtcStream::SetDecodeCodec(const std::string &codec)
     if (ret != WEBRTC_ERROR_NONE)
         ERR("Failed to set transceiver codec");
 
+    if (transceiver_codec == WEBRTC_TRANSCEIVER_CODEC_H264) {
+        int set_payload_ret = webrtc_media_source_set_payload_type(webrtc_handle_, source_id_,
+              WEBRTC_MEDIA_TYPE_VIDEO, 127);
+        DBG("webrtc_media_source_set_payload_type %s",
+              set_payload_ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
+    }
     return;
 }
 

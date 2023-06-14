@@ -85,6 +85,7 @@ class StreamManager {
     OnFrameCallback on_frame_cb_;
 
   private:
+    void IsSupportedFormat(const std::string &format);
     virtual void SetWebRtcStreamCallbacks(WebRtcStream &stream) = 0;
     virtual void HandleStreamState(const std::string &discovery_id,
           const std::vector<uint8_t> &message) = 0;
