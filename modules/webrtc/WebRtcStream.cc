@@ -30,7 +30,8 @@ WebRtcStream::WebRtcStream()
       : webrtc_handle_(nullptr),
         source_type_(WEBRTC_MEDIA_SOURCE_TYPE_NULL),
         channel_(nullptr),
-        source_id_(0)
+        source_id_(0),
+        display_object_(nullptr)
 {
     // Notice for Tizen webrtc handle
     // This API includes file read operation, launching thread,
@@ -204,6 +205,21 @@ void WebRtcStream::SetDecodeCodec(const std::string &codec)
               set_payload_ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
     }
     return;
+}
+
+
+void WebRtcStream::SetDisplay(void *display_object)
+{
+    display_object_ = display_object;
+    if (display_object_)
+        webrtc_unset_encoded_video_frame_cb(webrtc_handle_);
+    else
+        webrtc_set_encoded_video_frame_cb(webrtc_handle_, OnEncodedFrame, this);
+}
+
+bool WebRtcStream::IsDisplaySink(void)
+{
+    return display_object_ != nullptr;
 }
 
 bool WebRtcStream::CreateOfferAsync(std::function<void(std::string)> on_created_cb)
@@ -455,7 +471,7 @@ void WebRtcStream::AddDataChannel(void)
     webrtc_create_data_channel(webrtc_handle_, "label", nullptr, &channel_);
 }
 
-void WebRtcStream::AttachSignals(bool is_source, bool need_display)
+void WebRtcStream::AttachSignals(bool is_source)
 {
     int ret = WEBRTC_ERROR_NONE;
     // TODO: ADHOC TV profile doesn't show DBG level log
@@ -477,7 +493,7 @@ void WebRtcStream::AttachSignals(bool is_source, bool need_display)
     ret = webrtc_set_ice_candidate_cb(webrtc_handle_, OnIceCandiate, this);
     DBG("webrtc_set_ice_candidate_cb %s", ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
 
-    if (!is_source && !need_display) {
+    if (!is_source) {
         ret = webrtc_set_encoded_video_frame_cb(webrtc_handle_, OnEncodedFrame, this);
         ERR("webrtc_set_encoded_video_frame_cb %s",
               ret == WEBRTC_ERROR_NONE ? "Succeeded" : "failed");
@@ -584,12 +600,12 @@ void WebRtcStream::OnTrackAdded(webrtc_h webrtc, webrtc_media_type_e type, unsig
 {
     // type AUDIO(0), VIDEO(1)
     INFO("Added Track : id(%d), type(%s)", id, type ? "Video" : "Audio");
-
-    ERR("%s", __func__);
+    RET_IF(!user_data || type != WEBRTC_MEDIA_TYPE_VIDEO);
     auto webrtc_stream = static_cast<WebRtcStream *>(user_data);
-    RET_IF(webrtc_stream == nullptr);
 
-    if (type == WEBRTC_MEDIA_TYPE_VIDEO)
+    if (webrtc_stream->display_object_)
+        webrtc_set_display(webrtc, id, WEBRTC_DISPLAY_TYPE_EVAS, webrtc_stream->display_object_);
+    else
         webrtc_stream->GetEventHandler().CallOnTrakAddedCb(id);
 }
 

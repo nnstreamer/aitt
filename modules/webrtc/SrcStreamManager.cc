@@ -29,7 +29,7 @@ SrcStreamManager::SrcStreamManager(const std::string &topic, const std::string &
       : StreamManager(topic + "/SRC", topic + "/SINK", aitt_id, thread_id)
 {
     SetWebRtcStreamCallbacks(stream_);
-    stream_.AttachSignals(true, false);
+    stream_.AttachSignals(true);
     source_type_ = "CAMERA";
     stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
     stream_.ActivateSource();

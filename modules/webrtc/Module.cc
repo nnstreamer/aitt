@@ -88,6 +88,20 @@ AittStream *Module::SetConfig(const std::string &key, const std::string &value)
 
 AittStream *Module::SetConfig(const std::string &key, void *obj)
 {
+    DBG("key %s, %p", key.c_str(), obj);
+    if (stream_manager_->IsStarted())
+        throw aitt::AittException(aitt::AittException::RESOURCE_BUSY_ERR);
+
+    try {
+        if (key == "DISPLAY_OBJECT")
+            stream_manager_->SetDisplay(obj);
+        else
+            throw aitt::AittException(aitt::AittException::INVALID_ARG);
+    } catch (std::exception &e) {
+        DBG("exception while setting");
+        throw aitt::AittException(aitt::AittException::INVALID_ARG);
+    }
+
     return this;
 }
 

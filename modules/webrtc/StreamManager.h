@@ -47,6 +47,7 @@ class StreamManager {
     void SetMediaFormat(const std::string &format);
     void SetSourceType(const std::string &source_type);
     void SetDecodeCodec(const std::string &codec);
+    void SetDisplay(void *display_object);
     void Start(void);
     void Stop(void);
     virtual int Push(void *obj) = 0;
@@ -62,7 +63,6 @@ class StreamManager {
     std::string GetWatchingTopic(void) const;
 
   protected:
-    bool need_display_;
     bool is_started_;
     int width_;
     int height_;

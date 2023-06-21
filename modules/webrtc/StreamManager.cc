@@ -23,12 +23,11 @@ namespace AittWebRTCNamespace {
 
 StreamManager::StreamManager(const std::string &topic, const std::string &watching_topic,
       const std::string &aitt_id, const std::string &thread_id)
-      : need_display_(false),
-        is_started_(false),
+      : is_started_(false),
         width_(0),
         height_(0),
         frame_rate_(0),
-        //Need to sync with source_type_ on stream
+        // Need to sync with source_type_ on stream
         source_type_("NULL"),
         decode_codec_("VP8"),
         topic_(topic),
@@ -144,6 +143,11 @@ void StreamManager::SetDecodeCodec(const std::string &codec)
     if (source_type_ == "NULL")
         stream_.SetDecodeCodec(codec);
     decode_codec_ = codec;
+}
+
+void StreamManager::SetDisplay(void *display_object)
+{
+    stream_.SetDisplay(display_object);
 }
 
 void StreamManager::Start(void)

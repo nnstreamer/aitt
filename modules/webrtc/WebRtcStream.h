@@ -45,8 +45,10 @@ class WebRtcStream {
     bool SetVideoFrameRate(int frame_rate);
     bool SetMediaFormat(int width, int height, int frame_rate, const std::string &format);
     void SetDecodeCodec(const std::string &codec);
+    void SetDisplay(void *display_object);
+    bool IsDisplaySink(void);
     void AddDataChannel(void);
-    void AttachSignals(bool is_source, bool need_display);
+    void AttachSignals(bool is_source);
     void DetachSignals(void);
     // Cautions : Event handler is not a pointer. So, change event_handle after Set Event handler
     // doesn't affect event handler which is included in WebRtcStream
@@ -106,6 +108,7 @@ class WebRtcStream {
     webrtc_media_source_type_e source_type_;
     webrtc_data_channel_h channel_;
     unsigned int source_id_;
+    void *display_object_;
     std::string local_description_;
     std::string remote_description_;
     std::string id_;

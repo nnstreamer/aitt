@@ -31,7 +31,7 @@ SinkStreamManager::SinkStreamManager(const std::string &topic, const std::string
         decode_pipeline_(nullptr)
 {
     SetWebRtcStreamCallbacks(stream_);
-    stream_.AttachSignals(false, need_display_);
+    stream_.AttachSignals(false);
     stream_.ActivateSource();
     stream_.SetDecodeCodec(decode_codec_);
 }
@@ -211,7 +211,8 @@ void SinkStreamManager::HandleStartStream(const std::string &discovery_id)
 
     DBG("Sink Stream Started");
     AddStream(discovery_id);
-    BuildDecodePipeline();
+    if (!stream_.IsDisplaySink())
+        BuildDecodePipeline();
     request_server_.Start();
 }
 

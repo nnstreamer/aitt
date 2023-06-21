@@ -111,7 +111,7 @@ TEST_F(WebRtcStreamTest, test_Start_WebRtcSrcStream_OnDevice)
 {
     WebRtcStream stream{};
     stream.AddDataChannel();
-    stream.AttachSignals(true, false);
+    stream.AttachSignals(true);
 
     stream.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
     EXPECT_EQ(true, stream.ActivateSource()) << "Failed to attach camera source";
@@ -223,7 +223,7 @@ class WebRtcSourceOffererTest : public testing::Test {
 TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
 {
     src_stream_.AddDataChannel();
-    src_stream_.AttachSignals(true, false);
+    src_stream_.AttachSignals(true);
     src_stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
     EXPECT_EQ(true, src_stream_.ActivateSource()) << "Failed to attach camera source";
     src_stream_.GetEventHandler().SetOnStateChangedCb(
@@ -237,7 +237,7 @@ TEST_F(WebRtcSourceOffererTest, test_Start_WebRtcStream_OnDevice)
     src_stream_.Start();
 
     sink_stream_.AddDataChannel();
-    sink_stream_.AttachSignals(false, false);
+    sink_stream_.AttachSignals(false);
     sink_stream_.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 
@@ -345,7 +345,7 @@ class WebRtcSinkOffererTest : public testing::Test {
 TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
 {
     src_stream_.AddDataChannel();
-    src_stream_.AttachSignals(true, false);
+    src_stream_.AttachSignals(true);
     src_stream_.SetSourceType(WEBRTC_MEDIA_SOURCE_TYPE_CAMERA);
     EXPECT_EQ(true, src_stream_.ActivateSource()) << "Failed to attach camera source";
     auto on_src_stream_state_changed_cb =
@@ -360,7 +360,7 @@ TEST_F(WebRtcSinkOffererTest, test_Start_WebRtcStream_OnDevice)
     src_stream_.Start();
 
     src_stream_.AddDataChannel();
-    src_stream_.AttachSignals(false, false);
+    src_stream_.AttachSignals(false);
     sink_stream_.GetEventHandler().SetOnStateChangedCb(
           std::bind(OnSinkStreamStateChanged, std::placeholders::_1, std::ref(sink_stream_), this));
 
