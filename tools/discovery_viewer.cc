@@ -145,16 +145,22 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    MQTTHandler mqtt;
-    if (!arg.id.empty()) {
-        mqtt.SetClientID(arg.id);
-    }
-    if (!arg.topic.empty()) {
-        mqtt.SetTopic(arg.topic);
-    }
-    mqtt.Connect(arg.broker_ip);
-    while (1) {
-        sleep(10);
+    try {
+        MQTTHandler mqtt;
+        if (!arg.id.empty()) {
+            mqtt.SetClientID(arg.id);
+        }
+        if (!arg.topic.empty()) {
+            mqtt.SetTopic(arg.topic);
+        }
+        mqtt.Connect(arg.broker_ip);
+
+        while (1)
+            sleep(10);
+
+    } catch (const std::exception &e) {
+        ERR("MQTTHandler Fail(%s)", e.what());
+        return -1;
     }
 
     return 0;
