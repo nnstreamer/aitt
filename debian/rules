@@ -37,6 +37,10 @@ override_dh_auto_clean:
 override_dh_auto_configure:
 	mkdir -p ${AITT_BUILD_ROOT_PATH}; \
 	cd ${AITT_BUILD_ROOT_PATH}; \
+	wget -N -T 3 https://github.com/hjagodzinski/C-Mock/archive/refs/tags/v0.4.0.tar.gz; \
+	wget -N -T 3 https://github.com/hjagodzinski/C-Mock/archive/refs/tags/v0.3.1.tar.gz; \
+	tar -xvf v0.4.0.tar.gz; \
+	tar -xvf v0.3.1.tar.gz; \
 	cmake .. \
 		-DPLATFORM=${PLATFORM} \
 		-DCMAKE_INSTALL_PREFIX:PATH=/usr \

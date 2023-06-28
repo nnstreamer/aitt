@@ -4,12 +4,12 @@ Release: 0
 Summary: AI Telemetry Transport based on MQTT
 
 Group: Machine Learning / ML Framework
-License: Apache-2.0 and BSD-2-Clause
+License: Apache-2.0
 Source0: %{name}-%{version}.tar.gz
 Source1001: %{name}.manifest
 
 %{?!stdoutlog: %global stdoutlog 0}
-%{?!test: %global test 1}
+%{?!test: %global test 0}
 %{?!gcov: %global gcov 0}
 %{?!use_glib: %global use_glib 1}
 
@@ -17,7 +17,6 @@ BuildRequires: cmake
 BuildRequires: pkgconfig(bundle)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(flatbuffers)
-BuildRequires: pkgconfig(gmock_main)
 BuildRequires: pkgconfig(libmosquitto)
 BuildRequires: pkgconfig(openssl1.1)
 %if %{use_glib}
@@ -29,7 +28,10 @@ BuildRequires: pkgconfig(capi-media-webrtc)
 BuildRequires: pkgconfig(gstreamer-video-1.0)
 BuildRequires: pkgconfig(glib-2.0)
 BuildRequires: pkgconfig(json-glib-1.0)
-
+%endif
+%if %{test}
+BuildRequires: pkgconfig(gmock_main)
+BuildRequires: pkgconfig(c-mock)
 %endif
 %if %{gcov}
 BuildRequires: lcov
@@ -113,7 +115,7 @@ genhtml %{name}_gcov.info -o out --legend --show-details
 
 %if 0%{test}
 %files unittests
-%license LICENSE.APLv2 external/C-Mock/LICENSE.md
+%license LICENSE.APLv2
 %manifest %{name}.manifest
 %{_bindir}/*_ut*
 %{_bindir}/*_test
