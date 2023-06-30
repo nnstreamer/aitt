@@ -17,6 +17,8 @@
 
 #include <glib.h>
 
+#include <stdexcept>
+
 #include "aitt_internal.h"
 
 namespace aitt {

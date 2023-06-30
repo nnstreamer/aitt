@@ -69,7 +69,6 @@ class AITT::Impl {
     int CountSubscriber(const std::string &topic, AittProtocol protocols);
 
   private:
-    using Blob = std::pair<const void *, int>;
     using SubscribeInfo = std::pair<AittProtocol, void *>;
 
     int ConnectionCB(ConnectionCallback cb, void *user_data, int status,

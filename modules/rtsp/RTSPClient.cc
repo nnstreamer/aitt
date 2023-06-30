@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "RTSPClient.h"
+
+#include <stdexcept>
 
 #define MSEC_PER_SECOND 1000
 #define INIT_STATE 0
