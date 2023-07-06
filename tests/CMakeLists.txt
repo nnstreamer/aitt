@@ -6,6 +6,7 @@ pkg_check_modules(GTEST REQUIRED gmock_main)
 include_directories(${GTEST_INCLUDE_DIRS} ../src)
 link_directories(${GTEST_LIBRARY_DIRS})
 
+
 ###########################################################################
 set(AITT_UT_SRC AITT_test.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc
     AITT_TCP_test.cc)
@@ -20,7 +21,7 @@ add_test(
     COMMAND
         ${CMAKE_COMMAND} -E env
         LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime ${XML_OUTPUT}
 )
 
 ###########################################################################
@@ -38,7 +39,7 @@ add_test(
     COMMAND
         ${CMAKE_COMMAND} -E env
         LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../modules/rtsp/:../:../common/:$ENV{LD_LIBRARY_PATH}
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_STREAM_UT} --gtest_filter=*_Anytime
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_STREAM_UT} --gtest_filter=*_Anytime ${XML_OUTPUT}
 )
 ###########################################################################
 file(GLOB AITT_MANUAL_SRC *_manualtest.cc)
@@ -71,7 +72,7 @@ if(${GTEST_VERSION} VERSION_GREATER 1.7)
         COMMAND
             ${CMAKE_COMMAND} -E env
             LD_LIBRARY_PATH=../common/:$ENV{LD_LIBRARY_PATH}
-            ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT_MQ} --gtest_filter=*_Anytime
+            ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT_MQ} --gtest_filter=*_Anytime ${XML_OUTPUT}
     )
 endif(${GTEST_VERSION} VERSION_GREATER 1.7)
 ###########################################################################
@@ -86,5 +87,5 @@ add_test(
     COMMAND
         ${CMAKE_COMMAND} -E env
         LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../modules/rtsp/:../:../common/:$ENV{LD_LIBRARY_PATH}
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_local --gtest_filter=*_Anytime
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT}_local --gtest_filter=*_Anytime ${XML_OUTPUT}
 )

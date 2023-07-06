@@ -65,8 +65,8 @@ override_dh_auto_test:
 	ctest --output-on-failure --timeout 100
 
 	if [ ${TEST} -ne 0 -a ${COVERAGE} -ne 0 ]; then \
-		lcov -c --ignore-errors graph --no-external -b . -d . -o aitt_gcov.info; \
-		genhtml aitt_gcov.info -o out --legend --show-details; \
+		lcov -c --ignore-errors graph --no-external -b . -d . -o ${AITT_BUILD_ROOT_PATH}/aitt_gcov.info; \
+		genhtml ${AITT_BUILD_ROOT_PATH}/aitt_gcov.info -o ${AITT_BUILD_ROOT_PATH}/html --legend --show-details; \
 	fi
 .PHONY: override_dh_link
 override_dh_link:

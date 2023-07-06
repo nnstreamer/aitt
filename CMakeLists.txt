@@ -89,6 +89,7 @@ set_directory_properties(PROPERTIES ADDITIONAL_CMAKE_CLEAN_FILES ${PROJECT_NAME}
 
 if(BUILD_TESTING)
 	enable_testing() # NOTE: Must comes first than unittest subdirectories
+	set(XML_OUTPUT "--gtest_output=xml:${CMAKE_BINARY_DIR}/test_results/")
 	set(AITT_TEST_BINDIR ${CMAKE_INSTALL_BINDIR})
 	add_subdirectory(tests)
 endif(BUILD_TESTING)

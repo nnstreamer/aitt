@@ -11,7 +11,7 @@ debian/aitt-plugins.substvars
 debian/files
 debian/tmp/
 build
-out
+output
 aitt_gcov.info
 sam_cli.cfg
 

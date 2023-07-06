@@ -19,5 +19,5 @@ add_test(
         ${AITT_TCP_UT}
     COMMAND
         ${CMAKE_COMMAND} -E env
-        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_TCP_UT} --gtest_filter=*_Anytime
+        ${CMAKE_CURRENT_BINARY_DIR}/${AITT_TCP_UT} --gtest_filter=*_Anytime ${XML_OUTPUT}
 )
