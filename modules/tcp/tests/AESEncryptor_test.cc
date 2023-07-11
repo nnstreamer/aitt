@@ -67,3 +67,15 @@ TEST_F(AESEncryptorTest, EncryptDecryped_P_Anytime)
         ASSERT_STREQ(e.what(), strerror(EINVAL));
     }
 }
+
+TEST_F(AESEncryptorTest, Decryped_N_Anytime)
+{
+    try {
+        unsigned char plaintext[crypto.GetCryptogramSize(TEST_MESSAGE.size())];
+        int len =
+              crypto.Decrypt((unsigned char *)TEST_MESSAGE.c_str(), TEST_MESSAGE.size(), plaintext);
+        EXPECT_EQ(len, -1);
+    } catch (std::exception &e) {
+        ASSERT_STREQ(e.what(), strerror(EINVAL));
+    }
+}

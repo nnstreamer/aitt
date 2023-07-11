@@ -172,8 +172,26 @@ TEST_F(AITTWEBRTCTest, Set_Source_Type_Media_Packet_P)
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
-#endif
 
+TEST_F(AITTWEBRTCTest, SetConfig_param_N_)
+{
+    EXPECT_THROW({ publisher->SetConfig("UNKNOWN", ""); }, aitt::AittException);
+    EXPECT_THROW({ subscriber->SetConfig("UNKNOWN", ""); }, aitt::AittException);
+}
+
+TEST_F(AITTWEBRTCTest, SetConfig_after_start_N_)
+{
+    EXPECT_THROW(
+          {
+              publisher->Start();
+              publisher->SetConfig("WIDTH", std::to_string(HD_WIDTH));
+          },
+          aitt::AittException);
+}
+
+#endif  // WITH_WEBRTC
+
+#ifdef WITH_RTSP
 class AITTRTSPTest : public testing::Test {
   protected:
     void SetUp() override
@@ -205,6 +223,16 @@ class AITTRTSPTest : public testing::Test {
     MainLoopIface *main_loop;
 };
 
+TEST_F(AITTRTSPTest, Publisher_SetConfig_N_)
+{
+    EXPECT_THROW(
+          {
+              publisher->SetConfig("URI",
+                    "192.168.1.52:554/cam/realmonitor?channel=1&subtype=0&authbasic=64");
+          },
+          aitt::AittException);
+}
+
 TEST_F(AITTRTSPTest, Publisher_First_P)
 {
     try {
@@ -235,6 +263,11 @@ TEST_F(AITTRTSPTest, Publisher_First_P)
     }
 }
 
+TEST_F(AITTRTSPTest, Subscriber_SetConfig_N_)
+{
+    EXPECT_THROW({ subscriber->SetConfig("FPS", "NOT_NUMBER"); }, aitt::AittException);
+}
+
 TEST_F(AITTRTSPTest, Subscriber_First_P)
 {
     try {
@@ -258,3 +291,4 @@ TEST_F(AITTRTSPTest, Subscriber_First_P)
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
+#endif  // WITH_RTSP

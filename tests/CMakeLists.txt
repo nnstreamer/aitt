@@ -8,8 +8,8 @@ link_directories(${GTEST_LIBRARY_DIRS})
 
 
 ###########################################################################
-set(AITT_UT_SRC AITT_test.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc
-    AITT_TCP_test.cc)
+set(AITT_UT_SRC AITT_test.cc AITT_fixturetest.cc RequestResponse_test.cc MainLoopHandler_test.cc aitt_c_test.cc
+    AITT_TCP_test.cc AittOption_test.cc)
 add_executable(${AITT_UT} ${AITT_UT_SRC})
 target_link_libraries(${AITT_UT} Threads::Threads ${GTEST_LIBRARIES} ${PROJECT_NAME})
 
@@ -23,7 +23,26 @@ add_test(
         LD_LIBRARY_PATH=../modules/tcp/:../modules/webrtc/:../:../common/:$ENV{LD_LIBRARY_PATH}
         ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT} --gtest_filter=*_Anytime ${XML_OUTPUT}
 )
+###########################################################################
 
+if(USE_GLIB)
+    set(AITT_UT_LOOP_SRC ${CMAKE_SOURCE_DIR}/common/PosixMainLoop.cc ${CMAKE_SOURCE_DIR}/common/MainLoopHandler.cc)
+
+    set(AITT_UT_LOOP ${AITT_UT}_posixloop)
+    add_executable(${AITT_UT_LOOP} MainLoopHandler_test.cc ${AITT_UT_LOOP_SRC})
+    target_link_libraries(${AITT_UT_LOOP} Threads::Threads ${GTEST_LIBRARIES} rt)
+
+    install(TARGETS ${AITT_UT_LOOP} DESTINATION ${AITT_TEST_BINDIR})
+
+    add_test(
+        NAME
+            ${AITT_UT_LOOP}
+        COMMAND
+            ${CMAKE_COMMAND} -E env
+            LD_LIBRARY_PATH=../:../common/:$ENV{LD_LIBRARY_PATH}
+            ${CMAKE_CURRENT_BINARY_DIR}/${AITT_UT_LOOP} --gtest_filter=*_Anytime ${XML_OUTPUT}
+    )
+endif(USE_GLIB)
 ###########################################################################
 
 set(AITT_STREAM_UT ${PROJECT_NAME}_stream_ut)

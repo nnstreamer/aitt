@@ -39,13 +39,7 @@ using aitt::MainLoopIface;
 
 class AittTests {
   public:
-    AittTests()
-          : subscribeHandle(nullptr),
-            ready(false),
-            ready2(false),
-            mainLoop(aitt::MainLoopHandler::new_loop())
-    {
-    }
+    AittTests() : ready(false), ready2(false), mainLoop(aitt::MainLoopHandler::new_loop()) {}
 
     void Init()
     {
@@ -97,7 +91,6 @@ class AittTests {
         DBG("Go forward");
     }
 
-    AittSubscribeID subscribeHandle;
     bool ready;
     bool ready2;
 

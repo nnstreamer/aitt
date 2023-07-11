@@ -37,6 +37,7 @@ class AittDiscovery {
     void Start(const std::string &host, int port, const std::string &username,
           const std::string &password);
     void Restart();
+    bool IsRunning(void);
     void Stop();
     void UpdateDiscoveryMsg(const std::string &protocol, const void *msg, int length);
     int AddDiscoveryCB(const std::string &protocol, const DiscoveryCallback &cb);
@@ -59,6 +60,7 @@ class AittDiscovery {
           void *user_data);
     void PublishDiscoveryMsg();
 
+    bool is_running;
     std::string id_;
     std::unique_ptr<MQ> discovery_mq;
     void *callback_handle;

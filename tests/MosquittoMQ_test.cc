@@ -70,3 +70,27 @@ TEST_F(MQTest, Subscribe_in_Subscribe_MQTT_P_Anytime)
         FAIL() << "Unexpected exception: " << e.what();
     }
 }
+
+TEST_F(MQTest, Unsubscribe_N_Anytime)
+{
+    EXPECT_THROW(
+          {
+              MosquittoMQ mq("MQ_TEST_ID");
+              EXPECT_EQ(nullptr, mq.Unsubscribe(nullptr));
+
+              int invalid_pointer;
+              mq.Unsubscribe(&invalid_pointer);
+          },
+          aitt::AittException);
+}
+
+TEST_F(MQTest, CompareTopic_N_Anytime)
+{
+    MosquittoMQ mq("MQ_TEST_ID");
+    EXPECT_TRUE(mq.CompareTopic("topic1/+", "topic1/test"));
+    EXPECT_TRUE(mq.CompareTopic("topic1/#", "topic1/test1/test2"));
+    EXPECT_TRUE(mq.CompareTopic("topic1/#", "topic1"));
+
+    EXPECT_FALSE(mq.CompareTopic("topic1/+", "topic1/test1/test2"));
+    EXPECT_FALSE(mq.CompareTopic("topic1/+", "topic1"));
+}

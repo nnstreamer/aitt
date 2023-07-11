@@ -30,13 +30,6 @@
 
 using namespace AittTCPNamespace;
 
-TEST(TCPServer, Create_P_Anytime)
-{
-    unsigned short port = TEST_SERVER_PORT;
-    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
-    ASSERT_NE(tcp, nullptr);
-}
-
 TEST(TCPServer, Create_N_Anytime)
 {
     try {
@@ -55,30 +48,17 @@ TEST(TCPServer, Create_AutoPort_P_Anytime)
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_NE(port, 0);
+    ASSERT_EQ(tcp->GetPort(), port);
+    ASSERT_GE(tcp->GetHandle(), 0);
 }
 
-TEST(TCPServer, GetPort_P_Anytime)
+TEST(TCPServer, Create_Port_P_Anytime)
 {
     unsigned short port = TEST_SERVER_PORT;
     std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
     ASSERT_NE(tcp, nullptr);
     ASSERT_EQ(tcp->GetPort(), TEST_SERVER_PORT);
-}
-
-TEST(TCPServer, GetHandle_P_Anytime)
-{
-    unsigned short port = TEST_SERVER_PORT;
-    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
-    ASSERT_NE(tcp, nullptr);
     ASSERT_GE(tcp->GetHandle(), 0);
-}
-
-TEST(TCPServer, GetPort_AutoPort_P_Anytime)
-{
-    unsigned short port = TEST_SERVER_AVAILABLE_PORT;
-    std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, port));
-    ASSERT_NE(tcp, nullptr);
-    ASSERT_EQ(tcp->GetPort(), port);
 }
 
 TEST(TCPServer, AcceptPeer_P_Anytime)
@@ -93,6 +73,7 @@ TEST(TCPServer, AcceptPeer_P_Anytime)
     std::thread serverThread(
           [serverPort, &m, &ready, &connected, &ready_cv, &connected_cv](void) mutable -> void {
               std::unique_ptr<TCP::Server> tcp(new TCP::Server(TEST_SERVER_ADDRESS, serverPort));
+              ASSERT_NE(tcp, nullptr);
               {
                   std::lock_guard<std::mutex> lk(m);
                   ready = true;
@@ -113,6 +94,7 @@ TEST(TCPServer, AcceptPeer_P_Anytime)
         TCP::ConnectInfo info;
         info.port = serverPort;
         std::unique_ptr<TCP> tcp(new TCP(TEST_SERVER_ADDRESS, info));
+        ASSERT_NE(tcp, nullptr);
         connected_cv.wait(lk, [&connected] { return connected; });
     }
 

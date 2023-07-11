@@ -44,12 +44,9 @@ class AITT::Impl {
           const std::string &password);
     void Disconnect(void);
 
-    void ConfigureTransportModule(const std::string &key, const std::string &value,
-          AittProtocol protocols);
-
     void Publish(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocols, AittQoS qos, bool retain);
-    int PublishWithReply(const std::string &topic, const void *data, const int datalen,
+    void PublishWithReply(const std::string &topic, const void *data, const int datalen,
           AittProtocol protocol, AittQoS qos, bool retain, const AITT::SubscribeCallback &cb,
           void *cbdata, const std::string &correlation);
     int PublishWithReplySync(const std::string &topic, const void *data, const int datalen,

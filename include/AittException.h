@@ -33,6 +33,7 @@ class AittException : public std::exception {
         RESOURCE_BUSY_ERR,
         ALREADY,
         NOT_SUPPORTED,
+        INVALID_STATE,
     };
 
     AittException(ErrCode err_code);

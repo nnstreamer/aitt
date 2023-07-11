@@ -34,9 +34,14 @@ class MosquittoMock : public CMockMocker<MosquittoMock> {
     MOCK_METHOD4(mosquitto_connect,
           int(struct mosquitto *mosq, const char *host, int port, int keepalive));
     MOCK_METHOD1(mosquitto_disconnect, int(struct mosquitto *mosq));
+
     MOCK_METHOD7(mosquitto_publish,
           int(struct mosquitto *mosq, int *mid, const char *topic, int payloadlen,
                 const void *payload, int qos, bool retain));
+    MOCK_METHOD8(mosquitto_publish_v5,
+          int(struct mosquitto *mosq, int *mid, const char *topic, int payloadlen,
+                const void *payload, int qos, bool retain, const mosquitto_property *properties));
+
     MOCK_METHOD4(mosquitto_subscribe,
           int(struct mosquitto *mosq, int *mid, const char *sub, int qos));
     MOCK_METHOD3(mosquitto_unsubscribe, int(struct mosquitto *mosq, int *mid, const char *sub));
@@ -52,4 +57,9 @@ class MosquittoMock : public CMockMocker<MosquittoMock> {
     MOCK_METHOD2(mosquitto_disconnect_v5_callback_set,
           void(struct mosquitto *mosq, void (*on_disconnect)(struct mosquitto *, void *, int,
                                              const mosquitto_property *)));
+    MOCK_METHOD3(mosquitto_property_add_string,
+          int(mosquitto_property **proplist, int identifier, const char *value));
+    MOCK_METHOD4(mosquitto_property_add_binary,
+          int(mosquitto_property **proplist, int identifier, const void *value, uint16_t len));
+    MOCK_METHOD1(mosquitto_property_free_all, void(mosquitto_property **property));
 };

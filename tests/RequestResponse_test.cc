@@ -249,6 +249,24 @@ TEST_F(AITTRRTest, RequestResponse_P_Anytime)
     }
 }
 
+TEST_F(AITTRRTest, RequestResponse_Multi_protocol_N_Anytime)
+{
+    EXPECT_THROW(
+          {
+              AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
+              aitt.Connect();
+
+              aitt.PublishWithReply(
+                    rr_topic, message.c_str(), message.size(),
+                    (AittProtocol)(AITT_TYPE_MQTT | AITT_TYPE_TCP), AITT_QOS_AT_MOST_ONCE, false,
+                    [](AittMsg *msg, const void *data, const int datalen, void *cbdata) {
+                        FAIL() << "Should not be called";
+                    },
+                    nullptr, correlation);
+          },
+          aitt::AittException);
+}
+
 TEST_F(AITTRRTest, RequestResponse_asymmetry_Anytime)
 {
     std::string reply1 = "1st data";
@@ -387,7 +405,7 @@ TEST_F(AITTRRTest, RequestResponse_sync_in_sync_P_Anytime)
     }
 }
 
-TEST_F(AITTRRTest, RequestResponse_timeout_P_Anytime)
+TEST_F(AITTRRTest, RequestResponse_timeout_N_Anytime)
 {
     try {
         AITT aitt(clientId, LOCAL_IP, AittOption(true, false));
@@ -407,7 +425,7 @@ TEST_F(AITTRRTest, RequestResponse_timeout_P_Anytime)
     }
 }
 
-TEST_F(AITTRRTest, RequestResponse_timeout_restart_P_Anytime)
+TEST_F(AITTRRTest, RequestResponse_timeout_restart_N_Anytime)
 {
     bool sub_ok, reply_ok;
     sub_ok = reply_ok = false;

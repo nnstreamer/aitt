@@ -101,7 +101,7 @@ void AITT::Publish(const std::string &topic, const void *data, const int datalen
     return pImpl->Publish(topic, data, datalen, protocols, qos, retain);
 }
 
-int AITT::PublishWithReply(const std::string &topic, const void *data, const int datalen,
+void AITT::PublishWithReply(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *cbdata,
       const std::string &correlation)
 {

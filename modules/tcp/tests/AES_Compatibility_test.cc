@@ -28,19 +28,6 @@ using namespace AittTCPNamespace;
 
 class AESCompatibilityTest : public testing::Test {
   protected:
-    void SetUp() override
-    {
-        opensslcryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
-        mbedtlscryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
-        memset(ciphertext, 0, sizeof(ciphertext));
-        memset(decrypted, 0, sizeof(decrypted));
-
-        plaintext.resize(20);
-        std::independent_bits_engine<std::default_random_engine, CHAR_BIT, unsigned char>
-              random_engine;
-        std::generate(begin(plaintext), end(plaintext), std::ref(random_engine));
-    }
-
     unsigned char TEST_CIPHER_KEY[AITT_TCP_ENCRYPTOR_KEY_LEN] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae,
           0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c, 0x2b, 0x7e, 0x15, 0x16, 0x28,
           0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
@@ -56,6 +43,13 @@ class AESCompatibilityTest : public testing::Test {
 
 TEST_F(AESCompatibilityTest, opensslEncrypt_mbedtlsDecrypt_Anytime)
 {
+    opensslcryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
+    mbedtlscryptor.Init(TEST_CIPHER_KEY, TEST_CIPHER_IV);
+
+    plaintext.resize(20);
+    std::independent_bits_engine<std::default_random_engine, CHAR_BIT, unsigned char> random_engine;
+    std::generate(begin(plaintext), end(plaintext), std::ref(random_engine));
+
     for (int i = 1; i < static_cast<int>(plaintext.size()); i++) {
         int ciphertext_len = opensslcryptor.Encrypt(plaintext.data(), i, ciphertext);
         int decrypted_len = mbedtlscryptor.Decrypt(ciphertext, ciphertext_len, decrypted);
@@ -63,10 +57,11 @@ TEST_F(AESCompatibilityTest, opensslEncrypt_mbedtlsDecrypt_Anytime)
         ASSERT_EQ(i, decrypted_len);
         ASSERT_EQ(0, memcmp(plaintext.data(), decrypted, decrypted_len));
     }
-}
 
-TEST_F(AESCompatibilityTest, mbedtlsEncrypt_opensslDecrypt_Anytime)
-{
+    memset(ciphertext, 0, sizeof(ciphertext));
+    memset(decrypted, 0, sizeof(decrypted));
+    std::generate(begin(plaintext), end(plaintext), std::ref(random_engine));
+
     for (int i = 1; i < static_cast<int>(plaintext.size()); i++) {
         int ciphertext_len = mbedtlscryptor.Encrypt(plaintext.data(), i, ciphertext);
         int decrypted_len = opensslcryptor.Decrypt(ciphertext, ciphertext_len, decrypted);
@@ -74,10 +69,11 @@ TEST_F(AESCompatibilityTest, mbedtlsEncrypt_opensslDecrypt_Anytime)
         ASSERT_EQ(i, decrypted_len);
         ASSERT_EQ(0, memcmp(plaintext.data(), decrypted, decrypted_len));
     }
-}
 
-TEST_F(AESCompatibilityTest, opensslEncrypt_opensslDecrypt_Anytime)
-{
+    memset(ciphertext, 0, sizeof(ciphertext));
+    memset(decrypted, 0, sizeof(decrypted));
+    std::generate(begin(plaintext), end(plaintext), std::ref(random_engine));
+
     for (int i = 1; i < static_cast<int>(plaintext.size()); i++) {
         int ciphertext_len = opensslcryptor.Encrypt(plaintext.data(), i, ciphertext);
         int decrypted_len = opensslcryptor.Decrypt(ciphertext, ciphertext_len, decrypted);
@@ -85,10 +81,11 @@ TEST_F(AESCompatibilityTest, opensslEncrypt_opensslDecrypt_Anytime)
         ASSERT_EQ(i, decrypted_len);
         ASSERT_EQ(0, memcmp(plaintext.data(), decrypted, decrypted_len));
     }
-}
 
-TEST_F(AESCompatibilityTest, mbedtlsEncrypt_mbedtlsDecrypt_Anytime)
-{
+    memset(ciphertext, 0, sizeof(ciphertext));
+    memset(decrypted, 0, sizeof(decrypted));
+    std::generate(begin(plaintext), end(plaintext), std::ref(random_engine));
+
     for (int i = 1; i < static_cast<int>(plaintext.size()); i++) {
         int ciphertext_len = mbedtlscryptor.Encrypt(plaintext.data(), i, ciphertext);
         int decrypted_len = mbedtlscryptor.Decrypt(ciphertext, ciphertext_len, decrypted);

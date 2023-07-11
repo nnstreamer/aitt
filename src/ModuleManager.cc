@@ -190,6 +190,8 @@ std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const Aitt
 AittStream *ModuleManager::CreateStream(AittStreamProtocol type, const std::string &topic,
       AittStreamRole role)
 {
+    RETV_IF(type < 0 || AITT_STREAM_TYPE_MAX <= type, nullptr);
+
     AittStreamModule *stream = nullptr;
     try {
         stream = NewStreamModule(type, topic, role);

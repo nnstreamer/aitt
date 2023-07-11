@@ -28,7 +28,7 @@ class AITTManualTest : public testing::Test, public AittTests {
     void TearDown() override { Deinit(); }
 };
 
-TEST_F(AITTManualTest, WillSet_P)
+TEST_F(AITTManualTest, WillSet_P_manual)
 {
     try {
         AITT aitt("", LOCAL_IP, AittOption(true, false));
@@ -67,7 +67,7 @@ TEST_F(AITTManualTest, WillSet_P)
     }
 }
 
-TEST(AITT_MANUAL, Connect_with_ID_P)
+TEST(AITT_MANUAL, Connect_with_ID_P_manual)
 {
     try {
         AITT aitt("", LOCAL_IP);
@@ -75,4 +75,14 @@ TEST(AITT_MANUAL, Connect_with_ID_P)
     } catch (std::exception &e) {
         FAIL() << "Unexpected exception: " << e.what();
     }
+}
+
+TEST(AITT_MANUAL, Connect_with_ID_N_manual)
+{
+    EXPECT_THROW(
+          {
+              AITT aitt("", LOCAL_IP);
+              aitt.Connect(LOCAL_IP, 1883, "InvalidID", "InvalidPasswd");
+          },
+          std::exception);
 }

@@ -103,7 +103,7 @@ TEST(TCP, Create_InvalidAddress_N_Anytime)
     }
 }
 
-TEST_F(TCPTest, GetPeerInfo_P_Anytime)
+TEST_F(TCPTest, Get_P_Anytime)
 {
     std::string peerHost;
     unsigned short peerPort = 0;
@@ -113,18 +113,10 @@ TEST_F(TCPTest, GetPeerInfo_P_Anytime)
     peer->GetPeerInfo(peerHost, peerPort);
     ASSERT_STREQ(peerHost.c_str(), TEST_SERVER_ADDRESS);
     ASSERT_GT(peerPort, 0);
-}
 
-TEST_F(TCPTest, GetHandle_P_Anytime)
-{
-    RunServer();
     int handle = peer->GetHandle();
-    ASSERT_GE(handle, 0);
-}
+    ASSERT_GT(handle, 0);
 
-TEST_F(TCPTest, GetPort_P_Anytime)
-{
-    RunServer();
     unsigned short port = peer->GetPort();
     ASSERT_GT(port, 0);
 }

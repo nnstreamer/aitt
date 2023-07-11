@@ -24,7 +24,8 @@
 
 namespace aitt {
 
-AittDiscovery::AittDiscovery(const std::string &id) : id_(id), callback_handle(nullptr)
+AittDiscovery::AittDiscovery(const std::string &id)
+      : is_running(false), id_(id), callback_handle(nullptr)
 {
 }
 
@@ -45,15 +46,18 @@ void AittDiscovery::Start(const std::string &host, int port, const std::string &
 
     discovery_mq->SetWillInfo(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);
     discovery_mq->SetConnectionCallback([&](int status) {
-        if (status != AITT_CONNECTED)
+        if (status != AITT_CONNECTED) {
+            ERR("Discovery Disconnected");
+            is_running = false;
             return;
-
+        }
         DBG("Discovery Connected");
-        callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+",
-              DiscoveryMessageCallback, static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
-        discovery_mq->SetConnectionCallback(nullptr);
+        if (nullptr == callback_handle)
+            callback_handle = discovery_mq->Subscribe(DISCOVERY_TOPIC_BASE + "+",
+                  DiscoveryMessageCallback, static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
     });
     discovery_mq->Connect(host, port, username, password);
+    is_running = true;
 }
 
 void AittDiscovery::Restart()
@@ -64,8 +68,14 @@ void AittDiscovery::Restart()
           static_cast<void *>(this), AITT_QOS_EXACTLY_ONCE);
 }
 
+bool AittDiscovery::IsRunning(void)
+{
+    return is_running;
+}
+
 void AittDiscovery::Stop()
 {
+    is_running = false;
     discovery_mq->SetConnectionCallback(nullptr);
     discovery_mq->Unsubscribe(callback_handle);
     discovery_mq->Publish(DISCOVERY_TOPIC_BASE + id_, nullptr, 0, AITT_QOS_EXACTLY_ONCE, true);

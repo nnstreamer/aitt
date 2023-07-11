@@ -31,9 +31,14 @@ CMOCK_MOCK_FUNCTION1(MosquittoMock, mosquitto_will_clear, int(struct mosquitto *
 CMOCK_MOCK_FUNCTION4(MosquittoMock, mosquitto_connect,
       int(struct mosquitto *mosq, const char *host, int port, int keepalive));
 CMOCK_MOCK_FUNCTION1(MosquittoMock, mosquitto_disconnect, int(struct mosquitto *mosq));
+
 CMOCK_MOCK_FUNCTION7(MosquittoMock, mosquitto_publish,
       int(struct mosquitto *mosq, int *mid, const char *topic, int payloadlen, const void *payload,
             int qos, bool retain));
+CMOCK_MOCK_FUNCTION8(MosquittoMock, mosquitto_publish_v5,
+      int(struct mosquitto *mosq, int *mid, const char *topic, int payloadlen, const void *payload,
+            int qos, bool retain, const mosquitto_property *properties));
+
 CMOCK_MOCK_FUNCTION4(MosquittoMock, mosquitto_subscribe,
       int(struct mosquitto *mosq, int *mid, const char *sub, int qos));
 CMOCK_MOCK_FUNCTION3(MosquittoMock, mosquitto_unsubscribe,
@@ -50,3 +55,10 @@ CMOCK_MOCK_FUNCTION2(MosquittoMock, mosquitto_connect_v5_callback_set,
 CMOCK_MOCK_FUNCTION2(MosquittoMock, mosquitto_disconnect_v5_callback_set,
       void(struct mosquitto *mosq,
             void (*on_disconnect)(struct mosquitto *, void *, int, const mosquitto_property *)));
+
+CMOCK_MOCK_FUNCTION3(MosquittoMock, mosquitto_property_add_string,
+      int(mosquitto_property **proplist, int identifier, const char *value));
+CMOCK_MOCK_FUNCTION4(MosquittoMock, mosquitto_property_add_binary,
+      int(mosquitto_property **proplist, int identifier, const void *value, uint16_t len));
+CMOCK_MOCK_FUNCTION1(MosquittoMock, mosquitto_property_free_all,
+      void(mosquitto_property **property));

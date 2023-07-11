@@ -127,6 +127,19 @@ TEST(AITT_C_INTERFACE, option_N_Anytime)
     aitt_option_destroy(option);
 }
 
+TEST(AITT_C_INTERFACE, option_No_set_N_Anytime)
+{
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    EXPECT_EQ(nullptr, aitt_option_get(option, AITT_OPT_MY_IP));
+    EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CLEAN_SESSION));
+    EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
+    EXPECT_EQ(nullptr, aitt_option_get(option, AITT_OPT_UNKNOWN));
+
+    aitt_option_destroy(option);
+}
+
 TEST(AITT_C_INTERFACE, connect_disconnect_P_Anytime)
 {
     int ret;
@@ -167,6 +180,9 @@ TEST(AITT_C_INTERFACE, connect_N_Anytime)
 
     invalid_ip = "";
     ret = aitt_connect(handle, invalid_ip, 1883);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+
+    ret = aitt_connect(handle, nullptr, 1883);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     int invalid_port = -1;
@@ -252,6 +268,46 @@ TEST(AITT_C_INTERFACE, pub_N_Anytime)
 
     ret = aitt_publish(handle, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
     EXPECT_EQ(ret, AITT_ERROR_NOT_READY);
+
+    aitt_destroy(handle);
+}
+
+TEST(AITT_C_INTERFACE, pub_wildcard_topic_N_Anytime)
+{
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test_c", option);
+    aitt_option_destroy(option);
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    ret = aitt_publish(handle, "test/#", TEST_C_MSG, strlen(TEST_C_MSG));
+    EXPECT_EQ(ret, AITT_ERROR_SYSTEM);
+
+    aitt_destroy(handle);
+}
+
+TEST(AITT_C_INTERFACE, pub_invalid_param_N_Anytime)
+{
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_MY_IP, LOCAL_IP);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test9", option);
+    aitt_option_destroy(option);
+    ASSERT_NE(handle, nullptr);
 
     ret = aitt_publish(nullptr, TEST_C_TOPIC, TEST_C_MSG, strlen(TEST_C_MSG));
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
@@ -351,12 +407,23 @@ TEST(AITT_C_INTERFACE, pub_with_reply_N_Anytime)
     aitt_destroy(handle);
 }
 
-TEST(AITT_C_INTERFACE, will_set_N_Anytime)
+TEST(AITT_C_INTERFACE, will_set_with_null_N_Anytime)
 {
     int ret;
+    aitt_h invalid_handle = nullptr;
 
-    ret = aitt_will_set(nullptr, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
+    ret = aitt_will_set(invalid_handle, "test/will_topic", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
     EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+}
+
+TEST_F(AITTCTest, will_set_N_Anytime)
+{
+    int ret;
+    aitt_h handle = NewAitt();
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_will_set(handle, "test/will_topic/+", "test", 4, AITT_QOS_AT_MOST_ONCE, false);
+    EXPECT_EQ(ret, AITT_ERROR_SYSTEM);
 }
 
 TEST_F(AITTCTest, pub_with_reply_send_reply_P_Anytime)
@@ -487,4 +554,37 @@ TEST_F(AITTCTest, connect_cb_P_Anytime)
     EXPECT_EQ(ret, AITT_ERROR_NONE);
 
     aitt_destroy(handle);
+}
+
+TEST(AITT_C_INTERFACE, connect_cb_N_Anytime)
+{
+    int ret = aitt_set_connect_callback(
+          nullptr, [](aitt_h aitt_handle, int status, void *user_data) {}, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+}
+
+TEST(AITT_C_INTERFACE, unsubscribe_N_anytime)
+{
+    int ret = aitt_unsubscribe(nullptr, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+}
+
+TEST_F(AITTCTest, unsubscribe_N_Anytime)
+{
+    int ret;
+    aitt_h handle = NewAitt();
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_unsubscribe(handle, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_NOT_READY);
+
+    ret = aitt_connect(handle, LOCAL_IP, 1883);
+    ASSERT_EQ(ret, AITT_ERROR_NONE);
+
+    ret = aitt_unsubscribe(handle, nullptr);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
+
+    int invalid_pointer;
+    ret = aitt_unsubscribe(handle, &invalid_pointer);
+    EXPECT_EQ(ret, AITT_ERROR_SYSTEM);
 }

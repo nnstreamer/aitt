@@ -112,6 +112,11 @@ GlibMainLoop::MainLoopData *GlibMainLoop::RemoveWatch(int fd)
 
 unsigned int GlibMainLoop::AddTimeout(int interval, const mainLoopCB &cb, MainLoopData *data)
 {
+    if (interval <= 0) {
+        ERR("Invalid interval(%d)", interval);
+        return 0;
+    }
+
     MainLoopCbData *cb_data = new MainLoopCbData();
     GMainContext *ctx = g_main_loop_get_context(loop);
     cb_data->ctx = ctx;

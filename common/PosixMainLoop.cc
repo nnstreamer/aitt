@@ -165,8 +165,8 @@ unsigned int PosixMainLoop::AddTimeout(int interval, const mainLoopCB &cb, MainL
 {
     static int identifier = TIMEOUT_START;
 
-    if (interval < 0) {
-        ERR("Invalid : interval(%d) < 0", interval);
+    if (interval <= 0) {
+        ERR("Invalid interval(%d)", interval);
         return 0;
     }
 

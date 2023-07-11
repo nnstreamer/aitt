@@ -163,14 +163,18 @@ void AITT::Impl::UnsubscribeAll()
     subscribed_list.clear();
 }
 
-void AITT::Impl::ConfigureTransportModule(const std::string &key, const std::string &value,
-      AittProtocol protocols)
-{
-}
-
 void AITT::Impl::Publish(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocols, AittQoS qos, bool retain)
 {
+    if (discovery.IsRunning() == false) {
+        ERR("Not connected");
+        throw AittException(AittException::INVALID_STATE);
+    }
+    if ((protocols & ~(AITT_TYPE_MQTT | AITT_TYPE_TCP | AITT_TYPE_TCP_SECURE)) != 0) {
+        ERR("Unknown Protocol(%d)", protocols);
+        throw AittException(AittException::INVALID_ARG);
+    }
+
     if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT)
         mq->Publish(topic, data, datalen, qos, retain);
 
@@ -199,7 +203,7 @@ AittSubscribeID AITT::Impl::Subscribe(const std::string &topic, const AITT::Subs
     default:
         ERR("Unknown AittProtocol(%d)", protocol);
         delete info;
-        throw std::runtime_error("Unknown AittProtocol");
+        throw AittException(AittException::INVALID_ARG);
     }
     info->second = subscribe_handle;
     {
@@ -284,14 +288,14 @@ void *AITT::Impl::Unsubscribe(AittSubscribeID subscribe_id)
     return user_data;
 }
 
-// It's not supported with multiple protocols
-int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, const int datalen,
+// It's not supported with multiple protocols like subscribe.
+void AITT::Impl::PublishWithReply(const std::string &topic, const void *data, const int datalen,
       AittProtocol protocol, AittQoS qos, bool retain, const SubscribeCallback &cb, void *user_data,
       const std::string &correlation)
 {
     std::string replyTopic = topic + RESPONSE_POSTFIX + std::to_string(reply_id++);
 
-    Subscribe(
+    auto id = Subscribe(
           replyTopic,
           [this, cb](AittMsg *sub_msg, const void *sub_data, const int sub_datalen,
                 void *sub_cbdata) {
@@ -317,9 +321,9 @@ int AITT::Impl::PublishWithReply(const std::string &topic, const void *data, con
         break;
     default:
         ERR("Unknown AittProtocol(%d)", protocol);
-        return -1;
+        Unsubscribe(id);
+        throw AittException(AittException::INVALID_ARG);
     }
-    return 0;
 }
 
 int AITT::Impl::PublishWithReplySync(const std::string &topic, const void *data, const int datalen,
@@ -444,24 +448,20 @@ void AITT::Impl::DestroyStream(AittStream *aitt_stream)
 
 int AITT::Impl::CountSubscriber(const std::string &topic, AittProtocol protocols)
 {
-    int total = 0;
-
     if (topic.find("+") != std::string::npos || topic.find("#") != std::string::npos) {
         ERR("Not Support Wildcard in CountSubscriber");
         return AITT_ERROR_NOT_SUPPORTED;
     }
 
-    if ((protocols & AITT_TYPE_MQTT) == AITT_TYPE_MQTT) {
+    int total = 0;
+    if (protocols & AITT_TYPE_MQTT)
         total += mq_discovery_handler.CountSubscriber(topic);
-    }
 
-    if ((protocols & AITT_TYPE_TCP) == AITT_TYPE_TCP) {
+    if (protocols & AITT_TYPE_TCP)
         total += modules.Get(AITT_TYPE_TCP).CountSubscriber(topic);
-    }
 
-    if ((protocols & AITT_TYPE_TCP_SECURE) == AITT_TYPE_TCP_SECURE) {
+    if (protocols & AITT_TYPE_TCP_SECURE)
         total += modules.Get(AITT_TYPE_TCP_SECURE).CountSubscriber(topic);
-    }
 
     return total;
 }

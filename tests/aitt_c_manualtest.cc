@@ -22,7 +22,7 @@
 
 #define TEST_C_WILL_TOPIC "test/topic_will"
 
-TEST(AITT_C_MANUAL, will_set_P)
+TEST(AITT_C_MANUAL, will_set_P_manual)
 {
     int ret;
     aitt_h handle = aitt_new("test14", nullptr);
@@ -85,7 +85,7 @@ TEST(AITT_C_MANUAL, will_set_P)
 }
 
 // Set user/passwd in mosquitto.conf before testing
-TEST(AITT_C_MANUAL, connect_id_passwd_P)
+TEST(AITT_C_MANUAL, connect_id_passwd_P_manual)
 {
     aitt_h handle = aitt_new("test15", nullptr);
     ASSERT_NE(handle, nullptr);
@@ -95,6 +95,40 @@ TEST(AITT_C_MANUAL, connect_id_passwd_P)
 
     ret = aitt_disconnect(handle);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_destroy(handle);
+}
+
+TEST(AITT_C_MANUAL, connect_id_passwd_N_manual)
+{
+    aitt_h handle = aitt_new("test15", nullptr);
+    ASSERT_NE(handle, nullptr);
+
+    int ret = aitt_connect_full(handle, LOCAL_IP, 1883, "InvalidID", "InvalidPasswd");
+    ASSERT_EQ(ret, AITT_ERROR_SYSTEM);
+
+    ret = aitt_disconnect(handle);
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_destroy(handle);
+}
+
+TEST(AITT_C_INTERFACE, connect_custom_N_manual)
+{
+    int ret;
+
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    ret = aitt_option_set(option, AITT_OPT_CUSTOM_BROKER, "true");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+
+    aitt_h handle = aitt_new("test", option);
+    aitt_option_destroy(option);
+    ASSERT_NE(handle, nullptr);
+
+    ret = aitt_connect(handle, nullptr, 1883);
+    EXPECT_EQ(ret, AITT_ERROR_INVALID_PARAMETER);
 
     aitt_destroy(handle);
 }

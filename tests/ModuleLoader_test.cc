@@ -19,13 +19,14 @@
 #include "AittTests.h"
 #include "AittTransport.h"
 #include "ModuleManager.h"
+#include "NullTransport.h"
 #include "aitt_internal.h"
 
 using ModuleManager = aitt::ModuleManager;
 
-class ModuleLoaderTest : public testing::Test {
+class ModuleManagerTest : public testing::Test {
   public:
-    ModuleLoaderTest(void) : discovery("test_id"), modules(LOCAL_IP, discovery) {}
+    ModuleManagerTest(void) : discovery("test_id"), modules(LOCAL_IP, discovery) {}
 
   protected:
     void SetUp() override {}
@@ -35,14 +36,15 @@ class ModuleLoaderTest : public testing::Test {
     aitt::ModuleManager modules;
 };
 
-TEST_F(ModuleLoaderTest, Get_P_Anytime)
+TEST_F(ModuleManagerTest, Get_P_Anytime)
 {
     aitt::AittTransport &tcp = modules.Get(AITT_TYPE_TCP);
     EXPECT_TRUE(tcp.GetProtocol() == AITT_TYPE_TCP);
     aitt::AittTransport &tcp_secure = modules.Get(AITT_TYPE_TCP_SECURE);
     EXPECT_TRUE(tcp_secure.GetProtocol() == AITT_TYPE_TCP_SECURE);
 }
-TEST_F(ModuleLoaderTest, Get_N_Anytime)
+
+TEST_F(ModuleManagerTest, Get_N_Anytime)
 {
     EXPECT_THROW(
           {
@@ -52,7 +54,7 @@ TEST_F(ModuleLoaderTest, Get_N_Anytime)
           aitt::AittException);
 }
 
-TEST_F(ModuleLoaderTest, NewCustomMQ_P)
+TEST_F(ModuleManagerTest, NewCustomMQ_P)
 {
     EXPECT_NO_THROW({
         std::unique_ptr<aitt::MQ> mq = modules.NewCustomMQ("test", AittOption(false, true));
@@ -60,7 +62,7 @@ TEST_F(ModuleLoaderTest, NewCustomMQ_P)
     });
 }
 
-TEST_F(ModuleLoaderTest, NewCustomMQ_N_Anytime)
+TEST_F(ModuleManagerTest, NewCustomMQ_N_Anytime)
 {
     EXPECT_THROW(
           {
@@ -68,4 +70,39 @@ TEST_F(ModuleLoaderTest, NewCustomMQ_N_Anytime)
               FAIL() << "Should not be called";
           },
           aitt::AittException);
+}
+
+TEST_F(ModuleManagerTest, CreateStream_N_Anytime)
+{
+    EXPECT_EQ(nullptr, modules.CreateStream(AITT_STREAM_TYPE_MAX, "topic/Invalid/Stream_Type",
+                             AITT_STREAM_ROLE_PUBLISHER));
+    EXPECT_EQ(nullptr, modules.CreateStream(AITT_STREAM_TYPE_MAX, "topic/Invalid/Stream_Type",
+                             AITT_STREAM_ROLE_SUBSCRIBER));
+}
+
+TEST_F(ModuleManagerTest, DestroyStream_N_Anytime)
+{
+    EXPECT_NO_THROW(modules.DestroyStream(nullptr));
+}
+
+TEST_F(ModuleManagerTest, NullTranport_N_Anytime)
+{
+    NullTransport null_transport(discovery, LOCAL_IP);
+
+    EXPECT_NO_THROW({
+        null_transport.Publish("AnyTopic", "AnyData", 0);
+        null_transport.PublishWithReply("AnyTopic", "AnyData", 0, AITT_QOS_AT_MOST_ONCE, false,
+              "AnyReplyTopic", "AnyCorrelation");
+        null_transport.SendReply(nullptr, "AnyData", 0, AITT_QOS_AT_MOST_ONCE, false);
+
+        EXPECT_EQ(nullptr,
+              null_transport.Subscribe(
+                    "AnyTopic",
+                    [](AittMsg *handle, const void *data, const int datalen, void *cbdata) {},
+                    nullptr));
+        EXPECT_EQ(nullptr, null_transport.Unsubscribe(nullptr));
+        char any_pointer;
+        EXPECT_EQ(nullptr, null_transport.Unsubscribe(&any_pointer));
+        EXPECT_EQ(0, null_transport.CountSubscriber("AnyTopic"));
+    });
 }
