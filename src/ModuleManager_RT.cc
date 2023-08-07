@@ -64,7 +64,7 @@ std::unique_ptr<MQ> ModuleManager::NewCustomMQ(const std::string &id, const Aitt
 {
     std::unique_ptr<MQ> instance(new CustomMQ(id, option));
     if (instance == nullptr) {
-        ERR("STBrokerMQ() Fail");
+        ERR("CustomMQ() Fail");
         throw AittException(AittException::SYSTEM_ERR);
     }
 
