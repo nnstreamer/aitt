@@ -20,7 +20,6 @@ import android.util.Log;
 import com.google.flatbuffers.FlexBuffersBuilder;
 import com.samsung.android.aitt.Aitt;
 import com.samsung.android.aitt.internal.Definitions;
-import com.samsung.android.modules.ipc.Ipc;
 
 import java.nio.ByteBuffer;
 
@@ -29,7 +28,6 @@ public class IpcHandler implements TransportHandler {
     private static final String TAG = "IpcHandler";
     private Context context;
     private String ip;
-    private Ipc ipc;
     private byte[] publishData;
 
     public IpcHandler() {
@@ -55,10 +53,7 @@ public class IpcHandler implements TransportHandler {
     public void subscribe(String topic, HandlerDataCallback handlerDataCallback) {
         publishData = wrapPublishData(topic);
         try {
-            Ipc.ReceiveFrameCallback cb = handlerDataCallback::pushHandlerData;
-            ipc = new Ipc(context, cb);
-            ipc.initConsumer();
-
+            //TODO : Invoke IPC consumer/subscribe APIs
         } catch (Exception e) {
             Log.e(TAG, "Failed to subscribe to IPC");
         }
@@ -92,18 +87,12 @@ public class IpcHandler implements TransportHandler {
 
     @Override
     public void publish(String topic, String ip, int port, byte[] message) {
-        if (ipc == null)
-        {
-            ipc = new Ipc(context);
-            ipc.initProducer();
-        }
-        ipc.writeToMemory(message);
+        //TODO: Invoke producer/publish APIs
     }
 
     @Override
     public void unsubscribe() {
-        if (ipc != null)
-            ipc.close();
+        //TODO: Invoke IPC close APIs
     }
 
     @Override

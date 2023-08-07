@@ -52,7 +52,7 @@ dependencies {
 
     implementation project(path: ':android:modules:tcp')
     implementation project(path: ':android:modules:webrtc')
-    implementation project(path: ':android:modules:ipc')
+//    implementation project(path: ':android:modules:ipc')
     implementation project(path: ':android:modules:rtsp')
     implementation project(path: ':android:aitt-native')
 

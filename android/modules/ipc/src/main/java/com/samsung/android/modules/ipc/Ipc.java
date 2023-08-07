@@ -142,5 +142,4 @@ public class Ipc {
         Thread thread = new Thread(consumer);
         thread.start();
     }
-
 }
