@@ -57,7 +57,7 @@ public final class WebRTCStream implements AittStream {
     private StreamState streamState = StreamState.INIT;
     private StreamStateChangeCallback stateChangeCallback = null;
 
-    WebRTCStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
+    WebRTCStream(String topic, StreamRole streamRole, Context context) {
         this.streamRole = streamRole;
 
         id = createId();
@@ -72,14 +72,14 @@ public final class WebRTCStream implements AittStream {
         }
     }
 
-    public static WebRTCStream createSubscriberStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
+    public static WebRTCStream createSubscriberStream(String topic, StreamRole streamRole, Context context) {
         if (streamRole != StreamRole.SUBSCRIBER)
             throw new IllegalArgumentException("The role of this stream is not subscriber.");
 
         return new WebRTCStream(topic, streamRole, context);
     }
 
-    public static WebRTCStream createPublisherStream(String topic, StreamRole streamRole, Context context) throws InstantiationException {
+    public static WebRTCStream createPublisherStream(String topic, StreamRole streamRole, Context context) {
         if (streamRole != StreamRole.PUBLISHER)
             throw new IllegalArgumentException("The role of this stream is not publisher.");
 
@@ -88,8 +88,8 @@ public final class WebRTCStream implements AittStream {
 
     @Override
     public AittStream setConfig(String key, String value) {
-        if (streamRole == StreamRole.SUBSCRIBER)
-            throw new IllegalArgumentException("The role of this stream is not publisher");
+        if (streamRole == StreamRole.SUBSCRIBER && !"DECODE_CODEC".equals(key))
+            throw new IllegalArgumentException("Key provided does not match with the stream role");
 
         if (streamState == StreamState.READY)
             throw new RuntimeException("Stream is already started, cannot change configuration now");
@@ -100,6 +100,12 @@ public final class WebRTCStream implements AittStream {
         switch (key) {
             case "SOURCE_TYPE":
                 webrtc.setSourceType(value);
+                break;
+            case "MEDIA_FORMAT":
+                webrtc.setMediaFormat(value);
+                break;
+            case "DECODE_CODEC":
+                webrtc.setDecodeCodec(value);
                 break;
             case "HEIGHT":
                 int height = Integer.parseInt(value);
@@ -129,7 +135,7 @@ public final class WebRTCStream implements AittStream {
     }
 
     @Override
-    public void start() {
+    public void start() throws InstantiationException {
         if (streamState == StreamState.READY || streamState == StreamState.PLAYING) {
             Log.e(TAG, "Stream already started");
             return;

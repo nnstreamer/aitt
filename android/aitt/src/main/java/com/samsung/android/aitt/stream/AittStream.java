@@ -56,7 +56,7 @@ public interface AittStream {
     /**
      * Method to start stream
      */
-    void start();
+    void start() throws InstantiationException;
 
     /**
      * Method to push data on a topic

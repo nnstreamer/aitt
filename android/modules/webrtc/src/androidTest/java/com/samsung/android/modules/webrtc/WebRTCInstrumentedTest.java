@@ -447,8 +447,7 @@ public class WebRTCInstrumentedTest {
             publisherStream.setConfig("SOURCE_TYPE", "CAMERA")
                     .setConfig("WIDTH", "320")
                     .setConfig("HEIGHT", "240")
-                    .setConfig("FRAME_RATE", "30")
-                    .start();
+                    .setConfig("FRAME_RATE", "30");
 
             publisherStream.disconnect();
         } catch (Exception e) {

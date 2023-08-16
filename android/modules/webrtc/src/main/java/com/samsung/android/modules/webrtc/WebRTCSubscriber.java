@@ -50,7 +50,7 @@ public final class WebRTCSubscriber extends WebRTC {
    private final ByteArrayOutputStream baos;
    private boolean recvLargeChunk = false;
 
-   public WebRTCSubscriber(Context appContext, int width, int height, int fps) throws InstantiationException {
+   public WebRTCSubscriber(Context appContext, int width, int height, int fps) {
       super(appContext, width, height, fps);
       baos = new ByteArrayOutputStream();
    }

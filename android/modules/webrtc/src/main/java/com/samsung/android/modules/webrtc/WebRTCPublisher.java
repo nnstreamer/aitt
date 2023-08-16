@@ -69,9 +69,8 @@ public final class WebRTCPublisher extends WebRTC {
     private CameraEnumerator cameraEnumerator;
     private List<String> cameraDeviceNames;
 
-    public WebRTCPublisher(Context appContext, int width, int height, int fps) throws InstantiationException {
+    public WebRTCPublisher(Context appContext, int width, int height, int fps)  {
         super(appContext, width, height, fps);
-        configureStream();
     }
 
     @Override
@@ -85,9 +84,16 @@ public final class WebRTCPublisher extends WebRTC {
     }
 
     @Override
-    public void start() {
-        if (peerConnection == null)
+    public void start() throws InstantiationException {
+        if (peerConnection == null) {
+            initializePeerConnectionFactory();
             initializePeerConnection();
+            if (peerConnection == null)
+                throw new InstantiationException("Failed to create peer connection");
+
+            configureStream();
+        }
+
         if (sourceType == SourceType.CAMERA && cameraCapturer != null)
             cameraCapturer.startCapture(frameWidth, frameHeight, frameRate);
     }

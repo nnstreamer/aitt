@@ -33,7 +33,7 @@ public final class WebRTCHandler extends StreamHandler {
     }
 
     @Override
-    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) throws InstantiationException {
+    public AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
         if (protocol != Aitt.Protocol.WEBRTC)
             throw new InvalidParameterException("Invalid protocol");
 

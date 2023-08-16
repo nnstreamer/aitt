@@ -24,11 +24,14 @@ import org.webrtc.DataChannel;
 import org.webrtc.DefaultVideoDecoderFactory;
 import org.webrtc.DefaultVideoEncoderFactory;
 import org.webrtc.EglBase;
+import org.webrtc.HardwareVideoDecoderFactory;
+import org.webrtc.HardwareVideoEncoderFactory;
 import org.webrtc.IceCandidate;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
+import org.webrtc.VideoCodecInfo;
 import org.webrtc.VideoDecoderFactory;
 import org.webrtc.VideoEncoderFactory;
 
@@ -44,6 +47,7 @@ public abstract class WebRTC {
     public static final int MAX_MESSAGE_SIZE = 32768;
     public static final int MAX_UNCOMPRESSED_MESSAGE_SIZE = 295936;
     private static final String TAG = "WebRTC";
+    private static final String H264Codec = "H264";
 
     protected PeerConnection peerConnection;
     protected PeerConnectionFactory connectionFactory;
@@ -57,7 +61,9 @@ public abstract class WebRTC {
     protected int frameWidth;
     protected int frameHeight;
     protected int frameRate;
-    protected SourceType sourceType = SourceType.CAMERA;
+    protected SourceType sourceType = SourceType.NULL;
+    protected MediaFormat mediaFormat = MediaFormat.VP8;
+    protected String codec;
 
     protected final Context appContext;
 
@@ -79,7 +85,8 @@ public abstract class WebRTC {
 
     protected enum SourceType {
         CAMERA,
-        MEDIA_PACKET;
+        MEDIA_PACKET,
+        NULL;
 
         private static SourceType fromString(String str) {
             switch (str) {
@@ -89,6 +96,35 @@ public abstract class WebRTC {
                     return MEDIA_PACKET;
                 default:
                     throw new IllegalArgumentException("Invalid SOURCE_TYPE: " + str);
+            }
+        }
+    }
+
+    protected enum MediaFormat {
+        I420,
+        NV12,
+        VP8,
+        VP9,
+        H264,
+        JPEG,
+        MAX;
+
+        private static MediaFormat fromString(String str) {
+            switch (str) {
+                case "I420":
+                    return I420;
+                case "NV12":
+                    return NV12;
+                case "VP8":
+                    return VP8;
+                case "VP9":
+                    return VP9;
+                case "H264":
+                    return H264;
+                case "JPEG":
+                    return JPEG;
+                default:
+                    return MAX;
             }
         }
     }
@@ -112,15 +148,11 @@ public abstract class WebRTC {
      * @param height Frame height
      * @param fps Frames per second
      */
-    public WebRTC(Context appContext, int width, int height, int fps) throws InstantiationException {
+    public WebRTC(Context appContext, int width, int height, int fps)  {
         if (appContext == null)
             throw new IllegalArgumentException("App context is null.");
 
         this.appContext = appContext;
-        initializePeerConnectionFactory();
-        initializePeerConnection();
-        if (peerConnection == null)
-            throw new InstantiationException("Failed to create peer connection");
 
         frameWidth = width;
         frameHeight = height;
@@ -154,9 +186,13 @@ public abstract class WebRTC {
     /**
      * Method to start WebRTC
      */
-    public void start() {
-        if (peerConnection == null)
+    public void start() throws InstantiationException {
+        if (peerConnection == null) {
+            initializePeerConnectionFactory();
             initializePeerConnection();
+            if (peerConnection == null)
+                throw new InstantiationException("Failed to create peer connection");
+        }
     }
 
     /**
@@ -274,7 +310,29 @@ public abstract class WebRTC {
         if (sourceType == newType)
             return;
         sourceType = newType;
-        configureStream();
+    }
+
+    public void setMediaFormat(String format) {
+        MediaFormat newFormat = MediaFormat.fromString(format);
+        if (newFormat == MediaFormat.MAX) {
+            throw new IllegalArgumentException("Invalid MEDIA_FORMAT type");
+        }
+
+        if (mediaFormat == newFormat)
+            return;
+
+        if (sourceType == SourceType.MEDIA_PACKET) {
+            mediaFormat = newFormat;
+        }
+    }
+
+    public void setDecodeCodec(String newCodec) {
+        if (newCodec.equals(codec))
+            return;
+
+        if (sourceType == SourceType.NULL) {
+            codec = newCodec;
+        }
     }
 
     public void setFrameHeight(int height) {
@@ -354,11 +412,21 @@ public abstract class WebRTC {
     /**
      * Method to initialize peer connection factory
      */
-    private void initializePeerConnectionFactory() {
+    protected void initializePeerConnectionFactory() {
         eglBase = EglBase.create();
-        VideoEncoderFactory encoderFactory = new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true , true);
-        VideoDecoderFactory decoderFactory = new DefaultVideoDecoderFactory(eglBase.getEglBaseContext());
-
+        VideoEncoderFactory encoderFactory;
+        VideoDecoderFactory decoderFactory;
+        if (mediaFormat == MediaFormat.H264 || H264Codec.equals(codec)) {
+            encoderFactory = new HardwareVideoEncoderFactory(eglBase.getEglBaseContext(), false, true);
+            decoderFactory = new HardwareVideoDecoderFactory(eglBase.getEglBaseContext());
+            VideoCodecInfo[] videoCodecInfo = encoderFactory.getSupportedCodecs();
+            for (int i = 0; i < videoCodecInfo.length; i++) {
+                Log.d(TAG, "Supported codecs : " + i + " " + videoCodecInfo[i].name);
+            }
+        } else {
+            encoderFactory = new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true, true);
+            decoderFactory = new DefaultVideoDecoderFactory(eglBase.getEglBaseContext());
+        }
         PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(appContext).setEnableInternalTracer(true).createInitializationOptions());
         PeerConnectionFactory.Builder builder = PeerConnectionFactory.builder().setVideoEncoderFactory(encoderFactory).setVideoDecoderFactory(decoderFactory);
         builder.setOptions(null);

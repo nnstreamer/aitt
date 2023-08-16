@@ -794,7 +794,7 @@ public class Aitt {
      * @param streamRole The data received from JNI layer to be sent to application layer
      * @return AittStream instance
      */
-    public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) throws InstantiationException {
+    public AittStream createStream(Protocol protocol, String topic, AittStream.StreamRole streamRole) {
         ModuleHandler moduleHandler = createModuleHandler(protocol);
         if (moduleHandler == null) {
             Log.e(TAG, "Fail to create a module handler.");

@@ -33,22 +33,20 @@ public class WebRTCUnitTest {
         mockedLog.close();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testWebRTCPublisherConstructor_N() throws IllegalArgumentException {
+    @Test
+    public void testWebRTCPublisherConstructor_N() {
         try {
-            WebRTC webRTC = new WebRTCPublisher(null, WIDTH, HEIGHT, FPS);
-            assertNotNull("WebRTC instance not null", webRTC);
-        }  catch (InstantiationException e) {
+            assertThrows(IllegalArgumentException.class, () ->  { new WebRTCPublisher(null, WIDTH, HEIGHT, FPS); });
+        }  catch (Exception e) {
             fail("Failed to create WebRTCPublisher" + e);
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testWebRTCSubscriberConstructor_N() throws IllegalArgumentException {
+    @Test
+    public void testWebRTCSubscriberConstructor_N() {
         try {
-            WebRTC webRTC = new WebRTCSubscriber(null, WIDTH, HEIGHT, FPS);
-            assertNotNull("WebRTC instance not null", webRTC);
-        } catch (InstantiationException e) {
+            assertThrows(IllegalArgumentException.class, () ->  { new WebRTCSubscriber(null, WIDTH, HEIGHT, FPS); });
+        } catch (Exception e) {
             fail("Failed to create WebRTCSubscriber" + e);
         }
     }

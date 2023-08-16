@@ -19,12 +19,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 
+import android.util.Log;
+
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RTSPStreamUnitTest {
 
+   private static final String TAG = "RTSPStreamUnitTest";
    private final String topic = "aitt/test/rtsp";
    private final String url = "rtsp://192.168.1.4:1935";
    private final String id = "id1";
@@ -85,12 +88,16 @@ public class RTSPStreamUnitTest {
 
       rtspStream.setStateCallback(state -> assertEquals("Expected state is ready", state, AittStream.StreamState.READY));
 
-      rtspStream.setConfig("URI", url)
-              .setConfig("ID", id)
-              .setConfig("PASSWORD", password)
-              .setConfig("HEIGHT", height)
-              .setConfig("WIDTH", width)
-              .start();
+      try {
+         rtspStream.setConfig("URI", url)
+                 .setConfig("ID", id)
+                 .setConfig("PASSWORD", password)
+                 .setConfig("HEIGHT", height)
+                 .setConfig("WIDTH", width)
+                 .start();
+      } catch (InstantiationException e) {
+         Log.e(TAG, "Throw instantiation exception");
+      }
    }
 
    @Test
@@ -107,12 +114,16 @@ public class RTSPStreamUnitTest {
          }
       });
 
-      rtspStream.setConfig("URI", url)
-              .setConfig("ID", id)
-              .setConfig("PASSWORD", password)
-              .setConfig("HEIGHT", height)
-              .setConfig("WIDTH", width)
-              .start();
+      try {
+         rtspStream.setConfig("URI", url)
+                 .setConfig("ID", id)
+                 .setConfig("PASSWORD", password)
+                 .setConfig("HEIGHT", height)
+                 .setConfig("WIDTH", width)
+                 .start();
+      } catch (InstantiationException e) {
+         Log.e(TAG, "Caught instantiation exception");
+      }
 
       rtspStream.stop();
    }

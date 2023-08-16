@@ -30,7 +30,7 @@ public class StreamHandler implements ModuleHandler {
      * @param context context of the application
      * @return returns stream object
      */
-    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) throws InstantiationException {
+    AittStream newStreamModule(Aitt.Protocol protocol, String topic, AittStream.StreamRole role, Context context) {
         return null;
     }
 
