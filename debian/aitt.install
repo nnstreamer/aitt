@@ -1,2 +1,3 @@
-/usr/lib/*/libaitt*.so*
+/usr/lib/*/libaitt.so*
+/usr/lib/*/libaitt-common*.so*
 /usr/bin/*
