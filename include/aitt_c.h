@@ -141,11 +141,11 @@ void aitt_option_destroy(aitt_option_h handle);
  *          and NULL is handled as @c false
  */
 typedef enum {
-    AITT_OPT_UNKNOWN,       /**< Unknown */
-    AITT_OPT_MY_IP,         /**< Own device ip address for connecting by others */
-    AITT_OPT_CLEAN_SESSION, /**< A Boolean value whether broker clean all message and subscriptions
-                               on disconnect */
-    AITT_OPT_CUSTOM_BROKER, /**< A Boolean value whether AITT uses a custom broker. */
+    AITT_OPT_UNKNOWN = 0,       /**< Unknown */
+    AITT_OPT_MY_IP = 1,         /**< Own device ip address for connecting by others */
+    AITT_OPT_CLEAN_SESSION = 2, /**< A Boolean value whether broker clean all message and
+                                   subscriptions on disconnect */
+    AITT_OPT_CUSTOM_BROKER = 3, /**< A Boolean value whether AITT uses a custom broker. */
 } aitt_option_e;
 
 /**
@@ -371,7 +371,7 @@ int aitt_subscribe(aitt_h handle, const char *topic, aitt_sub_fn cb, void *user_
  * @retval #AITT_ERROR_SYSTEM System errors
  */
 int aitt_subscribe_full(aitt_h handle, const char *topic, aitt_sub_fn cb, void *user_data,
-      aitt_protocol_e protocols, aitt_qos_e qos, aitt_sub_h *sub_handle);
+      aitt_protocol_e protocol, aitt_qos_e qos, aitt_sub_h *sub_handle);
 
 /**
  * @brief Unsubscribe from a topic.

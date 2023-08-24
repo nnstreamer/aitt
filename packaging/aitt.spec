@@ -75,7 +75,7 @@ cp %{SOURCE1001} .
 %cmake . \
     -DLOG_STDOUT:BOOL=%{stdoutlog} \
     -DPLATFORM="tizen" \
-    -DVERSIONING:BOOL=OFF \
+    -DVERSIONING:BOOL=ON \
     -DWITH_WEBRTC:BOOL=ON \
     -DWITH_RTSP:BOOL=ON \
     -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
