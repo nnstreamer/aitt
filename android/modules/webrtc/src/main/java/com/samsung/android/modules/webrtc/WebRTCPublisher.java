@@ -88,12 +88,8 @@ public final class WebRTCPublisher extends WebRTC {
         if (peerConnection == null) {
             initializePeerConnectionFactory();
             initializePeerConnection();
-            if (peerConnection == null)
-                throw new InstantiationException("Failed to create peer connection");
-
-            configureStream();
         }
-
+        configureStream();
         if (sourceType == SourceType.CAMERA && cameraCapturer != null)
             cameraCapturer.startCapture(frameWidth, frameHeight, frameRate);
     }
@@ -103,8 +99,12 @@ public final class WebRTCPublisher extends WebRTC {
         if (peerConnection == null)
             return;
         cleanStream();
+        localDataChannel.dispose();
+        localDataChannel = null;
         peerConnection.dispose();
         peerConnection = null;
+        connectionFactory.dispose();
+        connectionFactory = null;
     }
 
     @Override
@@ -141,13 +141,13 @@ public final class WebRTCPublisher extends WebRTC {
     }
 
     @Override
-    protected void initializePeerConnection() {
+    protected void initializePeerConnection() throws InstantiationException {
         PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(new ArrayList<>());
 
         PeerConnection.Observer pcObserver = new PeerConnection.Observer() {
             @Override
             public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-                Log.d(TAG, "onSignalingChange: ");
+                Log.d(TAG, "onSignalingChange: " + signalingState);
                 if (signalingState == SignalingState.HAVE_REMOTE_OFFER) {
                     createAnswer();
                 }
@@ -155,17 +155,17 @@ public final class WebRTCPublisher extends WebRTC {
 
             @Override
             public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-                Log.d(TAG, "onIceConnectionChange: ");
+                Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
             }
 
             @Override
             public void onIceConnectionReceivingChange(boolean b) {
-                Log.d(TAG, "onIceConnectionReceivingChange: ");
+                Log.d(TAG, "onIceConnectionReceivingChange: " + b);
             }
 
             @Override
             public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-                Log.d(TAG, "onIceGatheringChange: ");
+                Log.d(TAG, "onIceGatheringChange: " + iceGatheringState);
             }
 
             @Override
@@ -190,6 +190,7 @@ public final class WebRTCPublisher extends WebRTC {
             @Override
             public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
                 Log.d(TAG, "onIceCandidatesRemoved: ");
+                removeIceCandidates(iceCandidates);
             }
 
             @Override
@@ -228,7 +229,7 @@ public final class WebRTCPublisher extends WebRTC {
 
         peerConnection = connectionFactory.createPeerConnection(rtcConfig, pcObserver);
         if (peerConnection == null)
-            return;
+            throw new InstantiationException("Failed to create peerConnection");
 
         localDataChannel = peerConnection.createDataChannel("sendDataChannel", new DataChannel.Init());
     }
@@ -251,11 +252,10 @@ public final class WebRTCPublisher extends WebRTC {
             if (videoTrack != null) {
                 mediaStream.removeTrack(videoTrack);
                 videoTrack.dispose();
+                videoTrack = null;
             }
+            mediaStream = null;
         }
-
-        if (videoSource != null)
-            videoSource.dispose();
 
         if (cameraCapturer != null) {
             try {
@@ -264,6 +264,11 @@ public final class WebRTCPublisher extends WebRTC {
             } catch (InterruptedException e) {
                 Log.e(TAG, "Failed to stop cameraCapturer:" + e.getMessage());
             }
+        }
+
+        if (videoSource != null) {
+            videoSource.dispose();
+            videoSource = null;
         }
     }
 

@@ -136,7 +136,12 @@ public abstract class WebRTC {
      */
     public abstract void setRemoteDescription(String sdp);
 
-    protected abstract void initializePeerConnection();
+    /**
+     * Method to start WebRTC
+     */
+    public abstract void start() throws InstantiationException;
+
+    protected abstract void initializePeerConnection() throws InstantiationException;
 
     protected abstract void configureStream();
 
@@ -166,7 +171,7 @@ public abstract class WebRTC {
      */
     public void registerDataCallback(ReceiveDataCallback cb) {
         if (cb == null)
-            throw new IllegalArgumentException("Callback is null.");
+            throw new IllegalArgumentException("Callback is null");
 
         dataCallback = cb;
     }
@@ -184,25 +189,17 @@ public abstract class WebRTC {
     }
 
     /**
-     * Method to start WebRTC
-     */
-    public void start() throws InstantiationException {
-        if (peerConnection == null) {
-            initializePeerConnectionFactory();
-            initializePeerConnection();
-            if (peerConnection == null)
-                throw new InstantiationException("Failed to create peer connection");
-        }
-    }
-
-    /**
      * Method to stop WebRTC
      */
     public void stop() {
         if (peerConnection == null)
             return;
+        localDataChannel.dispose();
+        localDataChannel = null;
         peerConnection.dispose();
         peerConnection = null;
+        connectionFactory.dispose();
+        connectionFactory = null;
     }
 
     /**
@@ -256,6 +253,12 @@ public abstract class WebRTC {
         return iceCandidates;
     }
 
+    protected void removeIceCandidates(IceCandidate... candidates) {
+        for (IceCandidate candidate: candidates) {
+            iceCandidates.remove(candidate.toString());
+        }
+    }
+
     /**
      * Method to add peer information
      *
@@ -288,21 +291,16 @@ public abstract class WebRTC {
 
     /**
      * Method to remove connected peer stream
-     *
-     * @param discoveryId Discovery ID of the peer
      */
-    public void removePeer(String discoveryId) {
+    public void removePeer() {
         if (peerDiscoveryId == null || peerDiscoveryId.isEmpty())
             return;
 
-        if (peerDiscoveryId.compareTo(discoveryId) != 0) {
-            Log.d(TAG, "No stream for peer: " + discoveryId);
-            return;
-        }
-
         peerDiscoveryId = null;
         peerId = null;
-        stop();
+
+        localDescription = null;
+        iceCandidates.clear();
     }
 
     public void setSourceType(String type) {
@@ -441,7 +439,7 @@ public abstract class WebRTC {
 
         @Override
         public void onCreateSuccess(SessionDescription sessionDescription) {
-            Log.d(TAG, "onCreateSuccess");
+            Log.d(TAG, "onCreateSuccess: " + sessionDescription.description);
         }
 
         @Override

@@ -96,7 +96,7 @@ public class RTSPStreamUnitTest {
                  .setConfig("WIDTH", width)
                  .start();
       } catch (InstantiationException e) {
-         Log.e(TAG, "Throw instantiation exception");
+         Log.e(TAG, "Failed to start: " + e.getMessage());
       }
    }
 
@@ -122,7 +122,7 @@ public class RTSPStreamUnitTest {
                  .setConfig("WIDTH", width)
                  .start();
       } catch (InstantiationException e) {
-         Log.e(TAG, "Caught instantiation exception");
+         Log.e(TAG, "Failed to start: " + e.getMessage());
       }
 
       rtspStream.stop();

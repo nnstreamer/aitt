@@ -150,10 +150,11 @@ public final class WebRTCStream implements AittStream {
             byte[] data = new byte[buffer.remaining()];
             buffer.get(data, 0, data.length);
             publishDiscoveryMessage(data);
-        } else if (streamRole == StreamRole.SUBSCRIBER && webrtc.getPeerDiscoveryId() != null) {
+        } else if (streamRole == StreamRole.SUBSCRIBER && webrtc.getIceCandidates() != null && !webrtc.getIceCandidates().isEmpty()) {
             byte[] discData = generateDiscoveryMessage();
             publishDiscoveryMessage(discData);
         }
+        Log.d(TAG, "Stream started");
         updateState(StreamState.READY);
     }
 
@@ -162,6 +163,7 @@ public final class WebRTCStream implements AittStream {
         stop();
         if (jniInterface != null)
             jniInterface.removeDiscoveryCallback(watchTopic);
+        Log.d(TAG, "Stream disconnected");
     }
 
     @Override
@@ -170,6 +172,7 @@ public final class WebRTCStream implements AittStream {
             return;
         }
 
+        webrtc.removePeer();
         webrtc.stop();
         FlexBuffersBuilder fbb = new FlexBuffersBuilder(ByteBuffer.allocate(512));
         fbb.putString(STOP);
@@ -178,6 +181,7 @@ public final class WebRTCStream implements AittStream {
         buffer.get(data, 0, data.length);
         if (jniInterface != null)
             jniInterface.updateDiscoveryMessage(publishTopic, data);
+        Log.d(TAG, "Stream stopped");
         updateState(StreamState.INIT);
     }
 
@@ -228,8 +232,7 @@ public final class WebRTCStream implements AittStream {
 
         jniInterface.setDiscoveryCallback(watchTopic, (clientId, status, data) -> {
             if (status.compareTo(Definitions.WILL_LEAVE_NETWORK) == 0) {
-                webrtc.removePeer(clientId);
-                updateState(StreamState.INIT);
+                removePeer(clientId);
                 return;
             }
 
@@ -245,11 +248,24 @@ public final class WebRTCStream implements AittStream {
         return UUID.randomUUID().toString();
     }
 
+    private void removePeer(String peerId) {
+        if (webrtc.getPeerDiscoveryId() == null) {
+            return;
+        }
+        if (webrtc.getPeerDiscoveryId().compareTo(peerId) != 0) {
+            Log.d(TAG, "No stream for peer: " + peerId);
+            return;
+        }
+
+        webrtc.removePeer();
+        webrtc.stop();
+        updateState(StreamState.INIT);
+    }
+
     private void handleStreamState(String clientId, ByteBuffer buffer) {
         String peerState = FlexBuffers.getRoot(buffer).asString();
         if (STOP.compareTo(peerState) == 0) {
-            updateState(StreamState.INIT);
-            webrtc.removePeer(clientId);
+            removePeer(clientId);
         } else if (START.compareTo(peerState) == 0) {
             if (streamRole == StreamRole.SUBSCRIBER)
                 webrtc.setPeerDiscoveryId(clientId);
@@ -280,9 +296,9 @@ public final class WebRTCStream implements AittStream {
                 webrtc.addPeer(id, sdp, iceCandidates);
         }
         else if(webrtc.getPeerDiscoveryId().compareTo(clientId) != 0)
-            Log.e(TAG, "Invalid peer discovery ID");
+            Log.e(TAG, "Invalid peer discovery ID: " + clientId);
         else if (this.id.compareTo(peerId) != 0)
-            Log.e(TAG, "Discovery message for different id");
+            Log.e(TAG, "Discovery message for different id: " + peerId);
         else if(webrtc.getPeerId() == null)
             webrtc.addPeer(id, sdp, iceCandidates);
         else
