@@ -9,12 +9,12 @@ def flatbuffersDir = new File("${thirdPartyDir}/flatbuffers-2.0.0")
 def mosquittoDir = new File("${thirdPartyDir}/mosquitto-2.0.14")
 
 android {
-    compileSdkVersion 33
+    compileSdkVersion 31
     ndkVersion "21.3.6528147"
 
     defaultConfig {
         minSdkVersion 28
-        targetSdkVersion 33
+        targetSdkVersion 31
         versionCode 1
         versionName '1.0'
 
@@ -80,7 +80,7 @@ dependencies {
     implementation 'com.google.flatbuffers:flatbuffers-java:2.0.0'
     implementation 'com.android.ndk.thirdparty:openssl:1.1.1g-alpha-1'
 
-    implementation 'androidx.appcompat:appcompat:1.5.0'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.6.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
@@ -94,6 +94,7 @@ task downloadFlatBuffers(type: Download) {
     src "https://github.com/google/flatbuffers/archive/refs/tags/v2.0.0.zip"
     dest new File(thirdPartyDir, "flatbuffers.zip")
     onlyIfModified true
+    connectTimeout 60000
 	retries 5
 }
 
@@ -113,6 +114,8 @@ task downloadMosquitto(type: Download) {
     src "https://github.com/eclipse/mosquitto/archive/refs/tags/v2.0.14.zip"
     dest new File(thirdPartyDir, "mosquitto-2.0.14.zip")
     onlyIfModified true
+    connectTimeout 60000
+    retries 5
 }
 
 task unzipMosquitto(type: Copy, dependsOn: downloadMosquitto) {
