@@ -245,6 +245,38 @@ public class RTSPInstrumentedTest {
     }
 
     @Test
+    public void testRTSPSetNullUri_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);
+            aitt.connect(brokerIp, PORT);
+
+            AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig("URI", null));
+
+            publisher.disconnect();
+        } catch (Exception e) {
+            fail("Failed testRTSPSetNullUri, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testRTSPSetInvalidUri_N() {
+        try {
+            Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);
+            aitt.connect(brokerIp, PORT);
+
+            AittStream publisher = aitt.createStream(Aitt.Protocol.RTSP, TEST_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisher.setConfig("URI", "tcp://someurl"));
+
+            publisher.disconnect();
+        } catch (Exception e) {
+            fail("Failed testRTSPSetInvalidUri, (" + e + ")");
+        }
+    }
+
+    @Test
     public void testRTSPSetNullKey_N() {
         try {
             Aitt aitt = new Aitt(appContext, AITT_ID, wifiIP, true);

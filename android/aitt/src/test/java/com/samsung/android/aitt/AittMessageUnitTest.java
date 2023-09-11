@@ -168,4 +168,10 @@ public class AittMessageUnitTest {
         byte[] newPayload = aittMessage.getPayload();
         assertEquals("Received payload and expected payload are equal", 0, newPayload.length);
     }
+
+    @Test(expected = NullPointerException.class)
+    public void testGetInvalidPayload_N() {
+        AittMessage aittMessage = new AittMessage(null);
+        byte[] newPayload = aittMessage.getPayload();
+    }
 }

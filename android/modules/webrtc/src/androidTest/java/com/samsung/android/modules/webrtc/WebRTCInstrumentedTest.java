@@ -456,7 +456,7 @@ public class WebRTCInstrumentedTest {
     }
 
     @Test
-    public void testWebRTCStreamInvalidWidth_N() {
+    public void testWebRTCStreamNegativeWidth_N() {
         try {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
@@ -467,12 +467,28 @@ public class WebRTCInstrumentedTest {
 
             publisherStream.disconnect();
         } catch (Exception e) {
-            fail("Failed testWebRTCStreamInvalidWidth, (" + e + ")");
+            fail("Failed testWebRTCStreamNegativeWidth, (" + e + ")");
         }
     }
 
     @Test
-    public void testWebRTCStreamInvalidHeight_N() {
+    public void testWebRTCStreamZeroWidth_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "0")
+                    .setConfig("HEIGHT", "240"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamZeroWidth, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCStreamNegativeHeight_N() {
         try {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
@@ -483,10 +499,25 @@ public class WebRTCInstrumentedTest {
 
             publisherStream.disconnect();
         } catch (Exception e) {
-            fail("Failed testWebRTCStreamInvalidHeight, (" + e + ")");
+            fail("Failed testWebRTCStreamNegativeHeight, (" + e + ")");
         }
     }
 
+    @Test
+    public void testWebRTCStreamZeroHeight_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("WIDTH", "320")
+                    .setConfig("HEIGHT", "0"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamZeroHeight, (" + e + ")");
+        }
+    }
     @Test
     public void testWebRTCStreamInvalidSourceType_N() {
         try {
@@ -498,12 +529,26 @@ public class WebRTCInstrumentedTest {
 
             publisherStream.disconnect();
         } catch (Exception e) {
-            fail("Failed testWebRTCStreamInvalidHeight, (" + e + ")");
+            fail("Failed testWebRTCStreamInvalidSourceType, (" + e + ")");
+        }
+    }
+    @Test
+    public void testWebRTCStreamInvalidMediaFormat_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("MEDIA_FORMAT", "A"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamInvalidMediaFormat, (" + e + ")");
         }
     }
 
     @Test
-    public void testWebRTCStreamInvalidFrameRate_N() {
+    public void testWebRTCStreamNegativeFrameRate_N() {
         try {
             Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
             publisher.connect(brokerIp, PORT);
@@ -513,7 +558,22 @@ public class WebRTCInstrumentedTest {
 
             publisherStream.disconnect();
         } catch (Exception e) {
-            fail("Failed testWebRTCStreamInvalidHeight, (" + e + ")");
+            fail("Failed testWebRTCStreamNegativeFrameRate, (" + e + ")");
+        }
+    }
+
+    @Test
+    public void testWebRTCStreamZeroFrameRate_N() {
+        try {
+            Aitt publisher = new Aitt(appContext, AITT_WEBRTC_CLIENT_ID + VIDEO_PREFIX, wifiIP, true);
+            publisher.connect(brokerIp, PORT);
+            AittStream publisherStream = publisher.createStream(Aitt.Protocol.WEBRTC, TEST_VIDEO_TOPIC, PUBLISHER);
+
+            assertThrows(IllegalArgumentException.class, () -> publisherStream.setConfig("FRAME_RATE", "0"));
+
+            publisherStream.disconnect();
+        } catch (Exception e) {
+            fail("Failed testWebRTCStreamZeroFrameRate, (" + e + ")");
         }
     }
 

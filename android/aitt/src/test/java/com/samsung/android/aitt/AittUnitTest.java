@@ -17,6 +17,7 @@ package com.samsung.android.aitt;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -663,6 +664,21 @@ public class AittUnitTest {
     }
 
     @Test
+    public void testSubscribeIpcInvalidCallback_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.subscribe(topic, null, Aitt.Protocol.IPC, Aitt.QoS.AT_MOST_ONCE));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testSubscribeIpcInvalidCallback " + e);
+        }
+    }
+
+    @Test
     public void testSubscribeAnyProtocol_P() {
         try {
             shadowJniInterface.setInitReturn(true);
@@ -1002,7 +1018,7 @@ public class AittUnitTest {
     }
 
     @Test
-    public void testCreateRTSPStreamInvalidTopic_N() {
+    public void testCreateRTSPSubscriberStreamEmptyTopic_N() {
         try {
             shadowJniInterface.setInitReturn(true);
             Aitt aitt = new Aitt(appContext, aittId);
@@ -1012,7 +1028,144 @@ public class AittUnitTest {
 
             aitt.disconnect();
         } catch (Exception e) {
-            fail("Failed testCreateRTSPStreamInvalidTopic " + e);
+            fail("Failed testCreateRTSPSubscriberStreamEmptyTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPPublisherStreamEmptyTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.RTSP, "", AittStream.StreamRole.PUBLISHER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPPublisherStreamEmptyTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPSubscriberStreamNullTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.RTSP, null, AittStream.StreamRole.SUBSCRIBER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPSubscriberStreamNullTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateRTSPPublisherStreamNullTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.RTSP, null, AittStream.StreamRole.PUBLISHER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateRTSPPublisherStreamNullTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateWebRTCSubscriberStreamEmptyTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.WEBRTC, "", AittStream.StreamRole.SUBSCRIBER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateWebRTCSubscriberStreamEmptyTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateWebRTCPublisherStreamEmptyTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.WEBRTC, "", AittStream.StreamRole.PUBLISHER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateWebRTCPublisherStreamEmptyTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateWebRTCSubscriberStreamNullTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.WEBRTC, null, AittStream.StreamRole.SUBSCRIBER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateWebRTCSubscriberStreamNullTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateWebRTCPublisherStreamNullTopic_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            assertThrows(IllegalArgumentException.class, () -> aitt.createStream(Aitt.Protocol.WEBRTC, null, AittStream.StreamRole.PUBLISHER));
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateWebRTCPublisherStreamNullTopic " + e);
+        }
+    }
+
+    @Test
+    public void testCreateMqttStream_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            AittStream aittStream = aitt.createStream(Aitt.Protocol.MQTT, topic, AittStream.StreamRole.PUBLISHER);
+            assertNull(aittStream);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateMqttStream " + e);
+        }
+    }
+
+    @Test
+    public void testCreateTcpStream_N() {
+        try {
+            shadowJniInterface.setInitReturn(true);
+            Aitt aitt = new Aitt(appContext, aittId);
+            aitt.connect(brokerIp, port);
+
+            AittStream aittStream = aitt.createStream(Aitt.Protocol.TCP, topic, AittStream.StreamRole.PUBLISHER);
+            assertNull(aittStream);
+
+            aitt.disconnect();
+        } catch (Exception e) {
+            fail("Failed testCreateTcpStream " + e);
         }
     }
 }

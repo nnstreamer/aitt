@@ -37,6 +37,9 @@ public final class WebRTCHandler extends StreamHandler {
         if (protocol != Aitt.Protocol.WEBRTC)
             throw new InvalidParameterException("Invalid protocol");
 
+        if (topic == null || topic.isEmpty())
+            throw new InvalidParameterException("Invalid topic");
+
         if (role == AittStream.StreamRole.SUBSCRIBER) {
             return createSubscriberStream(topic, role, context);
         } else {
