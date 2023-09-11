@@ -34,7 +34,14 @@
 #undef TO_STR
 #undef DEFINE_TO_STR
 
-#else  // PLATFORM
+#else  // (Tizen || Android) && !LOG_STDOUT
+
+#ifdef LOG_OFF
+#define PLATFORM_LOGD(fmt, ...)
+#define PLATFORM_LOGI(fmt, ...)
+#define PLATFORM_LOGE(fmt, ...)
+
+#else  // LOG_OFF
 
 #include <libgen.h>
 #include <stdio.h>
@@ -50,4 +57,6 @@
     fprintf(stderr, LOG_RED "[%s]%s(%s:%d)" LOG_END fmt "\n", LOG_TAG, __func__, __FILENAME__, \
           __LINE__, ##__VA_ARGS__)
 
-#endif  // PLATFORM
+#endif  // LOG_OFF
+
+#endif  // (Tizen || Android) && !LOG_STDOUT

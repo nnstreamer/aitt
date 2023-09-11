@@ -152,9 +152,9 @@ class AittTcpTest : public testing::Test, public AittTests {
                       DBG("Subscribe callback called: %d, szmsg = %d, msg = [%s]", cnt, szmsg,
                             receivedMsg.c_str());
                       if (cnt == 1) {
-                          ASSERT_TRUE(!strcmp(receivedMsg.c_str(), TEST_MSG));
+                          ASSERT_EQ(STR_EQ, strcmp(receivedMsg.c_str(), TEST_MSG));
                       } else if (cnt == 2) {
-                          ASSERT_TRUE(!strcmp(receivedMsg.c_str(), TEST_MSG2));
+                          ASSERT_EQ(STR_EQ, strcmp(receivedMsg.c_str(), TEST_MSG2));
                           test->ToggleReady();
                       }
                   },
@@ -217,8 +217,8 @@ class AittTcpTest : public testing::Test, public AittTests {
                       }
 
                       if (msg) {
-                          ASSERT_TRUE(!strncmp(static_cast<const char *>(msg), dump_msg,
-                                sizeof(dump_msg)));
+                          ASSERT_EQ(STR_EQ, strncmp(static_cast<const char *>(msg), dump_msg,
+                                                  sizeof(dump_msg)));
                       }
 
                       if (cnt == 10)

@@ -52,6 +52,7 @@ endif(PLATFORM STREQUAL "android")
 
 if(LOG_STDOUT)
 	add_definitions(-DLOG_STDOUT)
+	#add_definitions(-DLOG_OFF)
 endif(LOG_STDOUT)
 
 if(COVERAGE_TEST)
