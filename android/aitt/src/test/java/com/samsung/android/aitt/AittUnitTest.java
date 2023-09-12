@@ -1145,7 +1145,7 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             AittStream aittStream = aitt.createStream(Aitt.Protocol.MQTT, topic, AittStream.StreamRole.PUBLISHER);
-            assertNull(aittStream);
+            assertNull("Null AittStream", aittStream);
 
             aitt.disconnect();
         } catch (Exception e) {
@@ -1161,7 +1161,7 @@ public class AittUnitTest {
             aitt.connect(brokerIp, port);
 
             AittStream aittStream = aitt.createStream(Aitt.Protocol.TCP, topic, AittStream.StreamRole.PUBLISHER);
-            assertNull(aittStream);
+            assertNull("Null AittStream", aittStream);
 
             aitt.disconnect();
         } catch (Exception e) {
