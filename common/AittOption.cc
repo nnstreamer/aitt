@@ -46,10 +46,13 @@ bool AittOption::GetUseCustomMqttBroker() const
     return use_custom_broker;
 }
 
-void AittOption::SetServiceID(const std::string& id)
+int AittOption::SetServiceID(const std::string& id)
 {
-    RET_IF(false == use_custom_broker);
+    RETV_IF(false == use_custom_broker, AITT_ERROR_NOT_SUPPORTED);
+
     service_id = id;
+
+    return AITT_ERROR_NONE;
 }
 
 const char* AittOption::GetServiceID() const
@@ -57,10 +60,11 @@ const char* AittOption::GetServiceID() const
     return service_id.c_str();
 }
 
-void AittOption::SetLocationID(const std::string& id)
+int AittOption::SetLocationID(const std::string& id)
 {
-    RET_IF(false == use_custom_broker);
+    RETV_IF(false == use_custom_broker, AITT_ERROR_NOT_SUPPORTED);
     location_id = id;
+    return AITT_ERROR_NONE;
 }
 
 const char* AittOption::GetLocationID() const
@@ -68,10 +72,11 @@ const char* AittOption::GetLocationID() const
     return location_id.c_str();
 }
 
-void AittOption::SetRootCA(const std::string& ca)
+int AittOption::SetRootCA(const std::string& ca)
 {
-    RET_IF(false == use_custom_broker);
+    RETV_IF(false == use_custom_broker, AITT_ERROR_NOT_SUPPORTED);
     root_ca = ca;
+    return AITT_ERROR_NONE;
 }
 
 const char* AittOption::GetRootCA() const
@@ -79,10 +84,11 @@ const char* AittOption::GetRootCA() const
     return root_ca.c_str();
 }
 
-void AittOption::SetCustomRWFile(const std::string& file)
+int AittOption::SetCustomRWFile(const std::string& file)
 {
-    RET_IF(false == use_custom_broker);
+    RETV_IF(false == use_custom_broker, AITT_ERROR_NOT_SUPPORTED);
     custom_rw_file = file;
+    return AITT_ERROR_NONE;
 }
 
 const char* AittOption::GetCustomRWFile() const

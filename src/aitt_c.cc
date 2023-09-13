@@ -123,16 +123,31 @@ API int aitt_option_set(aitt_option_h handle, aitt_option_e option, const char *
     case AITT_OPT_MY_IP:
         handle->my_ip = value;
         break;
+
     case AITT_OPT_CLEAN_SESSION:
         ret = _to_boolean(value, bool_val);
         if (ret == AITT_ERROR_NONE)
             handle->option.SetCleanSession(bool_val);
         return ret;
+
     case AITT_OPT_CUSTOM_BROKER:
         ret = _to_boolean(value, bool_val);
         if (ret == AITT_ERROR_NONE)
             handle->option.SetUseCustomMqttBroker(bool_val);
         return ret;
+
+    case AITT_OPT_SERVICE_ID:
+        return handle->option.SetServiceID(value);
+
+    case AITT_OPT_LOCATION_ID:
+        return handle->option.SetLocationID(value);
+
+    case AITT_OPT_ROOT_CA:
+        return handle->option.SetRootCA(value);
+
+    case AITT_OPT_CUSTOM_RW_FILE:
+        return handle->option.SetCustomRWFile(value);
+
     default:
         ERR("Unknown option(%d)", option);
         return AITT_ERROR_INVALID_PARAMETER;
@@ -152,6 +167,14 @@ API const char *aitt_option_get(aitt_option_h handle, aitt_option_e option)
         return (handle->option.GetCleanSession()) ? "true" : "false";
     case AITT_OPT_CUSTOM_BROKER:
         return (handle->option.GetUseCustomMqttBroker()) ? "true" : "false";
+    case AITT_OPT_SERVICE_ID:
+        return handle->option.GetServiceID();
+    case AITT_OPT_LOCATION_ID:
+        return handle->option.GetLocationID();
+    case AITT_OPT_ROOT_CA:
+        return handle->option.GetRootCA();
+    case AITT_OPT_CUSTOM_RW_FILE:
+        return handle->option.GetCustomRWFile();
     default:
         ERR("Unknown option(%d)", option);
     }

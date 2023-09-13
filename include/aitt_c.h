@@ -146,6 +146,14 @@ typedef enum {
     AITT_OPT_CLEAN_SESSION = 2, /**< A Boolean value whether broker clean all message and
                                    subscriptions on disconnect */
     AITT_OPT_CUSTOM_BROKER = 3, /**< A Boolean value whether AITT uses a custom broker. */
+    AITT_OPT_SERVICE_ID =
+          4, /**< Service ID of Custom broker. Must set after @a AITT_OPT_CUSTOM_BROKER */
+    AITT_OPT_LOCATION_ID =
+          5, /**< Location ID of Custom broker. Must set after @a AITT_OPT_CUSTOM_BROKER */
+    AITT_OPT_ROOT_CA = 6, /**< Root CA of Custom broker. Must set after @a AITT_OPT_CUSTOM_BROKER */
+    AITT_OPT_CUSTOM_RW_FILE =
+          7, /**< Custom read/write file path. Must set after @a AITT_OPT_CUSTOM_BROKER */
+
 } aitt_option_e;
 
 /**

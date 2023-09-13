@@ -29,13 +29,13 @@ class API AittOption {
     bool GetCleanSession() const;
     void SetUseCustomMqttBroker(bool val);
     bool GetUseCustomMqttBroker() const;
-    void SetServiceID(const std::string &id);
+    int SetServiceID(const std::string &id);
     const char *GetServiceID() const;
-    void SetLocationID(const std::string &id);
+    int SetLocationID(const std::string &id);
     const char *GetLocationID() const;
-    void SetRootCA(const std::string &ca);
+    int SetRootCA(const std::string &ca);
     const char *GetRootCA() const;
-    void SetCustomRWFile(const std::string &file);
+    int SetCustomRWFile(const std::string &file);
     const char *GetCustomRWFile() const;
 
   private:

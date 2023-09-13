@@ -98,6 +98,22 @@ TEST(AITT_C_INTERFACE, option_P_Anytime)
     EXPECT_EQ(ret, AITT_ERROR_NONE);
     EXPECT_STREQ("true", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
 
+    ret = aitt_option_set(option, AITT_OPT_SERVICE_ID, "service_id");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("service_id", aitt_option_get(option, AITT_OPT_SERVICE_ID));
+
+    ret = aitt_option_set(option, AITT_OPT_LOCATION_ID, "location_id");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("location_id", aitt_option_get(option, AITT_OPT_LOCATION_ID));
+
+    ret = aitt_option_set(option, AITT_OPT_ROOT_CA, "root_ca");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("root_ca", aitt_option_get(option, AITT_OPT_ROOT_CA));
+
+    ret = aitt_option_set(option, AITT_OPT_CUSTOM_RW_FILE, "custom_rw_file");
+    EXPECT_EQ(ret, AITT_ERROR_NONE);
+    EXPECT_STREQ("custom_rw_file", aitt_option_get(option, AITT_OPT_CUSTOM_RW_FILE));
+
     ret = aitt_option_set(option, AITT_OPT_CUSTOM_BROKER, nullptr);
     EXPECT_EQ(ret, AITT_ERROR_NONE);
     EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
@@ -136,6 +152,21 @@ TEST(AITT_C_INTERFACE, option_No_set_N_Anytime)
     EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CLEAN_SESSION));
     EXPECT_STREQ("false", aitt_option_get(option, AITT_OPT_CUSTOM_BROKER));
     EXPECT_EQ(nullptr, aitt_option_get(option, AITT_OPT_UNKNOWN));
+
+    aitt_option_destroy(option);
+}
+
+TEST(AITT_C_INTERFACE, option_set_Without_Custom_Anytime)
+{
+    aitt_option_h option = aitt_option_new();
+    ASSERT_NE(option, nullptr);
+
+    EXPECT_EQ(AITT_ERROR_NOT_SUPPORTED, aitt_option_set(option, AITT_OPT_SERVICE_ID, "service_id"));
+    EXPECT_EQ(AITT_ERROR_NOT_SUPPORTED,
+          aitt_option_set(option, AITT_OPT_LOCATION_ID, "location_id"));
+    EXPECT_EQ(AITT_ERROR_NOT_SUPPORTED, aitt_option_set(option, AITT_OPT_ROOT_CA, "root_ca"));
+    EXPECT_EQ(AITT_ERROR_NOT_SUPPORTED,
+          aitt_option_set(option, AITT_OPT_CUSTOM_RW_FILE, "custom_rw_file"));
 
     aitt_option_destroy(option);
 }
